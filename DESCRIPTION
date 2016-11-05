@@ -1,10 +1,12 @@
-Package: flowmixture
+Package: flowReMix
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Generalized Linear Modeling of FCM Data With Clustered Coefficients
 Version: 0.1
 Date: 2016-09-10
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
+Author: Amit Meir
+Maintainer: Amit Meir <ammeir@fhcrc.org>
+Description: Fitting mixtures of generalized linear models with random effects and subject-level treatment effects.
 License: What license is it under?
 LazyData: TRUE
+LinkingTo: Rcpp
+Imports: Rcpp

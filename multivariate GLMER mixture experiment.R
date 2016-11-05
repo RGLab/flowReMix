@@ -1,27 +1,29 @@
+library(flowReMix)
+data(rv144)
 #set.seed(502)
 set.seed(504)
 par(mfrow = c(1, 1), mar = rep(4, 4))
-# data <- rv144
-# leaves <- unique(data$population)
-# data <- subset(data, population %in% leaves[c(1:7)])
-# data <- subset(data, stim != "sebctrl")
-# data$treatment <- as.numeric(data$stim == "env")
-# data$ptid <- as.numeric(data$ptid)
-# data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 10^4
-# data$prop <- data$count / data$parentcount
-# data$population <- as.factor(data$population)
-# data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
-#
-# mixtureFitList <- by(data, data$population, function(X)
-#                      mixedfit <- glmmMixture(count ~ (age + gender + treatment),
-#                                              N = parentcount,
-#                                              sub.population = population,
-#                                              id = ptid,
-#                                              treatment = treatment,
-#                                              data = X,
-#                                              tol = 0.01,
-#                                              maxiter = 20,
-#                                              nAGQ = 1))
+data <- rv144
+leaves <- unique(data$population)
+data <- subset(data, population %in% leaves[c(1:7)])
+data <- subset(data, stim != "sebctrl")
+data$treatment <- as.numeric(data$stim == "env")
+data$ptid <- as.numeric(data$ptid)
+data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 10^4
+data$prop <- data$count / data$parentcount
+data$population <- as.factor(data$population)
+data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
+
+mixtureFitList <- by(data, data$population, function(X)
+                     mixedfit <- glmmMixture(count ~ (age + gender + treatment),
+                                             N = parentcount,
+                                             sub.population = population,
+                                             id = ptid,
+                                             treatment = treatment,
+                                             data = X,
+                                             tol = 0.01,
+                                             maxiter = 20,
+                                             nAGQ = 1))
 # Getting list of Coefficients
 coefficientList <- lapply(mixtureFitList, function(x) x$beta)
 
@@ -38,6 +40,7 @@ round(covariance, 3)
 round(cov2cor(covariance), 3)
 
 # Computing new posterior porbabilities
+maxIter=50
 vaccines <- sapply(databyid, function(x) x$vaccine[1] == "VACCINE")
 muMat <- lapply(mixtureFitList, function(x) x$mu[, 4:5])
 muMat <- do.call("rbind", muMat)
@@ -56,13 +59,10 @@ sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
 allPosteriors <- matrix(nrow = nSubjects, ncol = maxIter)
 estimatedRandomEffects <- randomEffects
 randomSampList <- lapply(1:2, function(x) x)
-logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
-effectWeightsMat <- logLikelihoods
 posteriors <- numeric(nSubjects)
 clusterAssignments <- numeric(nSubjects)
 rate <- 1
 lastMean <- randomEffects
-maxIter <- 50
 iterCoefMat <- matrix(ncol = length(mixtureFitList), nrow = maxIter + 1)
 for(iter in 1:maxIter) {
   nsamp <- 50 + iter
@@ -77,10 +77,10 @@ for(iter in 1:maxIter) {
     N <- subjectData$parentcount
     y <- subjectData$count
     prop <- y/N
-    accpet <- 0
+    accept <- 0
     for(k in 1:2) {
       randEst <- estimatedRandomEffects[2*i - 2 + k, ]
-      randSamp <- apply(randomEffectSamp, 2, function(x) x + randEst)
+      randSamp <- randomEffectSamp+randEst #faster Sampapply(randomEffectSamp, 2, function(x) x + randEst)
       if(iter == 1) {
         if(k == 1) {
           eta <- logit(subjectData$nullMu) - randEst[popInd]
@@ -96,11 +96,12 @@ for(iter in 1:maxIter) {
           eta <- subjectData$altEta
         }
       }
-
-      mu <- expit(apply(randSamp, 2, function(x) eta + x[popInd]))
-      binomLlik <- apply(mu, 2, function(x) sum(dbinom(y, N, x, log = TRUE)))
-      normWeights <- apply(randSamp, 2, function(x) - 0.5 * t(x) %*% invcov  %*% x - 0.5 * covDet)
-      importanceWeights <- apply(randSamp, 2, function(x) - 0.5 * t(x - randEst) %*% invSampcov  %*% (x - randEst) - 0.5 * sampCovDet)
+      mu <- expit(eta+randSamp[popInd,]) #faster than expit(apply(randSamp, 2, function(x) eta + x[popInd])) and equivalent
+      binomLlik <- colSums(dbinom(y,N,mu,log=TRUE)) # Faster than this: apply(mu, 2, function(x) sum(dbinom(y, N, x, log = TRUE)))
+      normWeights <- #apply(randSamp, 2, function(x) - 0.5 * t(x) %*% invcov  %*% x - 0.5 * covDet)
+              -0.5*diag(crossprod(crossprod(invcov,randSamp),randSamp))-0.5*covDet #faster than above
+      importanceWeights <- #apply(randSamp, 2, function(x) - 0.5 * t(x - randEst) %*% invSampcov  %*% (x - randEst) - 0.5 * sampCovDet)
+              -0.5*diag(crossprod(crossprod(invSampcov,randSamp-randEst),randSamp-randEst))-0.5*sampCovDet #faster than above
       logLikelihoods[k, ] <- binomLlik + normWeights - importanceWeights + log(levelProbs[k])
       randomSampList[[k]] <- randSamp
     }
@@ -121,16 +122,19 @@ for(iter in 1:maxIter) {
     subjectData$tempTreatment <- subjectData$treatment * (cluster == 2)
 
     # Performing MH step
+    # This loop *may* be faster in C but it's hard to tell.. there's not that much sampling going on and gains may be lost due to the overhead of calling out.
     for(k in 1:2) {
       randomSamp <- randomSampList[[k]]
       currentSamp <- lastMean[2*i - 2 + k, ]
       randEst <- estimatedRandomEffects[2*i - 2 + k, ]
       mu <- expit(eta + currentSamp[popInd])
-      currentloglik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(currentSamp - randEst) %*% invcov %*% (currentSamp - randEst)
+      dev = currentSamp - randEst
+      currentloglik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
       for(j in 1:ncol(randomEffectSamp)) {
         newSamp <- randomEffectSamp[, j] + currentSamp
         mu <- expit(eta + newSamp[popInd])
-        newlogLik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(newSamp - randEst) %*% invcov %*% (newSamp - randEst)
+        dev = newSamp - randEst
+        newlogLik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
         if(runif(1) < exp(newlogLik - currentloglik)) {
           currentSamp <- newSamp
           currentloglik <- newlogLik
@@ -148,7 +152,7 @@ for(iter in 1:maxIter) {
   }
 
   # Refitting Model with current means
-  dataForGlm <- do.call("rbind", databyid)
+  dataForGlm <- data.frame(data.table::rbindlist(databyid)) # much faster than:  do.call("rbind", databyid)
   dataByPopulation <- by(dataForGlm, dataForGlm$population, function(x) x)
   glmFits <- lapply(dataByPopulation, function(popdata)
                 glm(cbind(count, parentcount - count) ~  age + gender + tempTreatment + offset(randomOffset),
@@ -211,7 +215,7 @@ for(iter in 1:maxIter) {
   print(round(cbind(iterCoef, currentCoef, initCoef), 3))
   #print(round(cov2cor(covariance), 3))
   require(pROC)
-  rocfit <- roc(vaccine ~ posteriors)
+  rocfit <- roc(vaccines ~ posteriors)
   print(plot(rocfit, main = round(rocfit$auc, 3)))
 }
 

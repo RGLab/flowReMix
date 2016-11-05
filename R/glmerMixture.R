@@ -1,3 +1,6 @@
+#' @useDynLib flowReMix
+#' @importFrom Rcpp sourceCpp
+
 # A function for monte-carlo computation of mixture densities
 simulateGmmDensity <- function(x, randomsd, nsamp, levelProbs) {
   sampmean <- x$randomMean[[1]]
