@@ -1,0 +1,88 @@
+\documentclass{article}
+
+\usepackage{amsmath, amssymb}
+
+\begin{document}
+
+\section{GLMER E-Step}
+$$
+P(Z_i= 1 | y, \theta) = 
+\frac{\int \prod_{j} f(y_{ij}|X,\beta_1) g(v)dv}
+{\int \prod_{j} f(y_{ij}|X,\beta_1) f(v)dv + \int \prod_{j} f(y_{ij}|X,\beta_0) g(v)dv}
+$$
+
+$$
+\approx \frac{\sum_{m=1}^{M} \frac{g(v)}{\tilde{g}_1(v)}\prod_{j} f(y_{ij}|X,\beta_1,v_{m})}
+{\sum_{m=1}^{M} \frac{g(v)}{\tilde{g}_1(v)}\prod_{j} f(y_{ij}|X,\beta_1,v_{m}) + 
+\frac{g(v)}{\tilde{g}_0(v)}\prod_{j} f(y_{ij}|X,\beta_0,v_{m})}
+$$$$
+= \left(
+1 + \frac{\sum_{m=1}^{M} \frac{g(v)}{\tilde{g}_0(v)} \prod_{j} f(y_{ij}|X,\beta_0,v_{m})}
+{\sum_{m=1}^{M}\frac{g(v)}{\tilde{g}_1(v)}\prod_{j} f(y_{ij}|X,\beta_1,v_{m})}
+\right)^{-1}
+$$
+
+
+
+
+
+\break
+\section{Some Computation}
+
+$$
+\mathcal{L(\theta)} = \int \prod_{k=1}^{K} f_\theta(x_k, v) \pi(v)dv
+$$$$
+l(\theta) = \log\int \prod_{k=1}^{K} f_\theta(x_k, v) \pi(v)dv
+$$$$
+\frac{\partial}{\partial \theta} l(\theta) = \frac{1}{\mathcal{L(\theta)}}
+\int \frac{\partial}{\partial \theta} \prod_{k=1}^{K} f_\theta(x_k) \pi(v)dv
+$$$$
+ = \frac{1}{\mathcal{L(\theta)}}
+\int \prod_{k=1}^{K} f_\theta(x_k, v)
+\left( \sum_{k=1}^{K} \frac{\partial}{\partial\theta} \log f_\theta(x_k, v) \right)
+\pi(v)dv
+$$
+
+$$
+\approx \left(\sum_{j=1}^{J}  \prod_{k=1}^{K} f_\theta(x_k, v_j)\right)^{-1}
+\left(\sum_{j=1}^{J} \prod_{k=1}^{K} f_\theta(x_k, v_j)
+\left( \sum_{k=1}^{K} \frac{\partial}{\partial\theta} \log f_\theta(x_k, v_j) \right)\right)
+$$
+
+
+\break
+\section{Constrained Random Effect}
+$$
+\min\frac{1}{2}\sum_{i=1}^{n} \sum_{k=1}^{K} \sum_{j=1}^{J} w_{ijk}(x_{ijk} - \hat{\mu}_{ik})^{2}
+$$$$
+w_{ik} := \sum_{j} w_{ijk}
+$$$$
+s.t. \; \sum_{i}w_{ik} \mu_{ik} = 0 \;\; \forall k
+$$
+
+For a set $k$:
+$$
+L_k = \frac{1}{2}\sum_i\sum_j w_{ij} (x_{ij} - \hat{\mu}_{i})^{2} + \lambda\sum_{i} w_{i} \hat\mu_{i}
+$$
+
+Solve a system of equations:
+$$
+-\sum_{j} w_{ij} (x_{ij} - \hat{\mu}_i) + \lambda w_i  = 0 \;\;\;\;\; \forall i 
+$$$$
+\sum_i w_i \hat\mu_i = 0
+$$$$
+\Rightarrow \lambda = \frac{\sum_{ij} w_{ij} x_{ij}}{\sum_{i} w_i }
+$$$$
+\Rightarrow \hat\mu_i 
+= \frac{\sum_{j} w_{ij} x_{ij} - \lambda w_i}{w_i}
+= \frac{\sum_{j} w_{ij} x_{ij}}{\sum_{j} w_{ij}} - \lambda := \bar{x}_i - \bar{\mu}
+$$
+
+
+
+
+
+
+
+\end{document}
+
