@@ -76,10 +76,10 @@ sprobs$vaccine <- data$vaccine[rowIndex]
 sprobs$id <- data$ptid[rowIndex]
 sprobs$nullprop <- log(data$count/data$parentcount + 10^-5)[data$stim == "negctrl" & data$population == leaf[1]]
 sprobs$altprop <- log(data$count/data$parentcount + 10^-5)[data$stim == "env" & data$population == leaf[1]]
-sprobs$nonrespNullProp <- log(mixedfit$mu$nullMu[waves == 1] + 10^-5)
-sprobs$nonrespAltProp <- log(mixedfit$mu$nullMu[waves == 2] + 10^-5)
-sprobs$respNullProp <- log(mixedfit$mu$altMu[waves == 1] + 10^-5)
-sprobs$respAltProp <- log(mixedfit$mu$altMu[waves == 2] + 10^-5)
+sprobs$nonrespNullProp <- log(mixedfit$mu$nullMu[mixedfit$mu$waves == 1] + 10^-5)
+sprobs$nonrespAltProp <- log(mixedfit$mu$nullMu[mixedfit$mu$waves == 2] + 10^-5)
+sprobs$respNullProp <- log(mixedfit$mu$altMu[mixedfit$mu$waves == 1] + 10^-5)
+sprobs$respAltProp <- log(mixedfit$mu$altMu[mixedfit$mu$waves == 2] + 10^-5)
 sprobs <- sprobs[order(sprobs$nullprob), ]
 sprobs$empFDR <- cummean(sprobs$vaccine == "PLACEBO")
 sprobs$nominalFDR <- cummean(sprobs$nullprob)
@@ -131,7 +131,7 @@ for(i in 1:7) {
   data <- data[order(data$ptid, decreasing = FALSE), ]
 
   count <- data$count
-  negcount <- data$parentcount - tempdat$count
+  negcount <- data$parentcount - count
   antigen <- data$stim
   cytokine <- data$population
   ptid <- data$ptid
@@ -158,8 +158,8 @@ for(i in 1:7) {
                           nAGQ = 1)
   glmList[[i]] <- mixedfit
 
-  glmRoc <- roc(tempdat$vaccine[tempdat$stim == "env"] ~ mixedfit$subject.probs[, 2])
-  mimosaRoc <- roc(tempdat$vaccine[tempdat$stim == "env"] ~ mimosaQvals)
+  glmRoc <- roc(data$vaccine[data$stim == "env"] ~ mixedfit$subject.probs[, 2])
+  mimosaRoc <- roc(data$vaccine[data$stim == "env"] ~ mimosaQvals)
   plot(glmRoc, col = "red", main = leaf)
   lines(mimosaRoc, col = "blue")
   legend("bottomright", col = c("red", "blue"), lty = 1,
@@ -208,7 +208,7 @@ data$stim[data$stim == "env"] <- "env"
 data$stimB <- data$stim == "env"
 data <- data[order(data$ptid, decreasing = FALSE), ]
 covMat <- matrix(ncol = 7, nrow = 7)
-diag(corMat) <- 1
+diag(covMat) <- 1
 for(i in 1:nrow(allPairs)) {
   pair <- allPairs[i, ]
   fit <- lme4::glmer(cbind(count, parentcount - count) ~ population/(age + gender + stim*vaccine)
