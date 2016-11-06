@@ -34,7 +34,10 @@ computeGmmWeights <- function(dat, randomsd, nsamp = 20, levelProbs) {
   return(weights)
 }
 
-# Estimate a composite mixture GEE
+#' Estimate a composite mixture GEE
+#'
+#' @name glmmMixture
+#' @export
 glmmMixture <- function(formula, sub.population = NULL,
                                  N = NULL, id, waves,
                                  data = parent.frame(),

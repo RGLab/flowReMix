@@ -134,8 +134,16 @@ augment.dataset <- function(subjectData, treatment.levels, treatmentColIndex) {
   return(subjectData)
 }
 
-# logit and expit functions
+#' logit and expit functions
+#'
+#' @name logit
+#' @aliases expit
+#' @rdname logitexpit
+#' @export
 logit <- function(x) log(x / (1 - x))
+
+#' @export
+#' @rdname logitexpit
 expit <- function(x) 1/(1 + exp(-x))
 
 # a function for computing a global dispersion
