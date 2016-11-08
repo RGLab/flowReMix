@@ -26,15 +26,26 @@ NumericVector dbinom_vec(NumericVector y, NumericVector N, NumericVector mu){
 }
 
 // [[Rcpp::export]]
-void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects, const NumericVector y,const  NumericVector N, const NumericMatrix randomEffectSamp, const NumericVector eta, const int i, IntegerVector popInd,  arma::mat invcov,  NumericVector accept,double iter,double rate, NumericVector unifs) {
+void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects,
+        const NumericVector y,const  NumericVector N,
+        const NumericMatrix randomEffectSamp,
+        const int i, IntegerVector popInd,  arma::mat invcov,
+        NumericVector accept,double iter,double rate, NumericVector unifs,
+        const NumericVector nullEta, const NumericVector altEta) {
   int k = 0;
   NumericVector diff;
   int j = 0;
   int I = 0;
   I = i-1;
+  NumericVector eta;
   NumericVector mu;
   NumericVector currentlogLik, newlogLik;
   for(k = 0; k < 2; k++){
+    if(k == 0) {
+      eta = nullEta ;
+    } else {
+      eta = altEta ;
+    }
     NumericVector currentSamp = lastMean(2*I + k,_);
     mu = currentSamp[popInd-1];
     mu = expit(eta+mu);

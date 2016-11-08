@@ -1,11 +1,12 @@
 library(flowReMix)
+cummean <- function(x) cumsum(x) / 1:length(x)
 data(rv144)
 #set.seed(502)
 set.seed(504)
 par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 leaves <- unique(data$population)
-data <- subset(data, population %in% leaves[c(1:7)])
+data <- subset(data, population %in% leaves[c(1:3, 5:7)])
 data <- subset(data, stim != "sebctrl")
 data$treatment <- as.numeric(data$stim == "env")
 data$ptid <- as.numeric(data$ptid)
@@ -22,7 +23,7 @@ mixtureFitList <- by(data, data$population, function(X)
                                              treatment = treatment,
                                              data = X,
                                              tol = 0.01,
-                                             maxiter = 20,
+                                             maxiter = 1,
                                              nAGQ = 1))
 # Getting list of Coefficients
 coefficientList <- lapply(mixtureFitList, function(x) x$beta)
@@ -40,7 +41,7 @@ round(covariance, 3)
 round(cov2cor(covariance), 3)
 
 # Computing new posterior porbabilities
-maxIter=50
+maxIter <- 30
 vaccines <- sapply(databyid, function(x) x$vaccine[1] == "VACCINE")
 muMat <- lapply(mixtureFitList, function(x) x$mu[, 4:5])
 muMat <- do.call("rbind", muMat)
@@ -64,8 +65,9 @@ clusterAssignments <- numeric(nSubjects)
 rate <- 1
 lastMean <- randomEffects
 iterCoefMat <- matrix(ncol = length(mixtureFitList), nrow = maxIter + 1)
+accept <- 0
 for(iter in 1:maxIter) {
-  nsamp <- 50 + iter
+  nsamp <- 100 + iter
   logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
   zSamp <- matrix(rnorm(nsamp * ncol(randomEffects)), nrow = ncol(randomEffects))
   randomEffectSamp <- sqrtcov %*% zSamp
@@ -84,15 +86,19 @@ for(iter in 1:maxIter) {
         if(k == 1) {
           eta <- logit(subjectData$nullMu) - randEst[popInd]
           subjectData$nullEta <- eta
+          nullEta <- eta
         } else {
           eta <- logit(subjectData$altMu) - randEst[popInd]
           subjectData$altEta <- eta
+          altEta <- eta
         }
       } else {
         if(k == 1) {
           eta <- subjectData$nullEta
+          nullEta <- eta
         } else {
           eta <- subjectData$altEta
+          altEta <- eta
         }
       }
       mu <- expit(eta+randSamp[popInd,]) #faster than expit(apply(randSamp, 2, function(x) eta + x[popInd])) and equivalent
@@ -126,7 +132,7 @@ for(iter in 1:maxIter) {
     unifs = runif(nsamp)
     # browser()
     # if(iter==2){stop();}
-    flowReMix:::MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, eta, i, popInd, invcov, accept, iter,rate, unifs);
+    flowReMix:::MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter,rate, unifs, nullEta, altEta);
     # for(k in 1:2) {
     #   currentSamp <- lastMean[2*i - 2 + k, ]
     #   mu <- expit(eta + currentSamp[popInd])
@@ -215,7 +221,7 @@ for(iter in 1:maxIter) {
   initCoef <- sapply(mixtureFitList, function(x) x$beta[[5]])
   iterCoefMat[1, ] <- initCoef
   print(round(cbind(iterCoef, currentCoef, initCoef), 3))
-  print(round(cov2cor(covariance), 3))
+  # print(round(cov2cor(covariance), 3))
   require(pROC)
   rocfit <- roc(vaccines ~ posteriors)
   print(plot(rocfit, main = round(rocfit$auc, 3)))
@@ -251,11 +257,12 @@ for(i in 1:length(mixtureFitList)) {
 }
 
 forPlot <- do.call("rbind", plotList)
+require(ggplot2)
 ggplot(forPlot) +
   geom_point(aes(x = ctrlprop, y = stimprop, col = posterior, shape = !vaccine), fill = "white") +
   theme_bw() + geom_abline(intercept = 0, slope = 1) +
   scale_colour_gradientn(colours=rainbow(4)) +
-  facet_wrap(~ population, scales = "free", ncol = 2)
+  facet_wrap(~ population, scales = "free", ncol = 3)
 
 par(mfrow = c(1, 2), mar = rep(3, 4))
 sprobs <- data.frame(posteriors, vaccine)
