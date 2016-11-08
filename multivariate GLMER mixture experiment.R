@@ -25,7 +25,6 @@ mixtureFitList <- by(data, data$population, function(X)
                                              maxiter = 20,
                                              nAGQ = 1))
 # Getting list of Coefficients
-set.seed(100)
 coefficientList <- lapply(mixtureFitList, function(x) x$beta)
 
 # Estimating covariance structure from marginal fits (step 0)
@@ -141,11 +140,11 @@ for(iter in 1:maxIter) {
     #       currentloglik <- newlogLik
     #       accept <- accept + 1
     #     }
-    #   }
     #   # cat("Accepted ",accept," on subject ",i,"\n");
     #   lastMean[2*i - 2 + k, ] <- currentSamp
     #   currentEst <- estimatedRandomEffects[2*i - 2 + k, ]
     #   estimatedRandomEffects[2*i - 2 + k, ] <- currentEst + (currentSamp - currentEst) / (iter + 1.0)^rate
+    #   }
     # }
 
     subjectData$randomOffset <- lastMean[2*i - 2 + cluster, ]
@@ -200,7 +199,7 @@ for(iter in 1:maxIter) {
 
   weights <- as.vector(sapply(posteriors, function(x) c(1 - x, x)))
   covariance <- cov.wt(estimatedRandomEffects, weights, center = FALSE)$cov
-  print(covariance)
+  # print(covariance)
   invcov <- solve(covariance)
   covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
 
@@ -215,8 +214,8 @@ for(iter in 1:maxIter) {
   currentCoef <- sapply(coefficientList, function(x) x[[5]])
   initCoef <- sapply(mixtureFitList, function(x) x$beta[[5]])
   iterCoefMat[1, ] <- initCoef
-  # print(round(cbind(iterCoef, currentCoef, initCoef), 3))
-  #print(round(cov2cor(covariance), 3))
+  print(round(cbind(iterCoef, currentCoef, initCoef), 3))
+  print(round(cov2cor(covariance), 3))
   require(pROC)
   rocfit <- roc(vaccines ~ posteriors)
   print(plot(rocfit, main = round(rocfit$auc, 3)))

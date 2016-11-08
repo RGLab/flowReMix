@@ -38,6 +38,7 @@ void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects, const Num
     NumericVector currentSamp = lastMean(2*I + k,_);
     mu = currentSamp[popInd-1];
     mu = expit(eta+mu);
+
     arma::vec dev = arma::vec(currentSamp.begin(),currentSamp.length(),true);
     currentlogLik = sum(dbinom_vec(y, N, mu)) - 0.5 * dev.t() * invcov * dev;
     for(j=0;j<randomEffectSamp.ncol();j++){
@@ -53,12 +54,12 @@ void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects, const Num
         currentlogLik = newlogLik;
         accept(0) = accept(0)+1;
       }
+      lastMean(2*I + k,_) = currentSamp;
+      NumericVector currentEst = estimatedRandomEffects(2*I + k,_);
+      estimatedRandomEffects(2*I + k,_) = currentEst + ((currentSamp - currentEst) / (iter + 1.0));
     }
     // Rprintf("Accepted %d on subject %d\n",accept,I);
-    lastMean(2*I + k,_) = currentSamp;
-    NumericVector currentEst = estimatedRandomEffects(2*I + k,_);
-    estimatedRandomEffects(2*I + k,_) = currentEst + ((currentSamp - currentEst) / (iter + 1.0));
-  }
+   }
 }
 
 // [[Rcpp::export]]
