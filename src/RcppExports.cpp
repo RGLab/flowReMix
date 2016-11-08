@@ -7,11 +7,10 @@
 using namespace Rcpp;
 
 // MH
-void MH(const List randomSampList, NumericMatrix lastMean, NumericMatrix estimatedRandomEffects, const NumericVector y, const NumericVector N, const NumericMatrix randomEffectSamp, const NumericVector eta, const int i, IntegerVector popInd, arma::mat invcov, NumericVector accept, double iter, double rate);
-RcppExport SEXP flowReMix_MH(SEXP randomSampListSEXP, SEXP lastMeanSEXP, SEXP estimatedRandomEffectsSEXP, SEXP ySEXP, SEXP NSEXP, SEXP randomEffectSampSEXP, SEXP etaSEXP, SEXP iSEXP, SEXP popIndSEXP, SEXP invcovSEXP, SEXP acceptSEXP, SEXP iterSEXP, SEXP rateSEXP) {
+void MH(NumericMatrix lastMean, NumericMatrix estimatedRandomEffects, const NumericVector y, const NumericVector N, const NumericMatrix randomEffectSamp, const NumericVector eta, const int i, IntegerVector popInd, arma::mat invcov, NumericVector accept, double iter, double rate, NumericVector unifs);
+RcppExport SEXP flowReMix_MH(SEXP lastMeanSEXP, SEXP estimatedRandomEffectsSEXP, SEXP ySEXP, SEXP NSEXP, SEXP randomEffectSampSEXP, SEXP etaSEXP, SEXP iSEXP, SEXP popIndSEXP, SEXP invcovSEXP, SEXP acceptSEXP, SEXP iterSEXP, SEXP rateSEXP, SEXP unifsSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List >::type randomSampList(randomSampListSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type lastMean(lastMeanSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type estimatedRandomEffects(estimatedRandomEffectsSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type y(ySEXP);
@@ -24,7 +23,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type accept(acceptSEXP);
     Rcpp::traits::input_parameter< double >::type iter(iterSEXP);
     Rcpp::traits::input_parameter< double >::type rate(rateSEXP);
-    MH(randomSampList, lastMean, estimatedRandomEffects, y, N, randomEffectSamp, eta, i, popInd, invcov, accept, iter, rate);
+    Rcpp::traits::input_parameter< NumericVector >::type unifs(unifsSEXP);
+    MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, eta, i, popInd, invcov, accept, iter, rate, unifs);
     return R_NilValue;
+END_RCPP
+}
+// zero
+NumericVector zero(NumericVector accept);
+RcppExport SEXP flowReMix_zero(SEXP acceptSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type accept(acceptSEXP);
+    rcpp_result_gen = Rcpp::wrap(zero(accept));
+    return rcpp_result_gen;
 END_RCPP
 }

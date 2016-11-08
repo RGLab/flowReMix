@@ -25,6 +25,7 @@ mixtureFitList <- by(data, data$population, function(X)
                                              maxiter = 20,
                                              nAGQ = 1))
 # Getting list of Coefficients
+set.seed(100)
 coefficientList <- lapply(mixtureFitList, function(x) x$beta)
 
 # Estimating covariance structure from marginal fits (step 0)
@@ -69,7 +70,7 @@ for(iter in 1:maxIter) {
   logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
   zSamp <- matrix(rnorm(nsamp * ncol(randomEffects)), nrow = ncol(randomEffects))
   randomEffectSamp <- sqrtcov %*% zSamp
-  accept <- 0
+  accept = flowReMix:::zero(accept)
   for(i in 1:nSubjects) {
     # Computing Posterior Probabilities (Step 1a)
     subjectData <- databyid[[i]]
@@ -77,7 +78,6 @@ for(iter in 1:maxIter) {
     N <- subjectData$parentcount
     y <- subjectData$count
     prop <- y/N
-    accept <- 0
     for(k in 1:2) {
       randEst <- estimatedRandomEffects[2*i - 2 + k, ]
       randSamp <- randomEffectSamp+randEst #faster Sampapply(randomEffectSamp, 2, function(x) x + randEst)
@@ -124,37 +124,34 @@ for(iter in 1:maxIter) {
     # Performing MH step
     # This loop *may* be faster in C but it's hard to tell.. there's not that much sampling going on and gains may be lost due to the overhead of calling out.
     # This is the loop below implemented directly in C++. No real optimization was done yet, just a direct translation.
-    browser()
-    flowReMix:::MH(randomSampList, lastMean, estimatedRandomEffects, y, N, randomEffectSamp, eta, i, popInd, invcov, accept, iter,rate);
-    for(k in 1:2) {
-      randomSamp <- randomSampList[[k]]
-      currentSamp <- lastMean[2*i - 2 + k, ]
-      randEst <- estimatedRandomEffects[2*i - 2 + k, ]
-      mu <- expit(eta + currentSamp[popInd])
-      dev = currentSamp - randEst
-      currentloglik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
-      for(j in 1:ncol(randomEffectSamp)) {
-        newSamp <- randomEffectSamp[, j] + currentSamp
-        mu <- expit(eta + newSamp[popInd])
-        dev = newSamp - randEst
-        newlogLik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
-
-        if(runif(1) < exp(newlogLik - currentloglik)) {
-          currentSamp <- newSamp
-          currentloglik <- newlogLik
-          accept <- accept + 1
-        }
-      }
-      lastMean[2*i - 2 + k, ] <- currentSamp
-      currentEst <- estimatedRandomEffects[2*i - 2 + k, ]
-      estimatedRandomEffects[2*i - 2 + k, ] <- currentEst + (currentSamp - currentEst) / (iter + 1.0)^rate
-    }
+    unifs = runif(nsamp)
+    # browser()
+    # if(iter==2){stop();}
+    flowReMix:::MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, eta, i, popInd, invcov, accept, iter,rate, unifs);
+    # for(k in 1:2) {
+    #   currentSamp <- lastMean[2*i - 2 + k, ]
+    #   mu <- expit(eta + currentSamp[popInd])
+    #   currentloglik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(currentSamp) %*% invcov %*% (currentSamp)
+    #   for(j in 1:ncol(randomEffectSamp)) {
+    #     newSamp <- randomEffectSamp[, j] + currentSamp
+    #     mu <- expit(eta + newSamp[popInd])
+    #     newlogLik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(newSamp) %*% invcov %*% (newSamp)
+    #     if(unifs[j] < exp(newlogLik - currentloglik)) {
+    #       currentSamp <- newSamp
+    #       currentloglik <- newlogLik
+    #       accept <- accept + 1
+    #     }
+    #   }
+    #   # cat("Accepted ",accept," on subject ",i,"\n");
+    #   lastMean[2*i - 2 + k, ] <- currentSamp
+    #   currentEst <- estimatedRandomEffects[2*i - 2 + k, ]
+    #   estimatedRandomEffects[2*i - 2 + k, ] <- currentEst + (currentSamp - currentEst) / (iter + 1.0)^rate
+    # }
 
     subjectData$randomOffset <- lastMean[2*i - 2 + cluster, ]
     #subjectData$randomOffset <- estimatedRandomEffects[2*i - 2 + cluster, ]
     databyid[[i]] <- subjectData
   }
-
   # Refitting Model with current means
   dataForGlm <- data.frame(data.table::rbindlist(databyid)) # much faster than:  do.call("rbind", databyid)
   dataByPopulation <- by(dataForGlm, dataForGlm$population, function(x) x)
@@ -180,7 +177,8 @@ for(iter in 1:maxIter) {
   databyid <- with(databyid, databyid[order(population, ptid, stim, decreasing = FALSE), ])
   databyid <- by(databyid, databyid$ptid, function(x) x)
 
-  acceptRate <- accept / (nsamp * nSubjects)
+  acceptRate <- accept / (2*nsamp * nSubjects)
+  # cat("acceptance rate: ",acceptRate,"\n")
   # Updating covariance
   if(iter == 1) {
     sampCoef <- 0.1
@@ -202,12 +200,13 @@ for(iter in 1:maxIter) {
 
   weights <- as.vector(sapply(posteriors, function(x) c(1 - x, x)))
   covariance <- cov.wt(estimatedRandomEffects, weights, center = FALSE)$cov
+  print(covariance)
   invcov <- solve(covariance)
   covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
 
   levelProbs[2] <- mean(posteriors)
   levelProbs[1] <- 1 - levelProbs[2]
-  print(c(iter, sampCoef, accept / (nsamp * nSubjects)))
+  print(c(iter, sampCoef, accept / (2*nsamp * nSubjects)))
   print(levelProbs)
 
   # Some Diagnostics/Outputs
@@ -216,7 +215,7 @@ for(iter in 1:maxIter) {
   currentCoef <- sapply(coefficientList, function(x) x[[5]])
   initCoef <- sapply(mixtureFitList, function(x) x$beta[[5]])
   iterCoefMat[1, ] <- initCoef
-  print(round(cbind(iterCoef, currentCoef, initCoef), 3))
+  # print(round(cbind(iterCoef, currentCoef, initCoef), 3))
   #print(round(cov2cor(covariance), 3))
   require(pROC)
   rocfit <- roc(vaccines ~ posteriors)

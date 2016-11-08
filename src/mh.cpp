@@ -20,50 +20,51 @@ void print(NumericVector x){
 NumericVector dbinom_vec(NumericVector y, NumericVector N, NumericVector mu){
   NumericVector v(y.length());
   for(int i=0;i<mu.length();++i){
-    v(i) = Rf_dbinom(y(i),N(i),mu(i),true);
+    v(i) = Rf_dbinom(y(i),N(i),mu(i),1);
   }
   return(v);
 }
 
 // [[Rcpp::export]]
-void MH(const List randomSampList,  NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects, const NumericVector y,const  NumericVector N, const NumericMatrix randomEffectSamp, const NumericVector eta, const int i, IntegerVector popInd,  arma::mat invcov,  NumericVector accept,double iter,double rate) {
+void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects, const NumericVector y,const  NumericVector N, const NumericMatrix randomEffectSamp, const NumericVector eta, const int i, IntegerVector popInd,  arma::mat invcov,  NumericVector accept,double iter,double rate, NumericVector unifs) {
   int k = 0;
   NumericVector diff;
   int j = 0;
   int I = 0;
   I = i-1;
-  NumericVector randomSamp;
   NumericVector mu;
   NumericVector currentlogLik, newlogLik;
   for(k = 0; k < 2; k++){
-    randomSamp = randomSampList[k];
     NumericVector currentSamp = lastMean(2*I + k,_);
-    NumericVector randEst = estimatedRandomEffects(2*I + k,_);
     mu = currentSamp[popInd-1];
     mu = expit(eta+mu);
-    NumericVector devr = currentSamp - randEst;
-    arma::vec dev = arma::vec(devr.begin(),devr.length(),false);
+    arma::vec dev = arma::vec(currentSamp.begin(),currentSamp.length(),true);
     currentlogLik = sum(dbinom_vec(y, N, mu)) - 0.5 * dev.t() * invcov * dev;
     for(j=0;j<randomEffectSamp.ncol();j++){
       NumericVector newSamp = randomEffectSamp(_,j);
       newSamp = newSamp + currentSamp;
       mu = newSamp[popInd-1];
       mu = expit(eta + mu);
-      devr = newSamp - randEst;
-      dev = arma::vec(devr.begin(),devr.length(),false);
+      dev = arma::vec(newSamp.begin(),newSamp.length(),true);
       newlogLik = sum(dbinom_vec(y, N, mu)) - 0.5 * dev.t() * invcov * dev;
       diff = exp(newlogLik - currentlogLik);
-      if((runif(1))(0) < diff(0)) {
+      if(unifs(j) < diff(0)) {
         currentSamp = newSamp;
         currentlogLik = newlogLik;
-        accept = accept + 1;
+        accept(0) = accept(0)+1;
       }
     }
+    // Rprintf("Accepted %d on subject %d\n",accept,I);
     lastMean(2*I + k,_) = currentSamp;
     NumericVector currentEst = estimatedRandomEffects(2*I + k,_);
-    estimatedRandomEffects(2*I + k,_) = currentEst + (currentSamp - currentEst) / (iter + 1.0);
-    print(estimatedRandomEffects(2*I+k,_));
+    estimatedRandomEffects(2*I + k,_) = currentEst + ((currentSamp - currentEst) / (iter + 1.0));
   }
+}
+
+// [[Rcpp::export]]
+NumericVector zero(NumericVector accept){
+  accept(0)=0;
+  return(accept);
 }
 
 
