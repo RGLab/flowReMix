@@ -124,30 +124,31 @@ for(iter in 1:maxIter) {
     # Performing MH step
     # This loop *may* be faster in C but it's hard to tell.. there's not that much sampling going on and gains may be lost due to the overhead of calling out.
     # This is the loop below implemented directly in C++. No real optimization was done yet, just a direct translation.
+    browser()
     flowReMix:::MH(randomSampList, lastMean, estimatedRandomEffects, y, N, randomEffectSamp, eta, i, popInd, invcov, accept, iter,rate);
-    # for(k in 1:2) {
-    #   randomSamp <- randomSampList[[k]]
-    #   currentSamp <- lastMean[2*i - 2 + k, ]
-    #   randEst <- estimatedRandomEffects[2*i - 2 + k, ]
-    #   mu <- expit(eta + currentSamp[popInd])
-    #   dev = currentSamp - randEst
-    #   currentloglik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
-    #   for(j in 1:ncol(randomEffectSamp)) {
-    #     newSamp <- randomEffectSamp[, j] + currentSamp
-    #     mu <- expit(eta + newSamp[popInd])
-    #     dev = newSamp - randEst
-    #     newlogLik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
-    #     print(exp(newlogLik - currentloglik))
-    #     if(runif(1) < exp(newlogLik - currentloglik)) {
-    #       currentSamp <- newSamp
-    #       currentloglik <- newlogLik
-    #       accept <- accept + 1
-    #     }
-    #   }
-    #   lastMean[2*i - 2 + k, ] <- currentSamp
-    #   currentEst <- estimatedRandomEffects[2*i - 2 + k, ]
-    #   estimatedRandomEffects[2*i - 2 + k, ] <- currentEst + (currentSamp - currentEst) / (iter + 1.0)^rate
-    # }
+    for(k in 1:2) {
+      randomSamp <- randomSampList[[k]]
+      currentSamp <- lastMean[2*i - 2 + k, ]
+      randEst <- estimatedRandomEffects[2*i - 2 + k, ]
+      mu <- expit(eta + currentSamp[popInd])
+      dev = currentSamp - randEst
+      currentloglik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
+      for(j in 1:ncol(randomEffectSamp)) {
+        newSamp <- randomEffectSamp[, j] + currentSamp
+        mu <- expit(eta + newSamp[popInd])
+        dev = newSamp - randEst
+        newlogLik <- sum(dbinom(y, N, mu, log = TRUE)) - 0.5 * t(dev) %*% invcov %*% (dev)
+
+        if(runif(1) < exp(newlogLik - currentloglik)) {
+          currentSamp <- newSamp
+          currentloglik <- newlogLik
+          accept <- accept + 1
+        }
+      }
+      lastMean[2*i - 2 + k, ] <- currentSamp
+      currentEst <- estimatedRandomEffects[2*i - 2 + k, ]
+      estimatedRandomEffects[2*i - 2 + k, ] <- currentEst + (currentSamp - currentEst) / (iter + 1.0)^rate
+    }
 
     subjectData$randomOffset <- lastMean[2*i - 2 + cluster, ]
     #subjectData$randomOffset <- estimatedRandomEffects[2*i - 2 + cluster, ]

@@ -30,19 +30,21 @@ void MH(const List randomSampList,  NumericMatrix lastMean,  NumericMatrix estim
   int k = 0;
   NumericVector diff;
   int j = 0;
+  int I = 0;
+  I = i-1;
   NumericVector randomSamp;
   NumericVector mu;
   NumericVector currentlogLik, newlogLik;
-  for(k = 0; k < 2; ++k){
+  for(k = 0; k < 2; k++){
     randomSamp = randomSampList[k];
-    NumericVector currentSamp = lastMean(2*i - 2 + k,_);
-    NumericVector randEst = estimatedRandomEffects(2*i - 2 + k,_);
+    NumericVector currentSamp = lastMean(2*I + k,_);
+    NumericVector randEst = estimatedRandomEffects(2*I + k,_);
     mu = currentSamp[popInd-1];
     mu = expit(eta+mu);
     NumericVector devr = currentSamp - randEst;
     arma::vec dev = arma::vec(devr.begin(),devr.length(),false);
     currentlogLik = sum(dbinom_vec(y, N, mu)) - 0.5 * dev.t() * invcov * dev;
-    for(j=0;j<randomEffectSamp.ncol();++j){
+    for(j=0;j<randomEffectSamp.ncol();j++){
       NumericVector newSamp = randomEffectSamp(_,j);
       newSamp = newSamp + currentSamp;
       mu = newSamp[popInd-1];
@@ -57,9 +59,10 @@ void MH(const List randomSampList,  NumericMatrix lastMean,  NumericMatrix estim
         accept = accept + 1;
       }
     }
-    lastMean(2*i - 2 + k,_) = currentSamp;
-    NumericVector currentEst = estimatedRandomEffects(2*i - 2 + k,_);
-    estimatedRandomEffects(2*i - 2 + k,_) = currentEst + (currentSamp - currentEst) / pow((iter + 1.0),rate);
+    lastMean(2*I + k,_) = currentSamp;
+    NumericVector currentEst = estimatedRandomEffects(2*I + k,_);
+    estimatedRandomEffects(2*I + k,_) = currentEst + (currentSamp - currentEst) / (iter + 1.0);
+    print(estimatedRandomEffects(2*I+k,_));
   }
 }
 
