@@ -6,7 +6,9 @@ set.seed(504)
 par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 leaves <- unique(data$population)
-data <- subset(data, population %in% leaves[c(1:3, 5:7)])
+selected_populations = c(1:3,7)
+data <- subset(data, population %in% leaves[selected_populations])
+data$population=factor(data$population)
 data <- subset(data, stim != "sebctrl")
 data$treatment <- as.numeric(data$stim == "env")
 data$ptid <- as.numeric(data$ptid)
@@ -67,7 +69,7 @@ lastMean <- randomEffects
 iterCoefMat <- matrix(ncol = length(mixtureFitList), nrow = maxIter + 1)
 accept <- 0
 for(iter in 1:maxIter) {
-  nsamp <- 100 + iter
+  nsamp <- 50 + iter
   logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
   zSamp <- matrix(rnorm(nsamp * ncol(randomEffects)), nrow = ncol(randomEffects))
   randomEffectSamp <- sqrtcov %*% zSamp
@@ -284,9 +286,9 @@ print(plot(rocfit, main = round(rocfit$auc, 3)))
 
 require(xtable)
 covTable <- xtable(covariance, digits = 2)
-names(covTable) <- 1:7
+names(covTable) <- 1:nlevels(data$population)
 #names(covTable) <- leaves[1:7]
 corMat <- cov2cor(covariance)
 corTable <- xtable(corMat, digits = 2)
-rownames(corTable) <- leaves[1:7]
+rownames(corTable) <- leaves[selected_populations]
 
