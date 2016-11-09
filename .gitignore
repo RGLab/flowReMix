@@ -1,3 +1,5 @@
+.Rbuildignore
+.Rhistory
 data/rv144.rda
 data/malaria.rda
 data-raw/*
