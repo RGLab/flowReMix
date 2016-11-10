@@ -39,33 +39,23 @@ computeGmmWeights <- function(dat, randomsd, nsamp = 20, levelProbs) {
 #' @name glmmMixture
 #' @export
 glmmMixture <- function(formula, sub.population = NULL,
-                                 N = NULL, id, waves,
+                                 N = NULL, id,
                                  data = parent.frame(),
                                  treatment,
-                                 treatment.levels = 2,
-                                 compute.offset = TRUE,
                                  weights = NULL,
-                                 init.beta = NULL,
-                                 init.rho = 0,
-                                 rho.fixed = FALSE,
-                                 shrinkage.folds = 5,
                                  maxiter = 100, tol = 1e-03,
-                                 nAGQ = 1,
-                                 computeT = FALSE,
-                                 shrink.sandwich = TRUE) {
+                                 nAGQ = 1) {
   #### Some checks
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
     stop("Treatment variable must be specified!")
-  }
-  if(treatment.levels != round(treatment.levels) | treatment.levels < 1) {
-    stop("treatment.levels must be a positive integer > 1.")
   }
 
   #### Getting all relevant variables from call
   # Getting model frame
   dat <- model.frame(formula, data, na.action=na.pass)
   n <- dim(dat)[1]
+  treatment.levels <- 2
 
   # Getting id, waves, weights and treatment variable
   if(typeof(data) == "environment"){
@@ -246,7 +236,6 @@ glmmMixture <- function(formula, sub.population = NULL,
   idIndex <- lapply(uniqueID,function(x) which(id == x))
   levelsPerObs <- augmentedData$treatmentLevel
 
-  rho <- init.rho
   waves <- augmentedData$waves
   uniqueWaves <- unique(waves)
   nUniqueWaves <- length(unique(waves))

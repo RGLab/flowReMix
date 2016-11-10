@@ -6,7 +6,7 @@ set.seed(504)
 par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 leaves <- unique(data$population)
-selected_populations = c(1:3,7)
+selected_populations = c(1:3, 7)
 data <- subset(data, population %in% leaves[selected_populations])
 data$population=factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -44,13 +44,12 @@ round(cov2cor(covariance), 3)
 
 # Computing new posterior porbabilities
 maxIter <- 30
-vaccines <- sapply(databyid, function(x) x$vaccine[1] == "VACCINE")
 muMat <- lapply(mixtureFitList, function(x) x$mu[, 4:5])
 muMat <- do.call("rbind", muMat)
 data$nullMu <- muMat$nullMu
 data$altMu <- muMat$altMu
-data$subpopInd <- as.numeric(data$population)
 databyid <- by(data, data$ptid, function(x) x)
+data$subpopInd <- as.numeric(data$population)
 nSubjects <- length(unique(data$ptid))
 sampCoef <- 0.00001
 sampcov <- sampCoef * covariance
@@ -281,7 +280,7 @@ plot(uniqueNominal, empFDR, type = "l", xlim = c(0, lim), ylim = c(0, 1), col = 
 abline(a = 0, b = 1)
 lines(uniqueNominal, power, col = "blue", lty = 2)
 legend("topright", col = c("red", "blue"), lty = 1:2, legend = c("FDR", "Power"))
-abline(v = c(.01, .05, .1), h = c(.75, .9, .95), col = "grey")
+abline(v = c(.01, .05, .1), h = c(.75, .8, .85), col = "grey")
 print(plot(rocfit, main = round(rocfit$auc, 3)))
 
 require(xtable)
@@ -291,4 +290,15 @@ names(covTable) <- 1:nlevels(data$population)
 corMat <- cov2cor(covariance)
 corTable <- xtable(corMat, digits = 2)
 rownames(corTable) <- leaves[selected_populations]
+
+flowRegressionMixture(count ~ age + gender + treatment,
+            sub.population = factor(data$population),
+            N = parentcount, id =  ptid,
+            data = data,
+            treatment = treatment,
+            weights = NULL,
+            maxIter = 30, tol = 1e-03)
+
+
+
 

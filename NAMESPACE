@@ -3,5 +3,6 @@
 export(expit)
 export(glmmMixture)
 export(logit)
+export(flowRegressionMixture)
 importFrom(Rcpp,sourceCpp)
 useDynLib(flowReMix)
