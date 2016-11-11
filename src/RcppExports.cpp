@@ -7,8 +7,8 @@
 using namespace Rcpp;
 
 // MH
-void MH(NumericMatrix lastMean, NumericMatrix estimatedRandomEffects, const NumericVector y, const NumericVector N, const NumericMatrix randomEffectSamp, const int i, IntegerVector popInd, arma::mat invcov, NumericVector accept, double iter, double rate, NumericVector unifs, const NumericVector nullEta, const NumericVector altEta);
-RcppExport SEXP flowReMix_MH(SEXP lastMeanSEXP, SEXP estimatedRandomEffectsSEXP, SEXP ySEXP, SEXP NSEXP, SEXP randomEffectSampSEXP, SEXP iSEXP, SEXP popIndSEXP, SEXP invcovSEXP, SEXP acceptSEXP, SEXP iterSEXP, SEXP rateSEXP, SEXP unifsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP) {
+void MH(NumericMatrix lastMean, NumericMatrix estimatedRandomEffects, const NumericVector y, const NumericVector N, const NumericMatrix randomEffectSamp, const int i, IntegerVector popInd, arma::mat invcov, NumericVector accept, double iter, double rate, NumericVector unifs, const NumericVector nullEta, const NumericVector altEta, double updateLag);
+RcppExport SEXP flowReMix_MH(SEXP lastMeanSEXP, SEXP estimatedRandomEffectsSEXP, SEXP ySEXP, SEXP NSEXP, SEXP randomEffectSampSEXP, SEXP iSEXP, SEXP popIndSEXP, SEXP invcovSEXP, SEXP acceptSEXP, SEXP iterSEXP, SEXP rateSEXP, SEXP unifsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP updateLagSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< NumericMatrix >::type lastMean(lastMeanSEXP);
@@ -25,7 +25,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type unifs(unifsSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type nullEta(nullEtaSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type altEta(altEtaSEXP);
-    MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter, rate, unifs, nullEta, altEta);
+    Rcpp::traits::input_parameter< double >::type updateLag(updateLagSEXP);
+    MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter, rate, unifs, nullEta, altEta, updateLag);
     return R_NilValue;
 END_RCPP
 }

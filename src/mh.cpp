@@ -31,7 +31,8 @@ void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects,
         const NumericMatrix randomEffectSamp,
         const int i, IntegerVector popInd,  arma::mat invcov,
         NumericVector accept,double iter,double rate, NumericVector unifs,
-        const NumericVector nullEta, const NumericVector altEta) {
+        const NumericVector nullEta, const NumericVector altEta,
+        double updateLag) {
   int k = 0;
   NumericVector diff;
   int j = 0;

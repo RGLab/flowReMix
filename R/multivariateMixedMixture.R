@@ -3,6 +3,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
                                   data = parent.frame(),
                                   treatment,
                                   weights = NULL,
+                                  updateLag = 5,
                                   rate = 1, nsamp = 100,
                                   maxIter = 30, tol = 1e-03) {
   call <- as.list(match.call())
@@ -153,7 +154,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   nSubjects <- length(unique(dat$id))
   levelProbs <- c(0.5, 0.5)
   nSubsets <- length(glmFits)
-  randomEffects <- do.call("cbind", sapply(glmFits, function(x) ranef(x)))
+  randomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
   randomEffects <- apply(randomEffects, 2, function(c) sapply(c, function(x) rep(x, 2)))
   covariance <- cov(randomEffects)
 
@@ -183,7 +184,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
     if(iter > 1) {
       glmFits <- lapply(dataByPopulation, function(popdata)
         glm(glmformula, family = "binomial", data = popdata, weights = weights))
-      coefficientList <- mapply(function(coef, fit) coef + (coef(fit) - coef)/(iter)^rate,
+      coefficientList <- mapply(function(coef, fit) coef + (coef(fit) - coef)/max(iter - updateLag, 1)^rate,
                                 coefficientList, glmFits, SIMPLIFY = FALSE)
     }
 
@@ -196,8 +197,8 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       newAltEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
       nullEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$nullEta)
       altEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$altEta)
-      dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - 4, 1)^rate
-      dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - 4, 1)^rate
+      dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - updateLag, 1)^rate
+      dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - updateLag, 1)^rate
     }
 
     databyid <- do.call("rbind", dataByPopulation)
@@ -237,7 +238,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       posterior <- rowSums(exp(logLikelihoods - max(logLikelihoods)))
       posterior <-  1/(1 + posterior[1] / posterior[2])
       if(is.nan(posterior)) posterior <- 0
-      posteriors[i] <- posteriors[i] + (posterior - posteriors[i]) / max(iter - 4, 1)^rate
+      posteriors[i] <- posteriors[i] + (posterior - posteriors[i]) / max(iter - updateLag, 1)^rate
 
       # Sampling cluster assignment
       cluster <- 1 + rbinom(1, 1, posteriors[i])
@@ -246,7 +247,8 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
 
       # Performing MH step
       unifs = runif(nsamp)
-      flowReMix:::MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter,rate, unifs, nullEta, altEta);
+      flowReMix:::MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov,
+                     accept, iter,rate, unifs, nullEta, altEta, updateLag);
 
       subjectData$randomOffset <- lastMean[2*i - 2 + cluster, ]
       databyid[[i]] <- subjectData

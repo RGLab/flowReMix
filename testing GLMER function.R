@@ -22,7 +22,7 @@ fit <- flowRegressionMixture(count ~  treatment,
                       data = data,
                       treatment = treatment,
                       weights = NULL,
-                      rate = 1,
+                      rate = 1, updateLag = 5,
                       nsamp = 100,
                       maxIter = 50, tol = 1e-03)
 
