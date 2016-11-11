@@ -297,7 +297,8 @@ flowRegressionMixture(count ~ age + gender + treatment,
             data = data,
             treatment = treatment,
             weights = NULL,
-            maxIter = 30, tol = 1e-03)
+            rate = 1,
+            maxIter = 50, tol = 1e-03)
 
 
 

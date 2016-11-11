@@ -3,6 +3,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
                                   data = parent.frame(),
                                   treatment,
                                   weights = NULL,
+                                  rate = 1,
                                   maxIter = 30, tol = 1e-03) {
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
@@ -175,11 +176,9 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   randomSampList <- lapply(1:2, function(x) x)
   posteriors <- numeric(nSubjects)
   clusterAssignments <- numeric(nSubjects)
-  rate <- 1
   lastMean <- randomEffects
   iterCoefMat <- matrix(ncol = length(mixtureFitList), nrow = maxIter + 1)
   accept <- 0
-
   for(iter in 1:maxIter) {
     nsamp <- 100 + iter
     logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
