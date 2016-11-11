@@ -3,7 +3,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
                                   data = parent.frame(),
                                   treatment,
                                   weights = NULL,
-                                  rate = 1,
+                                  rate = 1, nsamp = 100,
                                   maxIter = 30, tol = 1e-03) {
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
@@ -132,38 +132,35 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   uniqueSubpop <- sort(unique(subpopInd))
   dat$subpopInd <- subpopInd
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
+  initFormula <- update.formula(formula, cbind(y, N - y) ~ . + (1|id))
 
-  mixtureFitList <- by(dat, dat$sub.population, function(X)
-    glmmMixture(formula,
-                N = N,
-                id = id,
-                treatment = treatment,
-                data = X,
-                tol = 0.01,
-                maxiter = 1,
-                nAGQ = 1))
+#   mixtureFitList <- by(dat, dat$sub.population, function(X)
+#     glmmMixture(formula,
+#                 N = N,
+#                 id = id,
+#                 treatment = treatment,
+#                 data = X,
+#                 tol = 0.01,
+#                 maxiter = 1,
+#                 nAGQ = 1))
+  # coefficientList <- lapply(mixtureFitList, function(x) x$beta)
 
-  coefficientList <- lapply(mixtureFitList, function(x) x$beta)
+  glmFits <- by(dat, dat$sub.population, function(X) lme4::glmer(initFormula, family = "binomial", data = X))
+  coefficientList <- lapply(glmFits, function(x) colMeans(coef(x)[[1]]))
 
   # Estimating covariance structure from marginal fits (step 0)
-  randomEffects <- lapply(mixtureFitList, function(x) as.vector(x$randomEffectEst))
-  weights <- lapply(mixtureFitList, function(x) (x$subject.probs))
-  levelProbs <- colMeans(do.call("rbind", weights))
-  weights <- lapply(weights, function(x) as.vector(x))
-  weights <- do.call("cbind", weights)
-  weights <- rowMeans(weights)
-  randomEffects <- do.call("cbind", randomEffects)
-  covariance <- cov.wt(randomEffects, weights, center = FALSE)$cov
+  #randomEffects <- lapply(mixtureFitList, function(x) as.vector(x$randomEffectEst))
+  nSubjects <- length(unique(dat$id))
+  levelProbs <- c(0.5, 0.5)
+  nSubsets <- length(glmFits)
+  randomEffects <- do.call("cbind", sapply(glmFits, function(x) ranef(x)))
+  randomEffects <- apply(randomEffects, 2, function(c) sapply(c, function(x) rep(x, 2)))
+  covariance <- cov(randomEffects)
 
   # Computing new posterior porbabilities
   dat$tempTreatment <- dat$treatment
-  muMat <- lapply(mixtureFitList, function(x) x$mu[, 4:5])
-  muMat <- do.call("rbind", muMat)
-  dat$nullMu <- muMat$nullMu
-  dat$altMu <- muMat$altMu
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(data$population)
-  nSubjects <- length(unique(dat$id))
   sampCoef <- 0.00001
   sampcov <- sampCoef * covariance
   sqrtcov <- expm::sqrtm(sampcov)
@@ -174,13 +171,40 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   allPosteriors <- matrix(nrow = nSubjects, ncol = maxIter)
   estimatedRandomEffects <- randomEffects
   randomSampList <- lapply(1:2, function(x) x)
-  posteriors <- numeric(nSubjects)
+  posteriors <- rep(0.5, nSubjects)
   clusterAssignments <- numeric(nSubjects)
   lastMean <- randomEffects
   iterCoefMat <- matrix(ncol = length(mixtureFitList), nrow = maxIter + 1)
   accept <- 0
   for(iter in 1:maxIter) {
-    nsamp <- 100 + iter
+    # Refitting Model with current means
+    dataForGlm <- data.frame(data.table::rbindlist(databyid))
+    dataByPopulation <- by(dataForGlm, dataForGlm$sub.population, function(x) x)
+    if(iter > 1) {
+      glmFits <- lapply(dataByPopulation, function(popdata)
+        glm(glmformula, family = "binomial", data = popdata, weights = weights))
+      coefficientList <- mapply(function(coef, fit) coef + (coef(fit) - coef)/(iter)^rate,
+                                coefficientList, glmFits, SIMPLIFY = FALSE)
+    }
+
+    # Updating Prediction
+    for(j in 1:length(dataByPopulation)) {
+      dataByPopulation[[j]]$treatment <- 0
+      dataByPopulation[[j]]$randomOffset <- 0
+      newNullEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
+      dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
+      newAltEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
+      nullEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$nullEta)
+      altEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$altEta)
+      dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - 4, 1)^rate
+      dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - 4, 1)^rate
+    }
+
+    databyid <- do.call("rbind", dataByPopulation)
+    databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
+    databyid <- by(databyid, databyid$id, function(x) x)
+
+    nsamp <- nsamp + 1
     logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
     zSamp <- matrix(rnorm(nsamp * ncol(randomEffects)), nrow = ncol(randomEffects))
     randomEffectSamp <- sqrtcov %*% zSamp
@@ -195,24 +219,12 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       for(k in 1:2) {
         randEst <- estimatedRandomEffects[2*i - 2 + k, ]
         randSamp <- randomEffectSamp+randEst #faster Sampapply(randomEffectSamp, 2, function(x) x + randEst)
-        if(iter == 1) {
-          if(k == 1) {
-            eta <- logit(subjectData$nullMu) - randEst[popInd]
-            subjectData$nullEta <- eta
-            nullEta <- eta
-          } else {
-            eta <- logit(subjectData$altMu) - randEst[popInd]
-            subjectData$altEta <- eta
-            altEta <- eta
-          }
+        if(k == 1) {
+          eta <- subjectData$nullEta
+          nullEta <- eta
         } else {
-          if(k == 1) {
-            eta <- subjectData$nullEta
-            nullEta <- eta
-          } else {
-            eta <- subjectData$altEta
-            altEta <- eta
-          }
+          eta <- subjectData$altEta
+          altEta <- eta
         }
         mu <- expit(eta+randSamp[popInd,])
         binomLlik <- colSums(dbinom(y,N,mu,log=TRUE))
@@ -225,11 +237,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       posterior <- rowSums(exp(logLikelihoods - max(logLikelihoods)))
       posterior <-  1/(1 + posterior[1] / posterior[2])
       if(is.nan(posterior)) posterior <- 0
-      if(iter == 1) {
-        posteriors[i] <- posterior
-      } else if(iter > 1) {
-        posteriors[i] <- posteriors[i] + (posterior - posteriors[i]) / (iter)^rate
-      }
+      posteriors[i] <- posteriors[i] + (posterior - posteriors[i]) / max(iter - 4, 1)^rate
 
       # Sampling cluster assignment
       cluster <- 1 + rbinom(1, 1, posteriors[i])
@@ -243,30 +251,6 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       subjectData$randomOffset <- lastMean[2*i - 2 + cluster, ]
       databyid[[i]] <- subjectData
     }
-
-    # Refitting Model with current means
-    dataForGlm <- data.frame(data.table::rbindlist(databyid))
-    dataByPopulation <- by(dataForGlm, dataForGlm$sub.population, function(x) x)
-    glmFits <- lapply(dataByPopulation, function(popdata)
-      glm(glmformula, family = "binomial", data = popdata, weights = weights))
-    coefficientList <- mapply(function(coef, fit) coef + (coef(fit) - coef)/(iter)^rate,
-                              coefficientList, glmFits, SIMPLIFY = FALSE)
-    # Updating Prediction
-    for(j in 1:length(dataByPopulation)) {
-      dataByPopulation[[j]]$treatment <- 0
-      dataByPopulation[[j]]$randomOffset <- 0
-      newNullEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
-      dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
-      newAltEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
-      nullEta <- dataByPopulation[[j]]$nullEta
-      altEta <- dataByPopulation[[j]]$altEta
-      dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/(iter)^rate
-      dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/(iter)^rate
-    }
-
-    databyid <- do.call("rbind", dataByPopulation)
-    databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
-    databyid <- by(databyid, databyid$id, function(x) x)
 
     acceptRate <- accept / (2 * nsamp * nSubjects)
     # cat("acceptance rate: ",acceptRate,"\n")

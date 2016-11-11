@@ -67,7 +67,7 @@ void MH(NumericMatrix lastMean,  NumericMatrix estimatedRandomEffects,
       }
       lastMean(2*I + k,_) = currentSamp;
       NumericVector currentEst = estimatedRandomEffects(2*I + k,_);
-      estimatedRandomEffects(2*I + k,_) = currentEst + ((currentSamp - currentEst) / pow((iter + 1.0), rate));
+      estimatedRandomEffects(2*I + k,_) = currentEst + ((currentSamp - currentEst) / pow(std::max(iter - 5.0, 1.0), rate));
     }
     // Rprintf("Accepted %d on subject %d\n",accept,I);
    }
