@@ -301,16 +301,10 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
     print(levelProbs)
 
     # Some Diagnostics/Outputs
-    iterCoef <- sapply(glmFits, function(x) coef(x)[5])
-    iterCoefMat[iter + 1, ] <- iterCoef
-    currentCoef <- sapply(coefficientList, function(x) x[[5]])
-    initCoef <- sapply(mixtureFitList, function(x) x$beta[[5]])
-    iterCoefMat[1, ] <- initCoef
-    print(round(cbind(iterCoef, currentCoef, initCoef), 3))
-    # print(round(cov2cor(covariance), 3))
     require(pROC)
     rocfit <- roc(vaccines ~ posteriors)
     print(plot(rocfit, main = round(rocfit$auc, 3)))
+    print(cov2cor(covariance))
   }
 
   uniqueIDs <- sapply(databyid, function(x) x$id[1])

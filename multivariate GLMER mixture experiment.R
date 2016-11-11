@@ -291,7 +291,7 @@ corMat <- cov2cor(covariance)
 corTable <- xtable(corMat, digits = 2)
 rownames(corTable) <- leaves[selected_populations]
 
-flowRegressionMixture(count ~ age + gender + treatment,
+flowRegressionMixture(count ~  treatment,
             sub.population = factor(data$population),
             N = parentcount, id =  ptid,
             data = data,
