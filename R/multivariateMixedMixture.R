@@ -288,7 +288,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
 
     # Some Diagnostics/Outputs
     require(pROC)
-    rocfit <- roc(vaccines ~ posteriors)
+    rocfit <- roc(vaccine ~ posteriors)
     print(plot(rocfit, main = round(rocfit$auc, 3)))
     print(cov2cor(covariance))
   }
