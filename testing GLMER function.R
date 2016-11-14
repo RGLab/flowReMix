@@ -5,7 +5,7 @@ data(rv144)
 par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 leaves <- unique(data$population)
-selected_populations = c(1:3, 5:7)
+selected_populations = c(1:7)
 data <- subset(data, population %in% leaves[selected_populations])
 data$population=factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -16,20 +16,20 @@ data$prop <- data$count / data$parentcount
 data$population <- as.factor(data$population)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 
-fit <- flowRegressionMixture(count ~  treatment,
+system.time(fit <- flowRegressionMixture(count ~  treatment,
                       sub.population = factor(data$population),
                       N = parentcount, id =  ptid,
                       data = data,
                       treatment = treatment,
                       weights = NULL,
                       rate = 1, updateLag = 5,
-                      nsamp = 100,
-                      maxIter = 50, tol = 1e-03)
+                      nsamp = 200,
+                      maxIter = 40, tol = 1e-03))
 
 # Facet Wrap Plot! ---------------------------
 posteriors <- fit$posteriors[, 3]
 populations <- unique(data$population)
-plotList <- lapply(1:length(mixtureFitList), function(x) x)
+plotList <- lapply(1:length(selected_populations), function(x) x)
 for(i in 1:length(populations)) {
   tempdat <- subset(data, population == populations[i])
   prop <- log(tempdat$count / tempdat$parentcount)
@@ -47,9 +47,37 @@ ggplot(forPlot) +
   geom_point(aes(x = ctrlprop, y = stimprop, col = posterior, shape = !vaccine), fill = "white") +
   theme_bw() + geom_abline(intercept = 0, slope = 1) +
   scale_colour_gradientn(colours=rainbow(4)) +
-  facet_wrap(~ population, scales = "free", ncol = 2)
+  facet_wrap(~ population, scales = "free", ncol = 4)
 
 
+par(mfrow = c(1, 2), mar = rep(3, 4))
+sprobs <- data.frame(posteriors, vaccine)
+sprobs <- sprobs[order(posteriors, decreasing = TRUE), ]
+sprobs$nominalFDR <- cummean(1 - sprobs$posteriors)
+sprobs$empFDR <- cummean(1 - sprobs$vaccine)
+sprobs$power <- cumsum(sprobs$vaccine) / sum(sprobs$vaccine)
+uniqueNominal <- unique(sprobs$nominalFDR)
+empFDR <- sapply(uniqueNominal, function(x) sprobs$empFDR[max(which(sprobs$nominalFDR == x))])
+power <- sapply(uniqueNominal, function(x) sprobs$power[max(which(sprobs$nominalFDR == x))])
+lim <- max(c(empFDR, uniqueNominal))
+plot(uniqueNominal, empFDR, type = "l", xlim = c(0, lim), ylim = c(0, 1), col = "red",
+     xlab = "nominal FDR", ylab = "Empirical FDR / Power")
+abline(a = 0, b = 1)
+lines(uniqueNominal, power, col = "blue", lty = 2)
+legend("topright", col = c("red", "blue"), lty = 1:2, legend = c("FDR", "Power"))
+abline(v = c(.01, .05, .1), h = c(.75, .9, .95), col = "grey")
+rocfit <- roc(vaccine ~ posteriors)
+print(plot(rocfit, main = round(rocfit$auc, 3)))
+
+covariance <- fit$covariance
+require(xtable)
+covTable <- xtable(covariance, digits = 2)
+names(covTable) <- 1:nlevels(data$population)
+rownames(covTable) <- leaves[c(1:3,5:7)]
+corMat <- cov2cor(covariance)
+corTable <- xtable(corMat, digits = 2)
+names(corTable) <- 1:ncol(corTable)
+rownames(corTable) <- leaves[c(1:3,5:7)]
 
 
 

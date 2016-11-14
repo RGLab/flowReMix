@@ -290,16 +290,3 @@ names(covTable) <- 1:nlevels(data$population)
 corMat <- cov2cor(covariance)
 corTable <- xtable(corMat, digits = 2)
 rownames(corTable) <- leaves[selected_populations]
-
-fit <- flowRegressionMixture(count ~  treatment,
-            sub.population = factor(data$population),
-            N = parentcount, id =  ptid,
-            data = data,
-            treatment = treatment,
-            weights = NULL,
-            rate = 1,
-            maxIter = 50, tol = 1e-03)
-
-
-
-
