@@ -1,9 +1,17 @@
+sqrtMat <- function(X) {
+  if(length(X) > 1) {
+    return(expm::sqrtm(X))
+  } else {
+    return(matrix(sqrt(X)))
+  }
+}
+
 flowRegressionMixture <- function(formula, sub.population = NULL,
                                   N = NULL, id,
                                   data = parent.frame(),
                                   treatment,
                                   weights = NULL,
-                                  updateLag = 5,
+                                  updateLag = 3,
                                   rate = 1, nsamp = 100,
                                   maxIter = 30, tol = 1e-03) {
   call <- as.list(match.call())
@@ -135,22 +143,10 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
   initFormula <- update.formula(formula, cbind(y, N - y) ~ . + (1|id))
 
-#   mixtureFitList <- by(dat, dat$sub.population, function(X)
-#     glmmMixture(formula,
-#                 N = N,
-#                 id = id,
-#                 treatment = treatment,
-#                 data = X,
-#                 tol = 0.01,
-#                 maxiter = 1,
-#                 nAGQ = 1))
-  # coefficientList <- lapply(mixtureFitList, function(x) x$beta)
-
   glmFits <- by(dat, dat$sub.population, function(X) lme4::glmer(initFormula, family = "binomial", data = X))
   coefficientList <- lapply(glmFits, function(x) colMeans(coef(x)[[1]]))
 
   # Estimating covariance structure from marginal fits (step 0)
-  #randomEffects <- lapply(mixtureFitList, function(x) as.vector(x$randomEffectEst))
   nSubjects <- length(unique(dat$id))
   levelProbs <- c(0.5, 0.5)
   nSubsets <- length(glmFits)
@@ -164,7 +160,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   dat$subpopInd <- as.numeric(data$population)
   sampCoef <- 0.00001
   sampcov <- sampCoef * covariance
-  sqrtcov <- expm::sqrtm(sampcov)
+  sqrtcov <- sqrtMat(sampcov)
   invcov <- solve(covariance)
   invSampcov <- solve(sampcov)
   covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
@@ -175,7 +171,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   posteriors <- rep(0.5, nSubjects)
   clusterAssignments <- numeric(nSubjects)
   lastMean <- randomEffects
-  iterCoefMat <- matrix(ncol = length(mixtureFitList), nrow = maxIter + 1)
+  iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
   accept <- 0
   for(iter in 1:maxIter) {
     # Refitting Model with current means
@@ -205,7 +201,6 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
     databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
     databyid <- by(databyid, databyid$id, function(x) x)
 
-    nsamp <- nsamp + 1
     logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
     zSamp <- matrix(rnorm(nsamp * ncol(randomEffects)), nrow = ncol(randomEffects))
     randomEffectSamp <- sqrtcov %*% zSamp
@@ -219,7 +214,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       prop <- y/N
       for(k in 1:2) {
         randEst <- estimatedRandomEffects[2*i - 2 + k, ]
-        randSamp <- randomEffectSamp+randEst #faster Sampapply(randomEffectSamp, 2, function(x) x + randEst)
+        randSamp <- randomEffectSamp+randEst
         if(k == 1) {
           eta <- subjectData$nullEta
           nullEta <- eta
@@ -254,13 +249,16 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       databyid[[i]] <- subjectData
     }
 
+    weights <- as.vector(sapply(posteriors, function(x) c(1 - x, x)))
+    covariance <- cov.wt(estimatedRandomEffects, weights, center = TRUE)$cov
+    invcov <- solve(covariance)
+    covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
+
     acceptRate <- accept / (2 * nsamp * nSubjects)
-    # cat("acceptance rate: ",acceptRate,"\n")
-    # Updating covariance
     if(iter == 1) {
       sampCoef <- 0.1
       sampcov <- covariance * sampCoef
-      sqrtcov <- expm::sqrtm(sampcov)
+      sqrtcov <- sqrtMat(sampcov)
       invSampcov <- solve(sampcov)
       sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
     } else {
@@ -270,16 +268,10 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
         sampCoef <- sampCoef * 1.03
       }
       sampcov <- covariance * sampCoef
-      sqrtcov <- expm::sqrtm(sampcov)
       invSampcov <- solve(sampcov)
+      sqrtcov <- sqrtMat(sampcov)
       sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
     }
-
-    weights <- as.vector(sapply(posteriors, function(x) c(1 - x, x)))
-    covariance <- cov.wt(estimatedRandomEffects, weights, center = FALSE)$cov
-    # print(covariance)
-    invcov <- solve(covariance)
-    covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
 
     levelProbs[2] <- mean(posteriors)
     levelProbs[1] <- 1 - levelProbs[2]
@@ -288,13 +280,19 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
 
     # Some Diagnostics/Outputs
     require(pROC)
+<<<<<<< Updated upstream
     rocfit <- roc(vaccine ~ posteriors)
     print(plot(rocfit, main = round(rocfit$auc, 3)))
     print(cov2cor(covariance))
+=======
+#     rocfit <- roc(vaccines ~ posteriors)
+#     print(plot(rocfit, main = round(rocfit$auc, 3)))
+>>>>>>> Stashed changes
   }
 
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
   result <- list()
+  result$levelProbs <- levelProbs
   result$coefficients <- coefficientList
   result$posteriors <- cbind(uniqueIDs, 1 - posteriors, posteriors)
   result$covariance <- covariance
@@ -306,3 +304,4 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
                                                                           by = 2), ])
   return(result)
 }
+
