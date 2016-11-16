@@ -5,7 +5,7 @@ data(rv144)
 par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 leaves <- unique(data$population)
-selected_populations = c(1:7)
+selected_populations = c(1:3, 5:7)
 data <- subset(data, population %in% leaves[selected_populations])
 data$population=factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -24,7 +24,8 @@ system.time(fit <- flowRegressionMixture(count ~  treatment,
                       weights = NULL,
                       rate = 1, updateLag = 5,
                       nsamp = 200,
-                      maxIter = 40, tol = 1e-03))
+                      centerCovariance = FALSE,
+                      maxIter = 20, tol = 1e-03))
 
 # Facet Wrap Plot! ---------------------------
 posteriors <- fit$posteriors[, 3]
@@ -78,6 +79,29 @@ corMat <- cov2cor(covariance)
 corTable <- xtable(corMat, digits = 2)
 names(corTable) <- 1:ncol(corTable)
 rownames(corTable) <- leaves[c(1:3,5:7)]
+
+# Malaria dataset
+data <- malaria
+leaves <- unique(data$population)
+leaves <- leaves[!(leaves %in% unique(data$parent))]
+leaf <- leaves[2:4]
+data <- subset(data, population %in% leaf)
+data$visitno <- as.numeric(factor(data$visitno))
+data$visitno <- factor(data$visitno - min(data$visitno))
+data$treatment <- data$visitno
+fit <- flowRegressionMixture(count ~  (treatment * stim + experiment),
+                             sub.population = factor(data$population),
+                             N = parentcount, id =  ptid,
+                             data = data,
+                             treatment = treatment,
+                             weights = NULL,
+                             rate = 1, updateLag = 5,
+                             nsamp = 200,
+                             centerCovariance = TRUE,
+                             maxIter = 30, tol = 1e-03)
+sapply(fit$coefficients, function(x) x)
+
+
 
 
 

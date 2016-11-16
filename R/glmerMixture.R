@@ -1,32 +1,28 @@
 #' @useDynLib flowReMix
 #' @importFrom Rcpp sourceCpp
 
-# A function for monte-carlo computation of mixture densities
-simulateGmmDensity <- function(x, randomsd, nsamp, levelProbs) {
-  sampmean <- x$randomMean[[1]]
-  normsamp <- rnorm(nsamp, sampmean, randomsd / 2)
-  etasamp <- sapply(normsamp, function(v) v + x$eta)
-  musamp <- expit(etasamp)
-  normdens <- dnorm(normsamp, sd = randomsd, log = TRUE) -
-    dnorm(normsamp, mean = sampmean, sd = randomsd / 2)
-  binomdens <- apply(musamp, 2, function(v) sum(dbinom(x$count, x$N, v, log = TRUE)))
-  levelProb <- log(levelProbs[x$subpopInd[1], x$treatmentLevel[1] + 1])
-  return(binomdens + normdens + levelProb)
-}
-
 # A function for computation of weights for mixture-GLMER model
 computeGmmWeights <- function(dat, randomsd, nsamp = 20, levelProbs) {
   if(all(dat$treatmentLevel == 0)) return(rep(1, nrow(dat)))
-
   nrows <- nrow(dat)
   eta <- dat$fixedEta
   y <- dat$count
   N <- dat$N
-  dat$randomMean <- round(dat$randomMean, 10)
-  densities <- by(dat, dat$treatmentLevel, simulateGmmDensity, randomsd, nsamp, levelProbs)
-  densities <- do.call("rbind", densities)
+  randomMean <- dat$randomMean
+  sampCoef <- 0.2
+  randomEffect <- rnorm(nsamp, sd = randomsd * sampCoef)
+
+  binomdens <- sapply(randomEffect, function(v) dbinom(y, N, expit(v + randomMean + eta), log = TRUE))
+  densities <- matrix(nrow = 2, ncol = nsamp)
+  densities[1, ] <- colSums(binomdens[1:(nrows/2), ])
+  densities[2, ] <- colSums(binomdens[(nrows / 2 + 1):nrows, ])
+  densities[1, ] <- densities[1, ] + dnorm(randomEffect + randomMean[1], sd = randomsd) -
+    dnorm(randomEffect, sd = randomsd * sampCoef, log = TRUE)
+  densities[2, ] <- densities[2, ] + dnorm(randomEffect + randomMean[nrows], sd = randomsd) -
+    dnorm(randomEffect, sd = randomsd * sampCoef, log = TRUE)
   densities <- exp(densities - max(densities))
   densities <- rowSums(densities)
+
   weights <- numeric(nrow(dat))
   altprob <- 1/(1 + densities[1] / densities[2])
   weights[dat$treatmentLevel == 2] <- altprob
@@ -34,12 +30,23 @@ computeGmmWeights <- function(dat, randomsd, nsamp = 20, levelProbs) {
   return(weights)
 }
 
-#' Estimate a composite mixture GEE
+#' Estimate a Mixture of Regressions with Univariate Random Effect
+#'
+#' Fits a regression mixture to data with a univariate random effect.
+#'
+#' @param formula an object of class "formula".
+#' @param N a vector of total/parent population counts.
+#' @param id id variable to identify observations that should share the same random effect.
+#' @param treatment which is the treatment variable? Same variable must appear in the formula.
+#' @param weights prior weights for the data.
+#' @param maxiter maximum number of iterations of the optimization algorithm.
+#' @param tol tolerance - used to decide when to stop the optimization loop.
+#' @param nAGQ see documentation of lme4::glmer.
+#'
 #'
 #' @name glmmMixture
 #' @export
-glmmMixture <- function(formula, sub.population = NULL,
-                                 N = NULL, id,
+glmmMixture <- function(formula, N = NULL, id,
                                  data = parent.frame(),
                                  treatment,
                                  weights = NULL,
@@ -63,16 +70,6 @@ glmmMixture <- function(formula, sub.population = NULL,
     if(is.null(call$id)) stop("id must be specified!")
     weights <- weights
     if(is.null(call$weights)) weights <- rep(1, n)
-    waves <- waves
-    if(is.null(call$waves)) {
-      warning("No waves variables specified, assuming dataset ordered according to waves!")
-      uniqueID <- unique(id)
-      idIndex <- lapply(uniqueID,function(x) which(id==x))
-      waves <- numeric(length(id))
-      for(i in 1:length(idIndex)) {
-        waves[idIndex[[i]]] <- 1:length(idIndex[[i]])
-      }
-    }
     treatment <- treatment
   }
   else{
@@ -108,23 +105,6 @@ glmmMixture <- function(formula, sub.population = NULL,
     }else if(is.null(call$treatment)){
       stop("Treatment variable must be specified!")
     }
-
-    if(length(call$waves) == 1){
-      waves.col <- which(colnames(data) == call$waves)
-      if(length(waves.col) > 0){
-        waves <- data[, waves.col]
-      }else{
-        waves <- eval(call$waves, envir=parent.frame())
-      }
-    } else if(is.null(call$waves)){
-      warning("No waves variables specified, assuming dataset ordered according to waves!")
-      uniqueID <- unique(id)
-      idIndex <- lapply(uniqueID,function(x) which(id == x))
-      waves <- numeric(length(id))
-      for(i in 1:length(idIndex)) {
-        waves[idIndex[[i]]] <- 1:length(idIndex[[i]])
-      }
-    }
   }
 
   # getting offset, if no offset is given, then set to zero
@@ -154,41 +134,12 @@ glmmMixture <- function(formula, sub.population = NULL,
     }
   }
 
-  # getting Subpopulation
-  if(typeof(data) == "environment"){
-    sub.population <- sub.population
-  }
-  else {
-    if(length(call$sub.population) == 1){
-      s.col <- which(colnames(data) == call$sub.population)
-      if(length(s.col) > 0) {
-        sub.population <- data[, s.col]
-      }
-      else {
-        sub.population <- eval(call$sub.population, envir=parent.frame())
-      }
-    }
-    else if(is.null(call$sub.population)){
-      sub.population <- rep(1, n)
-      sub.population <- factor(sub.population)
-    }
-  }
-
-  # Sub-population must be a factor
-  if(!is.factor(sub.population)) stop("Sub-population must be a factor!")
-
   #################################
   # Creating working dataset
   dat$id <- id
   dat$weights <- weights
-  dat$waves <- waves
   dat$N <- N
   dat$off <- off
-  dat$sub.population <- sub.population
-  subpopInd <- as.numeric(dat$sub.population)
-  uniqueSubpop <- sort(unique(subpopInd))
-  subpopInd <- sapply(subpopInd, function(x) which(x == uniqueSubpop))
-  dat$subpopInd <- subpopInd
 
   # Checking that the treatment variables is in the model
   ind <- 0
@@ -201,13 +152,10 @@ glmmMixture <- function(formula, sub.population = NULL,
   }
   treatmentColIndex <- ind
 
-  dat <- dat[with(dat, order(id, waves)), ]
+  dat <- dat[with(dat, order(id)), ]
 
   # Creating 'full' dataset with all id/waves combinations
-  imputedDat <- with(dat, expand.grid(id = unique(id), waves = unique(waves)))
-  imputedDat <- merge(imputedDat, dat, all = TRUE)
-  imputedDat <- imputedDat[with(imputedDat, order(id, waves)), ]
-  treatmentColIndex <- which(names(imputedDat) == names(dat)[treatmentColIndex])
+  treatmentColIndex <- which(names(dat) == names(dat)[treatmentColIndex])
 
   #### Preparing new dataset with multiple instances per id for different effect levels
   # Checking that the treatment variable fulfills conditions
@@ -223,12 +171,12 @@ glmmMixture <- function(formula, sub.population = NULL,
   }
 
   #### Augmenting dataset
-  dataByID <- with(imputedDat, split(imputedDat, id))
+  dataByID <- with(dat, split(dat, id))
   dataByID <- lapply(dataByID, augment.dataset, treatment.levels, treatmentColIndex)
   augmentedData <- do.call("rbind", dataByID)
   augmentedData[, treatmentColIndex] <- factor(augmentedData[, treatmentColIndex])
   augmentedData$mixtureID <- factor(paste("mix", augmentedData$id, augmentedData$treatmentLevel, sep = ""))
-  augmentedData <- augmentedData[with(augmentedData, order(id, mixtureID, waves)), ]
+  augmentedData <- augmentedData[with(augmentedData, order(id, mixtureID)), ]
 
   #### Analysis preliminaries
   id <- augmentedData$mixtureID
@@ -236,25 +184,11 @@ glmmMixture <- function(formula, sub.population = NULL,
   idIndex <- lapply(uniqueID,function(x) which(id == x))
   levelsPerObs <- augmentedData$treatmentLevel
 
-  waves <- augmentedData$waves
-  uniqueWaves <- unique(waves)
-  nUniqueWaves <- length(unique(waves))
-  for(i in 1:length(uniqueWaves)) {
-    waves[which(waves == (sort(uniqueWaves)[i]))] <- i
-  }
-  augmentedData$waves <- waves
-
-  # Structured Correlation
-  structured <- diag(max(waves))
-
   X <- model.matrix(formula, augmentedData)
 
   mixtureWeights <- augmentedData$mixtureWeights
   rawWeights <- augmentedData$weights
 
-  sub.population <- augmentedData$sub.population
-  uniqueSubpop <- unique(sub.population)
-  uniqueSubpop <- uniqueSubpop[!is.na(uniqueSubpop)]
   N <- augmentedData$N
   y <- model.response(model.frame(formula, augmentedData))
   notNAind <- !is.na(mixtureWeights)
@@ -271,7 +205,7 @@ glmmMixture <- function(formula, sub.population = NULL,
 
   converged <- FALSE
   subjectProbs <- matrix(nrow = length(unique(dat$id)), ncol = treatment.levels)
-  levelProbs <- matrix(1, nrow = length(uniqueSubpop), ncol= treatment.levels + 1)
+  levelProbs <- matrix(1, nrow = 1, ncol= treatment.levels + 1)
   deviance <- 10^19
   eta <- NULL
   subjectOffset <- off
@@ -299,19 +233,16 @@ glmmMixture <- function(formula, sub.population = NULL,
     augmentedData$randomMean[notNAind] <- eta - fixedEta
 
     # Updating  level probabilities
-    for(k in 1:length(uniqueSubpop)) {
-      p <- sapply(1:treatment.levels,
-                  function(x) sum(mixtureWeights[levelsPerObs==x & sub.population==uniqueSubpop[k]],
-                                  na.rm=TRUE))
-      p <- p / sum(p)
-      levelProbs[k, 2:(treatment.levels + 1)] <- p
-    }
+    p <- sapply(1:treatment.levels,
+                function(x) sum(mixtureWeights[levelsPerObs==x], na.rm=TRUE))
+    p <- p / sum(p)
+    levelProbs[1, 2:(treatment.levels + 1)] <- p
 
     ## Updating Mixture Weights
     if(iter == 1){
-      nsamp <- 15
+      nsamp <- 50
     } else {
-      nsamp <- ceiling(ifelse(weightTime[3] < glmerTime[3], nsamp * 1.25, nsamp * 0.75))
+      nsamp <- min(ceiling(ifelse(weightTime[3] < glmerTime[3], nsamp * 1.25, nsamp * 0.75)), 100)
       nsamp <- max(nsamp, 15)
     }
     print(nsamp)
@@ -321,7 +252,7 @@ glmmMixture <- function(formula, sub.population = NULL,
     if(iter == 1) {
       mixtureWeights <- newWeights
     } else {
-      mixtureWeights <- mixtureWeights + (newWeights - mixtureWeights) / sqrt(iter - 1)
+      mixtureWeights <- mixtureWeights + (newWeights - mixtureWeights) / sqrt(max(1, iter - 1))
     }
     mixtureWeights <- unlist(mixtureWeights)
     mixtureWeights <- pmax(mixtureWeights, 10^-3)
@@ -361,8 +292,6 @@ glmmMixture <- function(formula, sub.population = NULL,
 
   # Preparing Level Probabilities or Output
   levelProbs <- data.frame(levelProbs)
-  names(levelProbs) <- paste("level",c(0:treatment.levels),sep="_")
-  rownames(levelProbs) <- unique(sub.population[notNAind])
 
   gmmfit <- fit
   fit <- list()
@@ -374,8 +303,8 @@ glmmMixture <- function(formula, sub.population = NULL,
 
   mu <- by(expit(eta), augmentedData$id, function(x) (matrix(x, ncol = 2)))
   mu <- do.call("rbind", mu)
-  mu <- data.frame(id = dat$id, population = dat$sub.population,
-                   waves = dat$waves, nullMu = mu[, 1], altMu = mu[, 2])
+  mu <- data.frame(id = dat$id,
+                   nullMu = mu[, 1], altMu = mu[, 2])
   fit$mu <- mu
   fit$eta <- eta
   randomIntercept <- matrix(unique(round(eta - fixedEta, 8)), byrow = TRUE, ncol = 2)

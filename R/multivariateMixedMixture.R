@@ -12,6 +12,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
                                   treatment,
                                   weights = NULL,
                                   updateLag = 3,
+                                  centerCovariance = TRUE,
                                   rate = 1, nsamp = 100,
                                   maxIter = 30, tol = 1e-03) {
   call <- as.list(match.call())
@@ -137,6 +138,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   dat$N <- N
   dat$off <- off
   dat$sub.population <- sub.population
+  dat$treatment <- treatment
   subpopInd <- as.numeric(dat$sub.population)
   uniqueSubpop <- sort(unique(subpopInd))
   dat$subpopInd <- subpopInd
@@ -186,7 +188,11 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
 
     # Updating Prediction
     for(j in 1:length(dataByPopulation)) {
-      dataByPopulation[[j]]$treatment <- 0
+      if(is.factor(dataByPopulation[[j]]$treatment)) {
+        dataByPopulation[[j]]$treatment <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
+      } else {
+        dataByPopulation[[j]]$treatment <- 0
+      }
       dataByPopulation[[j]]$randomOffset <- 0
       newNullEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
       dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
@@ -238,7 +244,11 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       # Sampling cluster assignment
       cluster <- 1 + rbinom(1, 1, posteriors[i])
       clusterAssignments[i] <- cluster
-      subjectData$treatment <- subjectData$tempTreatment * (cluster == 2)
+      if(cluster == 1) {
+        subjectData$treatment <- 0
+      } else {
+        subjectData$treatment <- subjectData$tempTreatment
+      }
 
       # Performing MH step
       unifs = runif(nsamp)
@@ -250,7 +260,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
     }
 
     weights <- as.vector(sapply(posteriors, function(x) c(1 - x, x)))
-    covariance <- cov.wt(estimatedRandomEffects, weights, center = TRUE)$cov
+    covariance <- cov.wt(estimatedRandomEffects, weights, center = centerCovariance)$cov
     invcov <- solve(covariance)
     covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
 
@@ -277,17 +287,6 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
     levelProbs[1] <- 1 - levelProbs[2]
     print(c(iter, sampCoef, accept / (2*nsamp * nSubjects)))
     print(levelProbs)
-
-    # Some Diagnostics/Outputs
-    require(pROC)
-<<<<<<< Updated upstream
-    rocfit <- roc(vaccine ~ posteriors)
-    print(plot(rocfit, main = round(rocfit$auc, 3)))
-    print(cov2cor(covariance))
-=======
-#     rocfit <- roc(vaccines ~ posteriors)
-#     print(plot(rocfit, main = round(rocfit$auc, 3)))
->>>>>>> Stashed changes
   }
 
   uniqueIDs <- sapply(databyid, function(x) x$id[1])

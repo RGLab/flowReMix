@@ -3,7 +3,7 @@ data <- rv144
 leaves <- unique(data$population)
 data <- subset(data, stim != "sebctrl")
 data$treatment <- as.numeric(data$stim == "env")
-leaf <- leaves[c(1, 7)]
+leaf <- leaves[c(1)]
 data <- subset(data, population %in% leaf)
 data$ptid <- as.numeric(data$ptid)
 data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 10^4
@@ -50,7 +50,7 @@ data <- rv144
 leaves <- unique(data$population)
 data <- subset(data, stim != "sebctrl")
 data$treatment <- as.numeric(data$stim == "env")
-leaf <- leaves[c(2)]
+leaf <- leaves[c(3)]
 data <- subset(data, population %in% leaf)
 data$ptid <- as.numeric(data$ptid)
 data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 10^4
@@ -61,12 +61,11 @@ data <- data[order(data$ptid, decreasing = FALSE), ]
 
 mixedfit <- glmmMixture(count ~ (age + gender + treatment),
                         N = parentcount,
-                        sub.population = population,
                         id = ptid,
                         treatment = treatment,
                         data = data,
-                        tol = 0.002,
-                        maxiter = 20,
+                        tol = 0.0001,
+                        maxiter = 10,
                         nAGQ = 1)
 
 cummean <- function(x) cumsum(x) / 1:length(x)
@@ -76,17 +75,13 @@ sprobs$vaccine <- data$vaccine[rowIndex]
 sprobs$id <- data$ptid[rowIndex]
 sprobs$nullprop <- log(data$count/data$parentcount + 10^-5)[data$stim == "negctrl" & data$population == leaf[1]]
 sprobs$altprop <- log(data$count/data$parentcount + 10^-5)[data$stim == "env" & data$population == leaf[1]]
-sprobs$nonrespNullProp <- log(mixedfit$mu$nullMu[mixedfit$mu$waves == 1] + 10^-5)
-sprobs$nonrespAltProp <- log(mixedfit$mu$nullMu[mixedfit$mu$waves == 2] + 10^-5)
-sprobs$respNullProp <- log(mixedfit$mu$altMu[mixedfit$mu$waves == 1] + 10^-5)
-sprobs$respAltProp <- log(mixedfit$mu$altMu[mixedfit$mu$waves == 2] + 10^-5)
 sprobs <- sprobs[order(sprobs$nullprob), ]
 sprobs$empFDR <- cummean(sprobs$vaccine == "PLACEBO")
 sprobs$nominalFDR <- cummean(sprobs$nullprob)
 sprobs$power <- cumsum(sprobs$vaccine == "VACCINE") / sum(sprobs$vaccine == "VACCINE")
 
 
-par(mfrow = c(1 , 2), mar = rep(4, 4))
+par(mfrow = c(2 , 1), mar = rep(4, 4))
 uniqueNominal <- unique(sprobs$nominalFDR)
 empFDR <- sapply(uniqueNominal, function(x) sprobs$empFDR[max(which(sprobs$nominalFDR == x))])
 power <- sapply(uniqueNominal, function(x) sprobs$power[max(which(sprobs$nominalFDR == x))])
@@ -106,9 +101,7 @@ require(ggplot2)
 ggplot(sprobs) +
   geom_point(aes(x = nullprop, y = altprop, col = altprob, shape = !vaccine, size = !vaccine), fill = "white") +
   theme_bw() + geom_abline(intercept = 0, slope = 1) +
-  scale_colour_gradientn(colours=rainbow(4)) +
-  stat_smooth(aes(x = nullprop, y = nonrespAltProp), col = "red") +
-  stat_smooth(aes(x = nullprop, y = respAltProp), col = "purple")
+  scale_colour_gradientn(colours=rainbow(4))
 
 # Comparison with MIMOSA ----------------------
 mimosaList <- list()
@@ -232,6 +225,21 @@ rownames(corTable) <- leaves[1:7]
 
 
 
+
+# Malaria dataset
+data <- malaria
+leaves <- unique(data$population)
+leaves <- leaves[!(leaves %in% unique(data$parent))]
+leaf <- leaves[27]
+data <- subset(data, population == leaf)
+mixedfit <- glmmMixture(count ~ visitno * stim,
+                        N = parentcount,
+                        id = ptid,
+                        treatment = visitno,
+                        data = data,
+                        tol = 0.0001,
+                        maxiter = 10,
+                        nAGQ = 1)
 
 
 
