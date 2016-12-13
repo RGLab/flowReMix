@@ -159,7 +159,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   # Computing new posterior porbabilities
   dat$tempTreatment <- dat$treatment
   databyid <- by(dat, dat$id, function(x) x)
-  dat$subpopInd <- as.numeric(data$population)
+  dat$subpopInd <- as.numeric(dat$sub.population)
   sampCoef <- 0.00001
   sampcov <- sampCoef * covariance
   sqrtcov <- sqrtMat(sampcov)

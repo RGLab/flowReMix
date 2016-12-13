@@ -7,7 +7,7 @@ data <- rv144
 leaves <- unique(data$population)
 selected_populations = c(1:3, 5:7)
 data <- subset(data, population %in% leaves[selected_populations])
-data$population=factor(data$population)
+data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
 data$treatment <- as.numeric(data$stim == "env")
 data$ptid <- as.numeric(data$ptid)
