@@ -266,16 +266,20 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
 
     acceptRate <- accept / (2 * nsamp * nSubjects)
     if(iter == 1) {
-      sampCoef <- 0.1
+      sampCoef <- 0.25
       sampcov <- covariance * sampCoef
       sqrtcov <- sqrtMat(sampcov)
       invSampcov <- solve(sampcov)
       sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
     } else {
-      if(acceptRate < .234) {
-        sampCoef <- sampCoef * .96
-      } else if (acceptRate > 0.234) {
-        sampCoef <- sampCoef * 1.03
+      if(acceptRate < 0.15) {
+        sampCoef <- sampCoef * .5
+      } else if (acceptRate > 0.35) {
+        sampCoef <- sampCoef * 2
+      } else if (acceptRate <= 0.234) {
+        sampCoef <- sampCoef * .95
+      } else {
+        sampCoef <- sampCoef * 1.05
       }
       sampcov <- covariance * sampCoef
       invSampcov <- solve(sampcov)
