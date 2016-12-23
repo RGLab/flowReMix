@@ -11,7 +11,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1:3, 5:7))
+selected_populations = c(c(1))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -28,7 +28,50 @@ system.time(fit <- subsetResponseMixture(count ~  treatment,
                                          data = data,
                                          treatment = treatment,
                                          weights = NULL,
-                                         rate = 1, updateLag = 20,
-                                         nsamp = 5,
+                                         rate = 1, updateLag = 5,
+                                         nsamp = 30,
                                          centerCovariance = FALSE,
-                                         maxIter = 100, tol = 1e-03))
+                                         maxIter = 20, tol = 1e-03))
+
+require(pROC)
+vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
+posteriors <- fit$posteriors[, 2:ncol(fit$posteriors), drop = FALSE]
+par(mfrow = c(2, 3), mar = rep(3, 4))
+for(i in 1:length(selected_populations)) {
+  rocfit <- roc(vaccine ~ posteriors[, i])
+  print(plot(rocfit, main = paste(leaves[selected_populations[i]], "- AUC", round(rocfit$auc, 3))))
+}
+
+par(mfrow = c(2, 3), mar = rep(3, 4))
+for(i in 1:length(selected_populations)) {
+  post <- posteriors[, i]
+  treatment <- vaccine[order(post)]
+  uniquePost <- sort(unique(post))
+  nominalFDR <- sapply(uniquePost, function(x) mean(post[post <= x]))
+  empFDR <- sapply(uniquePost, function(x) 1 - mean(vaccine[post <= x]))
+  power <- sapply(uniquePost, function(x) sum(vaccine[post <= x]) / sum(vaccine))
+  print(plot(nominalFDR, empFDR, type = "l", xlim = c(0, 1), ylim = c(0, 1), col = "red", main = leaves[selected_populations[i]]))
+  lines(nominalFDR, power, col = "blue", lty = 2)
+  abline(a = 0, b = 1)
+}
+
+forplot <- list()
+for(i in 1:length(selected_populations)) {
+  post <- posteriors[, i]
+  negprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "negctrl"]
+  envprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "env"]
+  forplot[[i]] <- data.frame(subset = leaves[selected_populations[i]],
+                             negprop = negprop, envprop = envprop,
+                             posterior = 1 - post, vaccine = vaccine)
+}
+
+forplot <- do.call("rbind", forplot)
+require(ggplot2)
+ggplot(forplot) +
+  geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine)) +
+  facet_wrap(~ subset, scales = 'free') +
+  geom_abline(slope = 1, intercept = 0) +
+  theme_bw()
+
+
+

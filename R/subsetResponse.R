@@ -171,10 +171,14 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
   posteriors <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
   clusterAssignments <- matrix(nrow = nSubjects, ncol = nSubsets)
   iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
-  accept <- 0
+  MHcoef <- 1
   for(iter in 1:maxIter) {
     # Refitting Model with current means
-    dataForGlm <- data.frame(data.table::rbindlist(databyid))
+    if(iter == 1) {
+      dataForGlm <- data.frame(data.table::rbindlist(databyid))
+    } else {
+      dataForGlm <- data.frame(data.table::rbindlist(dataForGlm))
+    }
     dataByPopulation <- by(dataForGlm, dataForGlm$sub.population, function(x) x)
     if(iter > 1) {
       glmFits <- lapply(dataByPopulation, function(popdata)
@@ -184,6 +188,8 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
     }
 
     # Updating Prediction
+    dataByPopulation <- data.frame(data.table::rbindlist(databyid))
+    dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     for(j in 1:length(dataByPopulation)) {
       if(is.factor(dataByPopulation[[j]]$treatment)) {
         dataByPopulation[[j]]$treatment <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
@@ -205,6 +211,11 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
     databyid <- by(databyid, databyid$id, function(x) x)
 
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
+    MHattempts <- 0
+    MHsuccess <- 0
+    dataLength <- 0
+    dataForGlm <- list()
+    MHlag <- 5
     for(i in 1:nSubjects) {
       # Computing Posterior Probabilities (Step 1a)
       subjectData <- databyid[[i]]
@@ -228,36 +239,42 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
           # Sampling assignment
           # The probability for assignments is proportional to the densities of the subset
           # At the current 'sampled' step. For now, assume independence between assignments.
-          popCount <- y[popInd == j]
-          popN <- N[popInd == j]
-          nullEta <- subjectData$nullEta[popInd == j]
-          altEta <- subjectData$altEta[popInd == j]
-          nullEffect <- subjectData$nullOffset[popInd == j]
-          altEffect <- subjectData$altOffset[popInd == j]
-          altProb <- levelProbs[j]
+          if((m - 1) %% MHlag == 0) {
+            popCount <- y[popInd == j]
+            popN <- N[popInd == j]
+            nullEta <- subjectData$nullEta[popInd == j]
+            altEta <- subjectData$altEta[popInd == j]
+            nullEffect <- subjectData$nullOffset[popInd == j]
+            altEffect <- subjectData$altOffset[popInd == j]
+            altProb <- levelProbs[j]
 
-          nulldens <- sum(dbinom(popCount, popN, expit(nullEta + nullEffect), log = TRUE)) + log(1 - altProb)
-          altdens <- sum(dbinom(popCount, popN, expit(altEta + altEffect), log = TRUE)) + log(altProb)
-          posteriorProb <- 1/(1 + exp(nulldens - altdens))
-          popCluster <- rbinom(1, 1, posteriorProb)
-          clusterAssignments[i, j] <- popCluster
-          sampledEta <- (popCluster == 1) * altEta + (popCluster == 0) * nullEta
-          subjectData$sampledEta[popInd == j] <- (popCluster == 1) * altEta + (popCluster == 0) * nullEta
-          subjectData$randomOffset[popInd == j] <- (popCluster == 1) * altEffect + (popCluster == 0) * nullEffect
+            nulldens <- sum(dbinom(popCount, popN, expit(nullEta + nullEffect), log = TRUE)) + log(1 - altProb)
+            altdens <- sum(dbinom(popCount, popN, expit(altEta + altEffect), log = TRUE)) + log(altProb)
+            posteriorProb <- 1/(1 + exp(nulldens - altdens))
+            popCluster <- rbinom(1, 1, posteriorProb)
+            clusterAssignments[i, j] <- popCluster
+            sampledEta <- (popCluster == 1) * altEta + (popCluster == 0) * nullEta
+            subjectData$sampledEta[popInd == j] <- (popCluster == 1) * altEta + (popCluster == 0) * nullEta
+            subjectData$randomOffset[popInd == j] <- (popCluster == 1) * altEffect + (popCluster == 0) * nullEffect
+          }
 
           # Sample random effect, but only if all cluster assignments are availble.
           randomEffects <- subjectData$randomOffset[singlePopInd]
           if(iter > 1 | m > 1) {
+            MHattempts <- MHattempts + 1
             condvar <- 1 / invcov[j, j]
-            #condmean <- -condvar * invcov[j, -j] %*% (randomEffects[-j])
+            condmean <- -condvar * invcov[j, -j] %*% (randomEffects[-j])
             #proposal <- rnorm(1, mean = condmean, sd = sqrt(condvar))
-            proposal <- rnorm(1, mean = randomEffects[j], sd = sqrt(condvar))
+            proposal <- rnorm(1, mean = randomEffects[j], sd = sqrt(condvar) * MHcoef)
 
             # Because of the gibbs form of the proposal, the MHratio is just the likelihood ratio.
             olddens <- sum(dbinom(popCount, popN, expit(sampledEta + randomEffects[j]), log = TRUE))
+            olddens <- olddens + dnorm(randomEffects[j], mean = condmean, sd = sqrt(condvar), log = TRUE)
             newdens <- sum(dbinom(popCount, popN, expit(sampledEta + proposal), log = TRUE))
+            newdens <- newdens + dnorm(proposal, mean = condmean, sd = sqrt(condvar), log = TRUE)
             MHratio <- exp(newdens - olddens)
             if(runif(1) < MHratio) {
+              MHsuccess <- MHsuccess + 1
               subjectData$randomOffset[popInd == j] <- proposal
               if(popCluster == 1) {
                 subjectData$altOffset[popInd == j] <- proposal
@@ -268,30 +285,30 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
           }
         }
         iterAssignments[i, ] <- iterAssignments[i, ] + clusterAssignments[i, ] / nsamp
-      }
 
-      # Setting treatment according to cluster assignment
-      for(j in 1:nSubsets) {
-        if(clusterAssignments[i, j] == 1) {
-          subjectData$treatment[popInd == j] <- subjectData$tempTreatment[popInd == j]
-        } else {
-          subjectData$treatment[popInd == j] <- 0
+        # Preparing dataset for glm
+        if((m %% MHlag) == 0) {
+          for(j in 1:nSubsets) {
+            # Setting treatment according to cluster assignment
+            if(clusterAssignments[i, j] == 1) {
+              subjectData$treatment[popInd == j] <- subjectData$tempTreatment[popInd == j]
+            } else {
+              subjectData$treatment[popInd == j] <- 0
+            }
+
+            dataLength <- dataLength + 1
+            dataForGlm[[dataLength]] <- subjectData
+          }
         }
       }
-
       # Updating estimated random effects and posteriors
       currentRandomEst <- estimatedRandomEffects[i, ]
       estimatedRandomEffects[i, ] <- currentRandomEst +
         (subjectData$randomOffset[singlePopInd] - currentRandomEst) / max(iter - updateLag, 1)^rate
 
+      if(i == 1) print(subjectData$randomOffset[singlePopInd])
       databyid[[i]] <- subjectData
     }
-
-    if(iter > updateLag) {
-      covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
-      invcov <- solve(covariance)
-    }
-    print(round(covariance, 3))
 
     # Updating posteriors
     if(iter > updateLag) {
@@ -300,16 +317,36 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
       posteriors <- iterAssignments
     }
 
+    # Updating Covariance
+    if(iter > 0) {
+      covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
+      invcov <- solve(covariance)
+    }
+    print(round(cov2cor(covariance), 3))
+
+    MHrate <- MHsuccess / MHattempts
+    if(MHrate > 0.35) {
+      MHcoef <- MHcoef * 1.5
+    } else if(MHrate > 0.234) {
+      MHcoef <- MHcoef * 1.05
+    } else if(MHrate < 0.15) {
+      MHcoef <- MHcoef * .5
+    } else {
+      MHcoef <- MHcoef * .95
+    }
+
     levelProbs <- colMeans(posteriors)
     print(c(iter, levelProbs))
     print(c(iter, round(sapply(coefficientList, function(x) x[2]), 2)))
+    print(apply(posteriors, 2, function(x) round(as.numeric(roc(vaccine ~ x)$auc), 3)))
+    print(c(MHcoef, MHrate))
   }
 
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
   result <- list()
   result$levelProbs <- levelProbs
   result$coefficients <- coefficientList
-  result$posteriors <- cbind(uniqueIDs, 1 - posteriors, posteriors)
+  result$posteriors <- cbind(uniqueIDs, 1 - posteriors)
   result$covariance <- covariance
   result$nullRandomEffects <- cbind(uniqueIDs, estimatedRandomEffects[seq(from = 1,
                                                          to = nrow(estimatedRandomEffects) - 1,
