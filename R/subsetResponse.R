@@ -196,6 +196,7 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
       } else {
         dataByPopulation[[j]]$treatment <- 0
       }
+      offsetBackup <- dataByPopulation[[j]]$randomOffset
       dataByPopulation[[j]]$randomOffset <- 0
       newNullEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
       dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
@@ -204,6 +205,7 @@ subsetResponseMixture <- function(formula, sub.population = NULL,
       altEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$altEta)
       dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - updateLag, 1)^rate
       dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - updateLag, 1)^rate
+      dataByPopulation[[j]]$randomOffset <- offsetBackup
     }
 
     databyid <- do.call("rbind", dataByPopulation)

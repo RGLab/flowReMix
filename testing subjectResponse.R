@@ -11,7 +11,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1))
+selected_populations = c(c(1:2))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -67,11 +67,11 @@ for(i in 1:length(selected_populations)) {
 
 forplot <- do.call("rbind", forplot)
 require(ggplot2)
-ggplot(forplot) +
+print(ggplot(forplot) +
   geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine)) +
   facet_wrap(~ subset, scales = 'free') +
   geom_abline(slope = 1, intercept = 0) +
-  theme_bw()
+  theme_bw())
 
 
 
