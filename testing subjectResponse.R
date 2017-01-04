@@ -11,7 +11,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1:2))
+selected_populations = c(c(1, 2, 5, 3, 6, 7))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -22,16 +22,16 @@ data$prop <- data$count / data$parentcount
 data$population <- as.factor(data$population)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 
-system.time(fit <- subsetResponseMixture(count ~  treatment,
+system.time(fit <- subsetResponseMixtureNested(count ~  treatment,
                                          sub.population = factor(data$population),
                                          N = parentcount, id =  ptid,
                                          data = data,
                                          treatment = treatment,
                                          weights = NULL,
-                                         rate = 1, updateLag = 5,
-                                         nsamp = 30,
+                                         rate = 1, updateLag = 4,
+                                         nsamp = 50,
                                          centerCovariance = FALSE,
-                                         maxIter = 20, tol = 1e-03))
+                                         maxIter = 10, tol = 1e-03))
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
@@ -53,6 +53,7 @@ for(i in 1:length(selected_populations)) {
   print(plot(nominalFDR, empFDR, type = "l", xlim = c(0, 1), ylim = c(0, 1), col = "red", main = leaves[selected_populations[i]]))
   lines(nominalFDR, power, col = "blue", lty = 2)
   abline(a = 0, b = 1)
+  abline(v = c(0.05, 0.1), h = c(0.8, 0.9), col = "grey")
 }
 
 forplot <- list()
