@@ -223,7 +223,6 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     MHlag <- 5
     condvar <- 1 / diag(invcov)
     for(i in 1:nSubjects) {
-      # Computing Posterior Probabilities (Step 1a)
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       singlePopInd <- sapply(sort(unique(popInd)), function(x) which(popInd == x)[1])
@@ -261,7 +260,11 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
           }
 
           densityRatio <- rowSums(exp(clusterDensities - max(clusterDensities)))
-          pResponder <- expit(sum(c(1, clusterAssignments[i, -j]) * isingCoefs[j, ]))
+          if(m >= 2) {
+            pResponder <- expit(sum(c(1, clusterAssignments[i, -j]) * isingCoefs[j, ]))
+          } else {
+            pResponder <- 0.5
+          }
           densityRatio <- densityRatio[1] / densityRatio[2] * (1 - pResponder) / pResponder
           pResponder <- 1 / (1 + densityRatio)
           assignment <- rbinom(1, 1, pResponder)
@@ -273,7 +276,7 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
       # Updating global posteriors
       iterPosteriors <- iterPosteriors / nsamp
       currentPost <- posteriors[i, ]
-      posteriors[i, ] <- currentPost + (iterPosteriors - currentPost) / max(iter - updateLag, 1)
+      posteriors[i, ] <- currentPost * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
 
       # MH sampler for random effects
       randomEst <- estimatedRandomEffects[i, ]
@@ -321,10 +324,13 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     }
 
     # Updating ising
+    require(glmnet)
     for(j in 1:nSubsets) {
       target <- clusterAssignments[, j]
       covariates <- clusterAssignments[, -j]
       newcoefs <- coef(logistf::logistf(target ~ covariates))
+      #glmnetfit <- glmnet::cv.glmnet(covariates, target, family = "binomial", alpha = 0.5)
+      #newcoefs <- as.numeric(coef(glmnetfit))
       coefs <- isingCoefs[j, ]
       isingCoefs[j, ] <- coefs + (newcoefs - coefs) / max(1, iter - updateLag)
     }

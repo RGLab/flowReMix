@@ -462,15 +462,7 @@ A common model for the joint distribution of a binary random variable is the Isi
 $$
 \log P(z_i) = \sum_{k=1}^{K} z_{k} \eta_k + \sum_{k=1}^{K - 1}\sum_{l=k + 1}^{K} z_{k} z_{l} \gamma_{kl} + C,
 $$
-where $C$ is a normalizing constant. In general, the Ising model has $K + K(K-1)/2$ parameters to estimate, rather than the $2^{K}$ parameters we would have estimate otherwise. However, this number is still likely to be too large for the typical dataset of interest. As a simplified model, we can consider the following model:
- $$
-\log P(z_i) = \sum_{k=1}^{K} z_{k} \eta_k + \sum_{k=1}^{K - 1}\sum_{l=k + 1}^{K} z_{k} z_{l} \gamma + C.
-$$
-Here, $\eta$ is a parameter vector which describes the probability of a response in each cell subset and $\gamma$ describes the dependence between the cell-subsets. To better understand the exact role $\gamma$ plays, write:
-$$
-\log P(z_{ik} = 1| z_{-k}) = z_k\eta_k + \sum_{l\neq k} z_{l} \gamma + \tilde{C}.
-$$
-That is, if $\gamma > 0$ then a response is more likely at the $k$th if a response is observed in other cell-subsets, and if $\gamma < 0$ then the converse holds. This could be a helpful model for our purposes as it is likely that a subject is a non-responder in all cell-subsets or a responder in several. Another more flexible option is to estimate a sparse graphical model via regularization.
+where $C$ is a normalizing constant. The Ising model has $K + K(K-1)/2$ parameters to estimate, rather than the $2^{K}$ parameters we would have estimate otherwise. 
 
 Given this model, the question remains of how to perform estimation. Here again we use a Monte-Carlo EM. In the Stochastic E-Step, for a subject $i$, we will sample from the joint posterior distribution of the random effect vector $\nu$ and the assignment vector $z$. For $l \in \{1,...,L\}$: 
 \begin{itemize}
