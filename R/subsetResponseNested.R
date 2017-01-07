@@ -222,6 +222,8 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     dataLength <- 0
     MHlag <- 5
     condvar <- 1 / diag(invcov)
+    assignmentList <- list()
+    assignListLength <- 0
     for(i in 1:nSubjects) {
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
@@ -271,32 +273,45 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
           clusterAssignments[i, j] <- assignment
           if(assignment == 1) iterPosteriors[j] <- iterPosteriors[j] + assignment
         }
+
+        if((m %% 5) == 0) {
+          assignmentList[[assignListLength + 1]] <- clusterAssignments[i, ]
+          assignListLength <- assignListLength + 1
+        }
       }
 
       # Updating global posteriors
       iterPosteriors <- iterPosteriors / nsamp
       currentPost <- posteriors[i, ]
       posteriors[i, ] <- currentPost * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
+      #posteriors[i, ] <- iterPosteriors
 
       # MH sampler for random effects
-      randomEst <- estimatedRandomEffects[i, ]
-      eta <- nullEta
-      if(assignment == 1) eta <- altEta
+      randomEst <- as.numeric(estimatedRandomEffects[i, ])
       for(m in 1:nsamp) {
         for(j in 1:nSubsets) {
+          eta <- nullEta[popInd == j]
+          if(clusterAssignments[i, j] == 0) {
+            eta <- subjectData$nullEta[popInd == j]
+          } else {
+            eta <- subjectData$altEta[popInd == j]
+          }
+          yj <- y[popInd == j]
+          Nj <- N[popInd == j]
           MHattempts <- MHattempts + 1
           current <- as.numeric(randomEst[j])
-          condmean <- as.numeric(condvar[j] * invcov[j, -j] %*% t(randomEst[-j]))
+          condmean <- as.numeric(condvar[j] * invcov[j, -j] %*% (randomEst[-j]))
           proposal <- rnorm(1, mean = current, sd = sqrt(covariance[j, j]) * MHcoef)
-          newdens <- sum(dbinom(y, N, expit(eta + proposal), log = TRUE))
+          newdens <- sum(dbinom(yj, Nj, expit(eta + proposal), log = TRUE))
           newdens <- newdens + dnorm(proposal, mean = condmean, sd = sqrt(condvar[j]))
-          olddens <- sum(dbinom(y, N, expit(eta + as.numeric(randomEst[j])), log = TRUE))
+          olddens <- sum(dbinom(yj, Nj, expit(eta + as.numeric(randomEst[j])), log = TRUE))
           olddens <- olddens + dnorm(current, mean = condmean, sd = sqrt(condvar[j]))
           if(runif(1) < exp(newdens - olddens))  {
             randomEst[j] <- proposal
             MHsuccess <- MHsuccess + 1
           }
         }
+        #if(i < 10) print(round(c(it = iter, i = i, m = m, REST = as.numeric(randomEst)), 2))
       }
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
@@ -317,7 +332,7 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     }
 
     # Updating Covariance
-    if(iter > 9) {
+    if(iter > updateLag) {
       covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
       invcov <- solve(covariance)
       print(round(cov2cor(covariance), 3))
@@ -325,12 +340,13 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
 
     # Updating ising
     require(glmnet)
+    assignmentList <- do.call("rbind",assignmentList)
     for(j in 1:nSubsets) {
-      target <- clusterAssignments[, j]
-      covariates <- clusterAssignments[, -j]
-      newcoefs <- coef(logistf::logistf(target ~ covariates))
-      #glmnetfit <- glmnet::cv.glmnet(covariates, target, family = "binomial", alpha = 0.5)
-      #newcoefs <- as.numeric(coef(glmnetfit))
+      target <- assignmentList[, j]
+      covariates <- assignmentList[, -j]
+      #newcoefs <- coef(logistf::logistf(target ~ covariates))
+      glmnetfit <- glmnet::cv.glmnet(covariates, target, family = "binomial", alpha = 1)
+      newcoefs <- as.numeric(coef(glmnetfit))
       coefs <- isingCoefs[j, ]
       isingCoefs[j, ] <- coefs + (newcoefs - coefs) / max(1, iter - updateLag)
     }

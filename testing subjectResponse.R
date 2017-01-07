@@ -28,10 +28,10 @@ system.time(fit <- subsetResponseMixtureNested(count ~  treatment,
                                          data = data,
                                          treatment = treatment,
                                          weights = NULL,
-                                         rate = 1, updateLag = 5,
-                                         nsamp = 100,
+                                         rate = 1, updateLag = 3,
+                                         nsamp = 25,
                                          centerCovariance = FALSE,
-                                         maxIter = 6, tol = 1e-03))
+                                         maxIter = 8, tol = 1e-03))
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
@@ -76,41 +76,41 @@ print(ggplot(forplot) +
 
 
 # Booleans dataset --------------------------------------------
-data("rv144_booleans")
-bySubset <- by(data.frame(booleans$stim, booleans$nonstim), booleans$Subset, function(x) x)
-largerThanThershold <- sapply(bySubset, function(x) colSums(x >5))
-
-require(reshape2)
-booldata <- melt(booleans, c("PTID", "Subset"))
-names(booldata)[3:4] <- c("stim", "count")
-
-forParentcount <- rv144
-forParentcount <- as.data.frame(forParentcount)
-forParentcount <- subset(forParentcount,
-                         parent == "4+" & stim == "env")
-forParentcount <- forParentcount[, c(2, 5, 11)]
-forParentcount <- unique(forParentcount)
-
-booldata <- merge(booldata, forParentcount, by.x = "PTID", by.y = "ptid",
-                  all.x = TRUE, all.y = FALSE)
-booldata <- subset(booldata, Subset != "!TNFa&!IFNg&!IL4&!IL2&!CD154&!IL17a")
-booldata$treatment <- as.numeric(booldata$stim == "stim")
-uniquepop <- unique(booldata$Subset)
-booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
-booldata <- subset(booldata, !is.na(Subset))
-allsubset <- booldata
-
-fit <- subsetResponseMixtureNested(count ~  treatment,
-                             sub.population = factor(booldata$Subset),
-                             N = parentcount, id =  PTID,
-                             data = booldata,
-                             treatment = treatment,
-                             weights = NULL,
-                             rate = 1, updateLag = 7,
-                             nsamp = 100,
-                             centerCovariance = FALSE,
-                             maxIter = 7, tol = 1e-03)
-
-
-
-
+# data("rv144_booleans")
+# bySubset <- by(data.frame(booleans$stim, booleans$nonstim), booleans$Subset, function(x) x)
+# largerThanThershold <- sapply(bySubset, function(x) colSums(x >5))
+#
+# require(reshape2)
+# booldata <- melt(booleans, c("PTID", "Subset"))
+# names(booldata)[3:4] <- c("stim", "count")
+#
+# forParentcount <- rv144
+# forParentcount <- as.data.frame(forParentcount)
+# forParentcount <- subset(forParentcount,
+#                          parent == "4+" & stim == "env")
+# forParentcount <- forParentcount[, c(2, 5, 11)]
+# forParentcount <- unique(forParentcount)
+#
+# booldata <- merge(booldata, forParentcount, by.x = "PTID", by.y = "ptid",
+#                   all.x = TRUE, all.y = FALSE)
+# booldata <- subset(booldata, Subset != "!TNFa&!IFNg&!IL4&!IL2&!CD154&!IL17a")
+# booldata$treatment <- as.numeric(booldata$stim == "stim")
+# uniquepop <- unique(booldata$Subset)
+# booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
+# booldata <- subset(booldata, !is.na(Subset))
+# allsubset <- booldata
+#
+# fit <- subsetResponseMixtureNested(count ~  treatment,
+#                              sub.population = factor(booldata$Subset),
+#                              N = parentcount, id =  PTID,
+#                              data = booldata,
+#                              treatment = treatment,
+#                              weights = NULL,
+#                              rate = 1, updateLag = 7,
+#                              nsamp = 100,
+#                              centerCovariance = FALSE,
+#                              maxIter = 7, tol = 1e-03)
+#
+#
+#
+#
