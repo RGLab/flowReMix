@@ -11,7 +11,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1, 2, 5, 3, 6, 7))
+selected_populations = c(c(1, 2))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -22,14 +22,14 @@ data$prop <- data$count / data$parentcount
 data$population <- as.factor(data$population)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 
-system.time(fit <- subsetResponseMixtureNested(count ~  treatment,
+system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          sub.population = factor(data$population),
                                          N = parentcount, id =  ptid,
                                          data = data,
                                          treatment = treatment,
                                          weights = NULL,
                                          rate = 1, updateLag = 3,
-                                         nsamp = 25,
+                                         nsamp = 40,
                                          centerCovariance = FALSE,
                                          maxIter = 8, tol = 1e-03))
 
@@ -106,10 +106,10 @@ print(ggplot(forplot) +
 #                              data = booldata,
 #                              treatment = treatment,
 #                              weights = NULL,
-#                              rate = 1, updateLag = 7,
-#                              nsamp = 100,
+#                              rate = 1, updateLag = 3,
+#                              nsamp = 30,
 #                              centerCovariance = FALSE,
-#                              maxIter = 7, tol = 1e-03)
+#                              maxIter = 8, tol = 1e-03)
 #
 #
 #

@@ -443,55 +443,160 @@ Below are the covariance structure inferred from the data. The algorithm estimat
 \section{Modeling Subset Response}
 The framework developed so far allows for the modeling of differential response at the subject level- an approach suitable for classifying subjects as responders/non-responders. It may also be of interest to model response at the cell-subset level. Such analysis may be more appropriate for understanding which cell subsets participate in the immune response. 
 
-It is quite clear that the nested EM algorithm developed previously will not be suitable for such analysis. To see why, consider the joint modeling of a non-trivial number $k$ of cell-subsets, where for each cell subset a subject can be a responder or a non-responder. Denote by $z_{ik}$ a random variable taking the value of $1$ if the $i$th subject is a responder for the $k$th cell-subset or $0$ otherwise. We must assign each subject to a 'response cluster', where such an assignment can be represented as a binary vector of length $K$. The posterior probability of a realization of such a cluster is given by:
+It is quite clear that the nested EM algorithm developed previously will not be suitable for such analysis. To see why, consider the joint modeling of a non-trivial number $k$ of cell-subsets, where for each cell subset a subject can be a responder or a non-responder. Denote by $z_{ij}$ a random variable taking the value of $1$ if the $i$th subject is a responder for the $j$th cell-subset or $0$ otherwise. We must assign each subject to a 'response cluster', where such an assignment can be represented as a binary vector of length $p$ (the number of cell-subsets). The posterior probability of a realization of such a cluster is given by:
 \begin{equation}\label{expsum}
-P(z_{i} | y_{i}) = \frac{ f(y_i | z_{i}) P(a) }{ \sum_{ b \in \{0,1\}^{K}} f(y_i | b) P(b)},
+P(z_{i} | y_{i}) = \frac{ f(y_i | z_{i}) P(a) }{ \sum_{ b \in \{0,1\}^{p}} f(y_i | b) P(b)},
 \end{equation}
-where $f(y_i | z_{ik})$ a is an integrated mixture density. The sum in the denominator of \eqref{expsum} is a sum over $2^{K}$ elements which may become computationally expensive even for datasets of modest size. An additional reason for why the nested-EM algorithm is an unattractive solution for estimating this model is the fact that previously, we estimated a random effect for every possible cluster assignment for each subject (there were two such assignments). In the presence of $2^K$ possible assignment this is no longer an attractive option. 
+where $f(y_i | z_{i})$ a is an integrated mixture density. The sum in the denominator of \eqref{expsum} is a sum over $2^{p}$ elements which may become computationally expensive even for datasets of modest size. An additional reason for why the nested-EM algorithm is an unattractive solution for estimating this model is the fact that previously, we estimated a random effect for every possible cluster assignment for each subject (there were two such assignments). In the presence of $2^p$ possible assignment this is no longer an attractive option. 
 
 Recall that for the nested-EM algorithm we sampled a cluster assignment for each subject at each iteration. This, as an alternative to estimating a regression weighted by posterior probabilities. Here, we can use posterior sampling in order to avoid computing the sum at the denominator of equation \eqref{expsum}. Under the assumption that we are able to compute the mixture density efficiently, consider the following Gibbs sampling scheme.  At the $t$th iteration, for the $k$th cell-subset, sample an assignment with probability:
 \begin{equation}\label{postGibbs}
-P(z_{ik} = 1 | y_i, z_{i,-k}) = 
-\frac{f(y_i | z_{ik} = 1, z_{-k}) P( z_{ik} = 1, z_{-k})}
-{\sum_{l=0}^{1} f(y_i | z_{ik} = l, z_{-k}) P( z_{ik} = l, z_{-k})}.
+P(z_{ij} = 1 | y_i, z_{i,-j}) = 
+\frac{f(y_i | z_{ij} = 1, z_{-j}) P( z_{ij} = 1, z_{-j})}
+{\sum_{l=0}^{1} f(y_i | z_{ij} = l, z_{-j}) P( z_{ij} = l, z_{-j})}.
 \end{equation}
 
 The sampling scheme described in \eqref{postGibbs} is simple and could be expected to explore the space of possible assignments in a reasonably efficient manner. However, given that the number of the subjects in a vaccine study is typically smaller, it is unlikely that we will have enough information to estimate $P(z_{i})$ in a reasonable manner without assuming a model for the joint distribution of the subset-specific response. 
 
 A common model for the joint distribution of a binary random variable is the Ising model, which assumes that:
 $$
-\log P(z_i) = \sum_{k=1}^{K} z_{k} \eta_k + \sum_{k=1}^{K - 1}\sum_{l=k + 1}^{K} z_{k} z_{l} \gamma_{kl} + C,
+\log P(z_i) = \sum_{j=1}^{p} z_{j} \gamma_j + \sum_{j=1}^{p - 1}\sum_{l=j + 1}^{p} z_{j} z_{l} \gamma_{jl} + C,
 $$
-where $C$ is a normalizing constant. The Ising model has $K + K(K-1)/2$ parameters to estimate, rather than the $2^{K}$ parameters we would have estimate otherwise. 
+where $C$ is a normalizing constant. The Ising model has $p + p(p-1)/2$ parameters to estimate, rather than the $2^{p}$ parameters we would have estimate otherwise. 
 
-Given this model, the question remains of how to perform estimation. Here again we use a Monte-Carlo EM. In the Stochastic E-Step, for a subject $i$, we will sample from the joint posterior distribution of the random effect vector $\nu$ and the assignment vector $z$. For $l \in \{1,...,L\}$: 
-\begin{itemize}
-\item Sample random effect:
-	\begin{itemize}
-	\item Sample proposal:
-	$$
-	v_l^{t} \sim f(\nu_l | \nu_{1}^{t},..,\nu_{l-1}^{t}, \nu_{l+1}^{t-1},...,\nu_{L}^{t-1})
-	$$
-	\item  Accept with probability:
-	$$
-	\frac{f(y | \nu^{t}, z^{t})}{f(y | \nu^{t-1}, z^{t-1})} 
-	\frac{f(\nu_l^{t-1}|\nu_{-l}^{t})}{f(\nu_l^{t-1}|\nu_{-l}^{t})}
-	$$
-	\end{itemize}
-	
-\item Sample assignment from:
+
+
+
+\subsection{Outer - EM}
+To estimate the subset response model we formulate a new Nested-EM algorithm. As a reminder, a Nested-EM\textregistered{} algorithm is an optimization scheme where a likelihood is maximized with an EM algorithm, the M-Step of which is another EM algorithm. Let us begin by defining relevant quantities. For subject $i$, cell-subset $j$, subsample $l$ and response indicator $k\in \{0,1\}$, we assume:
 $$
-z_l^{t} \sim P(z_l = 1 | y, z_{-l}^{t}, \nu^t)
+y_{ijl} | \{z_j = k\}  \sim Bin(p_{ijlk}, N_{il})
+$$
+where $N_{il}$ is the sum of all relevant cell counts and $p_{ijlk}$ is given by:
+\begin{equation}\label{subsetlogit}
+\text{logit}(p_{ijlk}) = x_{ijl} \beta_{j} + T_{ijl}\tau_{jk} + \nu_{ij}.
+\end{equation}
+In equation \eqref{subsetlogit} $\tau_{jk}$ is a random variable taking the value $0$ if $k =0$ and an unknown constant $\tau_{j}$ if $k = 1$. For the random intercept $\nu_{i}$ we assume a multivariate normal distribution:
+$$
+\nu_i \sim N_p(0, \Sigma)
+$$ 
+with a covariance $\Sigma$ which needs to be estimated from the data. Denote by $P_k(y_{ijl} | \beta_{j}, \tau_{jk}, \nu_l)$ the binomial probability of $y_{ijl}$. We denote the integrated likelihood of $y_{i}$ given an assignment $z \in \{0, 1\}^p$ by:
+$$
+f_z(y_i) := f_z(y_i | \beta, \tau, \Sigma, z) = \int_{\mathbb{R}^{p}} \prod_{jl} P(y_{ijl} | \beta_{j}, \tau_{jk},\nu_j)\varphi(\nu; \Sigma) d\nu
+$$
+
+The complete-information likelihood for the first optimization problem (given the values of the integrated likelihoods) is given by:
+$$
+Q_1(\theta^t | \theta^{t-1}) = 
+\sum_{i=1}^{n}\sum_{z \in \{0,1\}^p} \pi (z | y_i)\log f_z(y_i) + \pi(z | y_i) \log \pi (z)
+$$
+where:
+$$
+\pi(z) \propto e^{\sum_{j=1}^{p} \gamma_j z_j + \sum_{j \neq k} z_j z_k \gamma_{kl} }
+$$
+and
+$$
+\pi(z | y_i) \propto f_z(y_i) \pi(z).
+$$
+
+In the E-step of the outer-EM algorithm we aim to sample an assignment for the each subject, this can be done using a Gibbs sampler. For each subject, iterate over $j$:
+$$
+P(z_j = 1 | y_i, z_{-j}) = \frac{f_{1, z_{-j}}(y_{ij}) \pi (z_j = 1 | z_{-j})}
+{f_{1, z_{-j}}(y_{ij}) \pi (z_j = 1 | z_{-j}) + f_{0, z_{-j}}(y_{ij}) \pi (z_j = 0 | z_{-j})}.
+$$
+Computing $f_{1, z_{-j}}(y_{ij})$ is relatively simple because conditionally on $z_{-j}$ all but one of the random effects can be integrated out and we only need to compute a one dimensional integral. (Specifically, we use importance sampling)
+
+In the M-step of the outer-EM algorithm we must estimate all of the parameter that govern the behavior of the model, $\theta = \{\beta, \tau, \Sigma, \gamma\}$. The parameters of the ising model $\gamma$ can be estimated using the usual pseudo likelihood approach of estimating a set of logistic regression models. To see why this would work, recall that:
+$$
+P(z_{j} = 1| z_{-j}) = \frac{e^{\gamma_{j} + \sum_{k\neq j} z_{k} \gamma_{kj}}}{1 + e^{\gamma_{j} + \sum_{k\neq j} z_{k} \gamma_{kj}}}.
+$$
+We estimate all other parameters with a second EM iteration.
+
+
+
+
+
+
+
+\subsection{Inner - EM} 
+Fix cluster assignments $z_{1}^*,...,z_{n}^* \in \{0,1\}^{p}$. Given these cluster assignments we consider the problem of computing and maximizing the complete information likelihood:
+\begin{equation}\label{innerQ}
+Q_2(\theta^t|\theta^{t-1}) = 
+\sum_{i=1}^{n} \log E\left[ \prod_{jl} P(y_{ijl}| \nu_i, z_i^*) \middle| y_{ijl}, z_i^* \right].
+\end{equation}
+The conditional expectation in \eqref{innerQ} is once again a multivariate integral which may be difficult to compute. Instead of trying to compute the integral exactly, we will perform a stochastic E-step where we sample from the posterior distribution of the random effects $\nu_1,...,\nu_n$:
+\begin{equation}\label{approxInnerQ}
+Q_2(\theta^t|\theta^{t-1}) \approx Q_2^*(\theta^t|\theta^{t-1}) = 
+\sum_{i=1}^{n} \sum_{j=1}^{p} \sum_{l} \log P(y_{ijl}| \nu_i, z_i^*, \nu_{i}^*).
+\end{equation}
+
+We samples from the posterior distribution of the random effects using a component-wise Metropolis-Hastings algorithm.  We iterate over the cell-subsets $j = 1,...,p$ and at the $t$th iteration for the $j$th cell-subset we sample a proposal:
+$$
+r_{ij}^{t} \sim N(\nu_{ij}^{t-1}, c\sigma^{2}_j)
+$$
+where $c$ is a tuning parameter and $\sigma_j^2$ is the $j$th diagonal component of $\Sigma$. We keep the proposal if:
+$$
+\text{runif}(1) < 
+\frac{f(r_{ij}^t | \nu_{i, -j}))\prod_{l} P(y_{ijl} | z_i^*, r_{ij}^{t})}
+{f(\nu_{ij}^{t-1} | \nu_{i, -j}))\prod_{l} P(y_{ijl} | z_i^*, \nu_{ij}^{t-1})}.
+$$
+We then obtain estimates for $\beta, \tau$ and $\Sigma$ by maximizing \eqref{approxInnerQ}.
+
+
+
+
+\subsection{Putting All Together 2.0}
+Approximately:
+\begin{itemize}
+\item \textbf{Outer E-Step:} For $i = 1,..,n$, and $j=1,...,n$ for a fixed number of iterations sample: 
+$$
+z_{ij} \sim P(z_{ij} = 1 | y_i, z_{i,-j}) = 
+\frac{f(y_i | z_{ij} = 1, z_{-j}) P( z_{ij} = 1, z_{-j})}
+{\sum_{l=0}^{1} f(y_i | z_{ij} = l, z_{-j}) P( z_{ij} = l, z_{-j})}.
+$$
+
+\item \textbf{Outer M-Step:} Estimate the parameters of the Ising model based on $z_1^*,...,z^*_n$. 
+
+\item \textbf{Inner E-Step:} For $i = 1,..,n$, and $j=1,...,n$ for a fixed number of iterations sample: 
+$$
+r_{ij}^{t} \sim N(\nu_{ij}^{t-1}, c\sigma^{2}_j)
+$$
+and keep proposal if:
+$$
+\text{runif}(1) < 
+\frac{f(r_{ij}^t | \nu_{i, -j}))\prod_{l} P(y_{ijl} | z_i^*, r_{ij}^{t})}
+{f(\nu_{ij}^{t-1} | \nu_{i, -j}))\prod_{l} P(y_{ijl} | z_i^*, \nu_{ij}^{t-1})}.
+$$
+
+\item \textbf{Inner M-Step:} Set:
+$$
+\{\hat\beta, \hat\tau\} = \arg\max_\theta Q_2^*(\theta^{t}|\theta^{t-1})  
+$$$$
+\hat\Sigma = \frac{1}{n} \sum_{i=1}^{n} \nu_i^* \nu_i^{*T}
 $$
 \end{itemize}
-For each subject we keep $M$ samples. At the M-Step we maximize the likelihood:
+
+\textbf{In the actual implementation:}
+\begin{itemize}
+\item The assignments $z_1,...,z_n$ are averaged across iterations to better estimate the posterior probabilities.
+\item In each iteration, several assignments are saved for each subject to better estimate the Ising model parameters.
+\item The final parameter estimates for $\beta, \tau$ and $\gamma$ are an average of the estimates from the last several iterations. 
+\item The tuning parameter $c$ is tuned such that the acceptance rate is roughly $0.234$.
+\item The random effect samples $\nu_1^*,...,\nu_n^*$ are averaged across iterations to estimate a posterior mean $\hat\mu^*_i$ for each subject and the covariance estimate is:
 $$
-\sum_{i=1}^{n}\sum_{m=1}^{M} \log f(y_i | \nu_i^m, z^m_i)  +
-\sum_{i=1}^{n} \sum_{m=1}^{M} \log f(\nu_i^m)
-$$$$
-+ \sum_{i=1}^{n}\sum_{m=1}^{M}\sum_{l=1}^{L} \eta_l z_{il}^m
-+ \sum_{i=1}^{n}\sum_{m=1}^{M}\sum_{l=1}^{L-1}\sum_{k=l+1}^{L} \eta_l z_{il}^m z_{ik}^{m} + C.
+\hat\Sigma = \frac{1}{n} \sum_{i=1}^{n} \hat\mu_i\hat\mu_i^{T}.
 $$
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
 
 
 

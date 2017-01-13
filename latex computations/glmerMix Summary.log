@@ -1,4 +1,4 @@
-This is LuaTeX, Version beta-0.79.1 (TeX Live 2014) (rev 4971)  (format=lualatex 2014.5.25)  6 JAN 2017 11:50
+This is LuaTeX, Version beta-0.79.1 (TeX Live 2014) (rev 4971)  (format=lualatex 2014.5.25)  7 JAN 2017 18:53
  restricted \write18 enabled.
  file:line:error style messages enabled.
 **"glmerMix Summary.tex"
@@ -417,37 +417,45 @@ Package pdftex.def Info: figures/multivariatescatter.pdf used on input line 433.
 
 (pdftex.def)             Requested size: 345.0pt x 487.63876pt.
  [11<./figures/multivaraiteROC.jpeg>]
-[12<./figures/multivariatescatter.pdf>] [13] [14] ("./glmerMix Summary.aux")
+[12<./figures/multivariatescatter.pdf>] [13]
+Overfull \hbox (0.72293pt too wide) in paragraph at lines 488--489
+[][]\OT1/cmr/m/n/10 The complete-information like-li-hood for the first op-ti-m
+iza-tion prob-lem (given
+ []
+
+[14] [15] [16] [17] ("./glmerMix Summary.aux")
 
 LaTeX Warning: There were multiply-defined labels.
 
 )
 
 Here is how much of LuaTeX's memory you used:
- 4891 strings out of 494695
+ 4896 strings out of 494695
  100000,154059 words of node,token memory allocated
- 469 words of node memory still in use:
-   5 hlist, 2 vlist, 2 rule, 2 glue, 3 kern, 59 glue_spec, 1 write nodes
-   avail lists: 2:21,3:217,4:1473,5:236,6:2731,7:89,9:388,10:263
- 8233 multiletter control sequences out of 65536+600000
+ 505 words of node memory still in use:
+   5 hlist, 2 vlist, 2 rule, 2 glue, 6 kern, 59 glue_spec, 1 write nodes
+   avail lists: 2:21,3:238,4:1452,5:233,6:2756,7:89,9:388,10:265
+ 8238 multiletter control sequences out of 65536+600000
  39 fonts using 1544147 bytes
  38i,8n,26p,743b,240s stack positions out of 5000i,500n,10000p,200000b,100000s
 <</usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb><
 </usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb><<
 /usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb><</
-usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><</u
-sr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb><</usr
-/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb><</usr/l
-ocal/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><</usr/loc
-al/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb><</usr/local/
-texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb><</usr/local/tex
-live/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><</usr/local/texl
-ive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb><</usr/local/texliv
-e/2014/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
-Output written on glmerMix Summary.pdf (14 pages, 768033 bytes).
+usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex7.pfb>
+<</usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><
+</usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb><</
+usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb><</us
+r/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><</usr/
+local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb><</usr/loc
+al/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb><</usr/local/
+texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><</usr/local/t
+exlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb><</usr/local/tex
+live/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb><</usr/local/texli
+ve/2014/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
+Output written on glmerMix Summary.pdf (17 pages, 794228 bytes).
 
-PDF statistics: 121 PDF objects out of 1000 (max. 8388607)
- 78 compressed objects within 1 object stream
+PDF statistics: 138 PDF objects out of 1000 (max. 8388607)
+ 90 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 131072)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

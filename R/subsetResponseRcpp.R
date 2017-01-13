@@ -6,7 +6,14 @@ sqrtMat <- function(X) {
   }
 }
 
-flowRegressionMixture <- function(formula, sub.population = NULL,
+binomDensity <- function(v, prop, N, eta) {
+  result <- sum(dbinom(prop, N, expit(eta + v), log = TRUE))
+  return(result)
+}
+
+logit <- function(p) log(p / (1 - p))
+
+subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   N = NULL, id,
                                   data = parent.frame(),
                                   treatment,
@@ -150,11 +157,10 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
 
   # Estimating covariance structure from marginal fits (step 0)
   nSubjects <- length(unique(dat$id))
-  levelProbs <- c(0.5, 0.5)
   nSubsets <- length(glmFits)
-  randomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
-  randomEffects <- apply(randomEffects, 2, function(c) sapply(c, function(x) rep(x, 2)))
-  covariance <- cov(randomEffects)
+  levelProbs <- rep(0.5, nSubsets)
+  estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
+  covariance <- cov(estimatedRandomEffects)
 
   # Computing new posterior porbabilities
   dat$tempTreatment <- dat$treatment
@@ -168,17 +174,18 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
   sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
   allPosteriors <- matrix(nrow = nSubjects, ncol = maxIter)
-  estimatedRandomEffects <- randomEffects
   randomSampList <- lapply(1:2, function(x) x)
-  posteriors <- rep(0.5, nSubjects)
-  clusterAssignments <- numeric(nSubjects)
-  lastMean <- randomEffects
+  posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
+  clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
   iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
-  accept <- 0
+  MHcoef <- 0.4
+  probSamples <- 100
+  clusterDensities <- matrix(nrow = 2, ncol = probSamples)
+  isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
   for(iter in 1:maxIter) {
     # Refitting Model with current means
-    dataForGlm <- data.frame(data.table::rbindlist(databyid))
-    dataByPopulation <- by(dataForGlm, dataForGlm$sub.population, function(x) x)
+    dataByPopulation <- data.frame(data.table::rbindlist(databyid))
+    dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     if(iter > 1) {
       glmFits <- lapply(dataByPopulation, function(popdata)
         glm(glmformula, family = "binomial", data = popdata, weights = weights))
@@ -193,6 +200,7 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       } else {
         dataByPopulation[[j]]$treatment <- 0
       }
+      offsetBackup <- dataByPopulation[[j]]$randomOffset
       dataByPopulation[[j]]$randomOffset <- 0
       newNullEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
       dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
@@ -201,103 +209,144 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
       altEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$altEta)
       dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - updateLag, 1)^rate
       dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - updateLag, 1)^rate
+      dataByPopulation[[j]]$randomOffset <- offsetBackup
     }
 
     databyid <- do.call("rbind", dataByPopulation)
     databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
     databyid <- by(databyid, databyid$id, function(x) x)
 
-    logLikelihoods <- matrix(nrow = 2, ncol = nsamp)
-    zSamp <- matrix(rnorm(nsamp * ncol(randomEffects)), nrow = ncol(randomEffects))
-    randomEffectSamp <- sqrtcov %*% zSamp
-    accept = flowReMix:::zero(accept)
+    iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
+    MHattempts <- 0
+    MHsuccess <- 0
+    dataLength <- 0
+    MHlag <- 5
+    condvar <- 1 / diag(invcov)
+    assignmentList <- list()
+    assignListLength <- 0
     for(i in 1:nSubjects) {
-      # Computing Posterior Probabilities (Step 1a)
+      #print(i)
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
+      singlePopInd <- sapply(sort(unique(popInd)), function(x) which(popInd == x)[1])
       N <- subjectData$N
       y <- subjectData$y
       prop <- y/N
-      for(k in 1:2) {
-        randEst <- estimatedRandomEffects[2*i - 2 + k, ]
-        randSamp <- randomEffectSamp+randEst
-        if(k == 1) {
-          eta <- subjectData$nullEta
-          nullEta <- eta
-        } else {
-          eta <- subjectData$altEta
-          altEta <- eta
+      iterPosteriors <- rep(0, nSubsets)
+      keepEach <- 5
+
+      # Gibbs sampler for cluster assignments
+      keepEach <- 5
+      assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
+                                         subjectData$nullEta, subjectData$altEta,
+                                         covariance, nsamp, nSubsets, keepEach, MHcoef,
+                                         as.integer(popInd))
+
+      clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
+      assignmentList$i <- assignmentMat
+
+      # Updating global posteriors
+      iterPosteriors <- iterPosteriors / nsamp
+      currentPost <- posteriors[i, ]
+      posteriors[i, ] <- currentPost * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
+      #posteriors[i, ] <- iterPosteriors
+
+      # MH sampler for random effects
+      randomEst <- as.numeric(estimatedRandomEffects[i, ])
+      for(m in 1:nsamp) {
+        for(j in 1:nSubsets) {
+          eta <- nullEta[popInd == j]
+          if(clusterAssignments[i, j] == 0) {
+            eta <- subjectData$nullEta[popInd == j]
+          } else {
+            eta <- subjectData$altEta[popInd == j]
+          }
+          yj <- y[popInd == j]
+          Nj <- N[popInd == j]
+          MHattempts <- MHattempts + 1
+          current <- as.numeric(randomEst[j])
+          condmean <- as.numeric(condvar[j] * invcov[j, -j] %*% (randomEst[-j]))
+          proposal <- rnorm(1, mean = current, sd = sqrt(covariance[j, j]) * MHcoef)
+          newdens <- sum(dbinom(yj, Nj, expit(eta + proposal), log = TRUE))
+          newdens <- newdens + dnorm(proposal, mean = condmean, sd = sqrt(condvar[j]))
+          olddens <- sum(dbinom(yj, Nj, expit(eta + as.numeric(randomEst[j])), log = TRUE))
+          olddens <- olddens + dnorm(current, mean = condmean, sd = sqrt(condvar[j]))
+          if(runif(1) < exp(newdens - olddens))  {
+            randomEst[j] <- proposal
+            MHsuccess <- MHsuccess + 1
+          }
         }
-        mu <- expit(eta+randSamp[popInd, ])
-        binomLlik <- colSums(dbinom(y,N,mu,log=TRUE))
-        normWeights <- -0.5*diag(crossprod(crossprod(invcov,randSamp),randSamp))-0.5*covDet #faster than above
-        importanceWeights <- -0.5*diag(crossprod(crossprod(invSampcov,randSamp-randEst),randSamp-randEst))-0.5*sampCovDet #faster than above
-        logLikelihoods[k, ] <- binomLlik + normWeights - importanceWeights + log(levelProbs[k])
-        randomSampList[[k]] <- randSamp
+        #if(i < 10) print(round(c(it = iter, i = i, m = m, REST = as.numeric(randomEst)), 2))
       }
+      # Updating global estimates
+      currentRandomEst <- estimatedRandomEffects[i, ]
+      estimatedRandomEffects[i, ] <- currentRandomEst +
+        (randomEst - currentRandomEst) / max(iter - updateLag, 1)
 
-      posterior <- rowSums(exp(logLikelihoods - max(logLikelihoods)))
-      posterior <-  1/(1 + posterior[1] / posterior[2])
-      if(is.nan(posterior)) posterior <- 0
-      posteriors[i] <- posteriors[i] + (posterior - posteriors[i]) / max(iter - updateLag, 1)^rate
-
-      # Sampling cluster assignment
-      cluster <- 1 + rbinom(1, 1, posteriors[i])
-      clusterAssignments[i] <- cluster
-      if(cluster == 1) {
-        subjectData$treatment <- 0
-      } else {
-        subjectData$treatment <- subjectData$tempTreatment
+      # preparing data for glm
+      subjectData$randomOffset[1:length(popInd)] <- as.numeric(randomEst[popInd])
+      for(j in 1:nSubsets) {
+        # Setting treatment according to cluster assignment
+        if(clusterAssignments[i, j] == 1) {
+          subjectData$treatment[popInd == j] <- subjectData$tempTreatment[popInd == j]
+        } else {
+          subjectData$treatment[popInd == j] <- 0
+        }
       }
-
-      # Performing MH step
-      unifs = runif(nsamp)
-      flowReMix:::MH(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov,
-                     accept, iter,rate, unifs, nullEta, altEta, updateLag);
-
-      subjectData$randomOffset <- lastMean[2*i - 2 + cluster, ]
       databyid[[i]] <- subjectData
     }
 
-    weights <- as.vector(sapply(posteriors, function(x) c(1 - x, x)))
-    covariance <- cov.wt(estimatedRandomEffects, weights, center = centerCovariance)$cov
-    invcov <- solve(covariance)
-    covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
-
-    acceptRate <- accept / (2 * nsamp * nSubjects)
-    if(iter == 1) {
-      sampCoef <- 0.25
-      sampcov <- covariance * sampCoef
-      sqrtcov <- sqrtMat(sampcov)
-      invSampcov <- solve(sampcov)
-      sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
-    } else {
-      if(acceptRate < 0.15) {
-        sampCoef <- sampCoef * .5
-      } else if (acceptRate > 0.35) {
-        sampCoef <- sampCoef * 2
-      } else if (acceptRate <= 0.234) {
-        sampCoef <- sampCoef * .95
-      } else {
-        sampCoef <- sampCoef * 1.05
-      }
-      sampcov <- covariance * sampCoef
-      invSampcov <- solve(sampcov)
-      sqrtcov <- sqrtMat(sampcov)
-      sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
+    # Updating Covariance
+    if(iter > updateLag) {
+      covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
+      invcov <- solve(covariance)
+      #print(round(cov2cor(covariance), 3))
     }
 
-    levelProbs[2] <- mean(posteriors)
-    levelProbs[1] <- 1 - levelProbs[2]
-    print(c(iter, sampCoef, accept / (2*nsamp * nSubjects)))
-    print(levelProbs)
+    # Updating ising
+    require(glmnet)
+    randomizeAssignments <- function(x, prob = 0.5) {
+      if(runif(1) < prob) {
+        coordinate <- sample.int(length(x), 1)
+        x[coordinate] <- ifelse(x[coordinate] == 1, 0, 1)
+      }
+
+      return(x)
+    }
+    assignmentList <- do.call("rbind",assignmentList)
+    assignmentList <- t(apply(assignmentList, 1, randomizeAssignments))
+    isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
+                                   progressbar = FALSE, plot = FALSE)
+    newcoefs <- isingfit$weiadj
+    for(j in 1:nSubsets) {
+      newcoefs[j, ] <- c(newcoefs[j, j], newcoefs[j, -j])
+      isingCoefs[j, ] <- isingCoefs[j, ] + (newcoefs[j, ] - isingCoefs[j, ]) / max(1, iter - updateLag)
+    }
+    print(isingCoefs)
+
+    MHrate <- MHsuccess / MHattempts
+    if(MHrate > 0.35) {
+      MHcoef <- MHcoef * 1.5
+    } else if(MHrate > 0.234) {
+      MHcoef <- MHcoef * 1.05
+    } else if(MHrate < 0.15) {
+      MHcoef <- MHcoef * .5
+    } else {
+      MHcoef <- MHcoef * .95
+    }
+
+    levelProbs <- colMeans(posteriors)
+    print(c(iter, levelProbs))
+    print(c(iter, round(sapply(coefficientList, function(x) x[2]), 2)))
+    print(apply(posteriors, 2, function(x) round(as.numeric(roc(vaccine ~ x)$auc), 3)))
+    print(c(MHcoef, MHrate))
   }
 
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
   result <- list()
   result$levelProbs <- levelProbs
   result$coefficients <- coefficientList
-  result$posteriors <- cbind(uniqueIDs, 1 - posteriors, posteriors)
+  result$posteriors <- cbind(uniqueIDs, 1 - posteriors)
   result$covariance <- covariance
   result$nullRandomEffects <- cbind(uniqueIDs, estimatedRandomEffects[seq(from = 1,
                                                          to = nrow(estimatedRandomEffects) - 1,
@@ -305,6 +354,8 @@ flowRegressionMixture <- function(formula, sub.population = NULL,
   result$altRandomEffects <- cbind(uniqueIDs, estimatedRandomEffects[seq(from = 2,
                                                                           to = nrow(estimatedRandomEffects),
                                                                           by = 2), ])
+  result$isingCov <- isingCoefs
+  result$isingfit <- isingfit
   return(result)
 }
 

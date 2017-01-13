@@ -9,3 +9,7 @@ zero <- function(accept) {
     .Call('flowReMix_zero', PACKAGE = 'flowReMix', accept)
 }
 
+subsetAssignGibbs <- function(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, MHcoef, popInd) {
+    .Call('flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, MHcoef, popInd)
+}
+

@@ -41,3 +41,25 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
+// subsetAssignGibbs
+NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, double MHcoef, IntegerVector popInd);
+RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type prop(propSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type N(NSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type isingCoefs(isingCoefsSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type nullEta(nullEtaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type altEta(altEtaSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< int >::type nsamp(nsampSEXP);
+    Rcpp::traits::input_parameter< int >::type nSubsets(nSubsetsSEXP);
+    Rcpp::traits::input_parameter< int >::type keepEach(keepEachSEXP);
+    Rcpp::traits::input_parameter< double >::type MHcoef(MHcoefSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
+    __result = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, MHcoef, popInd));
+    return __result;
+END_RCPP
+}

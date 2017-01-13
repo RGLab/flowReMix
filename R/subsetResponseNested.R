@@ -225,6 +225,7 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     assignmentList <- list()
     assignListLength <- 0
     for(i in 1:nSubjects) {
+      #print(i)
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       singlePopInd <- sapply(sort(unique(popInd)), function(x) which(popInd == x)[1])
@@ -335,22 +336,29 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     if(iter > updateLag) {
       covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
       invcov <- solve(covariance)
-      print(round(cov2cor(covariance), 3))
+      #print(round(cov2cor(covariance), 3))
     }
 
     # Updating ising
     require(glmnet)
-    assignmentList <- do.call("rbind",assignmentList)
-    for(j in 1:nSubsets) {
-      target <- assignmentList[, j]
-      covariates <- assignmentList[, -j]
-      #newcoefs <- coef(logistf::logistf(target ~ covariates))
-      glmnetfit <- glmnet::cv.glmnet(covariates, target, family = "binomial", alpha = 1)
-      newcoefs <- as.numeric(coef(glmnetfit))
-      coefs <- isingCoefs[j, ]
-      isingCoefs[j, ] <- coefs + (newcoefs - coefs) / max(1, iter - updateLag)
+    randomizeAssignments <- function(x, prob = 0.5) {
+      if(runif(1) < prob) {
+        coordinate <- sample.int(length(x), 1)
+        x[coordinate] <- ifelse(x[coordinate] == 1, 0, 1)
+      }
+
+      return(x)
     }
-    print(isingCoefs[1, ])
+    assignmentList <- do.call("rbind",assignmentList)
+    assignmentList <- t(apply(assignmentList, 1, randomizeAssignments))
+    isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
+                                   progressbar = FALSE, plot = FALSE)
+    newcoefs <- isingfit$weiadj
+    for(j in 1:nSubsets) {
+      newcoefs[j, ] <- c(newcoefs[j, j], newcoefs[j, -j])
+      isingCoefs[j, ] <- isingCoefs[j, ] + (newcoefs[j, ] - isingCoefs[j, ]) / max(1, iter - updateLag)
+    }
+    print(isingCoefs)
 
     MHrate <- MHsuccess / MHattempts
     if(MHrate > 0.35) {
@@ -383,6 +391,7 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
                                                                           to = nrow(estimatedRandomEffects),
                                                                           by = 2), ])
   result$isingCov <- isingCoefs
+  result$isingfit <- isingfit
   return(result)
 }
 
