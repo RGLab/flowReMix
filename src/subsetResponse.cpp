@@ -72,8 +72,10 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericMatrix isingCoefs,
                                 NumericVector nullEta, NumericVector altEta,
                                 NumericMatrix covariance,
-                                int nsamp, int nSubsets, int keepEach, double MHcoef,
-                                IntegerVector popInd) {
+                                int nsamp, int nSubsets, int keepEach, int intSampSize,
+                                double MHcoef,
+                                IntegerVector popInd,
+                                NumericVector unifVec, NumericVector normVec) {
 
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
@@ -85,13 +87,13 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   double priorProb, densityRatio, pResponder ;
   int k, j, m;
 
-  int intSampSize = 100 ;
   int assignNum = 0;
   NumericMatrix clusterDensities(2, intSampSize) ;
   NumericVector iterPosteriors(nSubsets) ;
   NumericMatrix assignmentMatrix(int(floor(nsamp / keepEach)), nSubsets) ;
   NumericVector assignment(nSubsets) ;
 
+  int unifPosition = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
       subsetNullEta = nullEta[popInd == (j + 1)] ;
@@ -112,7 +114,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         }
         etaResid = empEta - eta ;
         muHat = mean(etaResid) ;
-        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef) ;
+        //vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef) ;
+        vsample = normVec * sigmaHat * MHcoef + muHat ;
         sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef, TRUE) ;
         normDens = dnorm(vsample, muHat, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
@@ -130,7 +133,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
 
       densityRatio = integratedDensities[0] / integratedDensities[1] * (1.0 - priorProb) / priorProb ;
       pResponder = 1.0 / (1.0 + densityRatio) ;
-      if(unifZeroOne() < pResponder) {
+      if(unifVec[unifPosition++] < pResponder) {
         assignment[j] = 1 ;
       } else {
         assignment[j] = 0 ;

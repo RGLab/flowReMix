@@ -233,12 +233,18 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
       keepEach <- 1
+      intSampSize <- 100
 
       # Gibbs sampler for cluster assignments
+      set.seed(iter * i)
+      unifVec <- runif(nsamp * nSubsets)
+      normVec <- rnorm(intSampSize)
       assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
                                          subjectData$nullEta, subjectData$altEta,
-                                         covariance, nsamp, nSubsets, keepEach, MHcoef,
-                                         as.integer(popInd))
+                                         covariance, nsamp, nSubsets, keepEach, intSampSize,
+                                         MHcoef,
+                                         as.integer(popInd),
+                                         unifVec, normVec)
 
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
       assignmentList[[i]] <- assignmentMat

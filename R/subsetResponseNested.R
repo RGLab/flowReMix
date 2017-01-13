@@ -233,6 +233,12 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
 
+      set.seed(iter * i)
+      intSampSize <- 100
+      unifVec <- runif(nsamp * nSubsets)
+      normVec <- rnorm(intSampSize)
+      unifPosition <- 1
+
       # Gibbs sampler for cluster assignments
       for(m in 1:nsamp) {
         for(j in 1:nSubsets) {
@@ -252,7 +258,8 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
             }
             etaResid <- empEta - eta
             muHat <- mean(etaResid)
-            vsample <- rnorm(probSamples, mean = muHat, sd = sigmaHat * MHcoef)
+            #vsample <- rnorm(intSampSize, mean = muHat, sd = sigmaHat * MHcoef)
+            vsample <- sigmaHat * MHcoef * normVec + muHat
             sampNormDens <- dnorm(vsample, mean = muHat, sd = sigmaHat * MHcoef, log = TRUE)
             normDens <- dnorm(vsample, mean = 0, sd = sigmaHat, log = TRUE)
             importanceWeights <- normDens - sampNormDens
@@ -269,7 +276,13 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
           }
           densityRatio <- densityRatio[1] / densityRatio[2] * (1 - priorProb) / priorProb
           pResponder <- 1 / (1 + densityRatio)
-          assignment <- rbinom(1, 1, pResponder)
+          #assignment <- rbinom(1, 1, pResponder)
+          assignment <- 0
+          if(unifVec[unifPosition] < pResponder) {
+            assignment <- 1
+          }
+          unifPosition <- unifPosition + 1
+
           clusterAssignments[i, j] <- assignment
           if(assignment == 1) iterPosteriors[j] <- iterPosteriors[j] + 1
         }

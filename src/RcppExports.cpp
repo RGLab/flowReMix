@@ -42,8 +42,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // subsetAssignGibbs
-NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, double MHcoef, IntegerVector popInd);
-RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP) {
+NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, double MHcoef, IntegerVector popInd, NumericVector unifVec, NumericVector normVec);
+RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP intSampSizeSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP, SEXP unifVecSEXP, SEXP normVecSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -57,9 +57,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type nsamp(nsampSEXP);
     Rcpp::traits::input_parameter< int >::type nSubsets(nSubsetsSEXP);
     Rcpp::traits::input_parameter< int >::type keepEach(keepEachSEXP);
+    Rcpp::traits::input_parameter< int >::type intSampSize(intSampSizeSEXP);
     Rcpp::traits::input_parameter< double >::type MHcoef(MHcoefSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
-    __result = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, MHcoef, popInd));
+    Rcpp::traits::input_parameter< NumericVector >::type unifVec(unifVecSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type normVec(normVecSEXP);
+    __result = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec));
     return __result;
 END_RCPP
 }
