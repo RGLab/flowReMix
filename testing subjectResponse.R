@@ -11,7 +11,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1, 2))
+selected_populations = c(c(1, 2, 3))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -32,6 +32,18 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          nsamp = 40,
                                          centerCovariance = FALSE,
                                          maxIter = 8, tol = 1e-03))
+
+system.time(fit <- subsetResponseMixtureNested(count ~  treatment,
+                                             sub.population = factor(data$population),
+                                             N = parentcount, id =  ptid,
+                                             data = data,
+                                             treatment = treatment,
+                                             weights = NULL,
+                                             rate = 1, updateLag = 3,
+                                             nsamp = 40,
+                                             centerCovariance = FALSE,
+                                             maxIter = 8, tol = 1e-03))
+
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))

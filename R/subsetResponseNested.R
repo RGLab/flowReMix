@@ -225,7 +225,6 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
     assignmentList <- list()
     assignListLength <- 0
     for(i in 1:nSubjects) {
-      #print(i)
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       singlePopInd <- sapply(sort(unique(popInd)), function(x) which(popInd == x)[1])
@@ -264,15 +263,15 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
 
           densityRatio <- rowSums(exp(clusterDensities - max(clusterDensities)))
           if(m >= 2) {
-            pResponder <- expit(sum(c(1, clusterAssignments[i, -j]) * isingCoefs[j, ]))
+            priorProb <- expit(sum(c(1, clusterAssignments[i, -j]) * isingCoefs[j, ]))
           } else {
-            pResponder <- 0.5
+            priorProb <- 0.5
           }
-          densityRatio <- densityRatio[1] / densityRatio[2] * (1 - pResponder) / pResponder
+          densityRatio <- densityRatio[1] / densityRatio[2] * (1 - priorProb) / priorProb
           pResponder <- 1 / (1 + densityRatio)
           assignment <- rbinom(1, 1, pResponder)
           clusterAssignments[i, j] <- assignment
-          if(assignment == 1) iterPosteriors[j] <- iterPosteriors[j] + assignment
+          if(assignment == 1) iterPosteriors[j] <- iterPosteriors[j] + 1
         }
 
         if((m %% 5) == 0) {
@@ -283,6 +282,7 @@ subsetResponseMixtureNested <- function(formula, sub.population = NULL,
 
       # Updating global posteriors
       iterPosteriors <- iterPosteriors / nsamp
+      print(iterPosteriors)
       currentPost <- posteriors[i, ]
       posteriors[i, ] <- currentPost * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
       #posteriors[i, ] <- iterPosteriors

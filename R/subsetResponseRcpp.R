@@ -228,28 +228,25 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       #print(i)
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
-      singlePopInd <- sapply(sort(unique(popInd)), function(x) which(popInd == x)[1])
       N <- subjectData$N
       y <- subjectData$y
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
-      keepEach <- 5
+      keepEach <- 1
 
       # Gibbs sampler for cluster assignments
-      keepEach <- 5
       assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
                                          subjectData$nullEta, subjectData$altEta,
                                          covariance, nsamp, nSubsets, keepEach, MHcoef,
                                          as.integer(popInd))
 
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
-      assignmentList$i <- assignmentMat
+      assignmentList[[i]] <- assignmentMat
 
       # Updating global posteriors
-      iterPosteriors <- iterPosteriors / nsamp
-      currentPost <- posteriors[i, ]
-      posteriors[i, ] <- currentPost * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
-      #posteriors[i, ] <- iterPosteriors
+      iterPosteriors <- colMeans(assignmentMat)
+      print(iterPosteriors)
+      posteriors[i, ] <- posteriors[i, ] * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
 
       # MH sampler for random effects
       randomEst <- as.numeric(estimatedRandomEffects[i, ])
@@ -276,8 +273,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
             MHsuccess <- MHsuccess + 1
           }
         }
-        #if(i < 10) print(round(c(it = iter, i = i, m = m, REST = as.numeric(randomEst)), 2))
       }
+
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
       estimatedRandomEffects[i, ] <- currentRandomEst +
@@ -304,7 +301,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     }
 
     # Updating ising
-    require(glmnet)
     randomizeAssignments <- function(x, prob = 0.5) {
       if(runif(1) < prob) {
         coordinate <- sample.int(length(x), 1)
@@ -317,11 +313,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     assignmentList <- t(apply(assignmentList, 1, randomizeAssignments))
     isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
                                    progressbar = FALSE, plot = FALSE)
-    newcoefs <- isingfit$weiadj
-    for(j in 1:nSubsets) {
-      newcoefs[j, ] <- c(newcoefs[j, j], newcoefs[j, -j])
-      isingCoefs[j, ] <- isingCoefs[j, ] + (newcoefs[j, ] - isingCoefs[j, ]) / max(1, iter - updateLag)
-    }
+    isingCoefs <- isingCoefs + (isingfit$weiadj - isingCoefs) / max(1, iter - updateLag)
     print(isingCoefs)
 
     MHrate <- MHsuccess / MHattempts

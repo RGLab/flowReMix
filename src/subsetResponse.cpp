@@ -1,9 +1,21 @@
 #include  <RcppArmadillo.h>
 using namespace Rcpp;
 
+// headers
+
 NumericVector expit(NumericVector x) ;
 
 void print(NumericVector x);
+
+// helper functions
+
+double expit(double x) {
+  return 1.0 / (1.0 + std::exp(-x)) ;
+}
+
+double unifZeroOne() {
+  return rand() / (RAND_MAX + 1.) ;
+}
 
 NumericVector logit(NumericVector p) {
   NumericVector result = log(p / (1.0 - p)) ;
@@ -21,39 +33,23 @@ NumericMatrix computeRandomEta(NumericVector eta, NumericVector vsample) {
   return result ;
 }
 
-NumericVector computeResponderProb(NumericMatrix coefficients, NumericVector assignment, int subsetIndex, int nSubsets) {
-  NumericVector eta = coefficients(subsetIndex, 0) ;
-  for(int i = 0; i < nSubsets - 1; i++) {
-    if(i != subsetIndex) {
-      eta[0] += coefficients(subsetIndex, i + 1) * assignment[i] ;
-    }
-  }
-
-  eta = expit(eta) ;
-  return eta;
-}
-
 NumericVector computeBinomDensity(NumericVector subsetCount, NumericVector subsetN,
                                   NumericMatrix randomEta) {
   int sampSize = randomEta.nrow() ;
   int subsetSize = subsetCount.length() ;
-  double density ;
-  NumericVector prob ;
+  int count, N;
+  double density, prob ;
 
   NumericVector binomDensity(sampSize) ;
 
   for(int i = 0; i < sampSize ; i++) {
     density = 0;
     for(int j = 0; j < subsetSize; j++) {
-      // print(randomEta(i, _)) ;
       prob = randomEta(i, j) ;
       prob = expit(prob) ;
-      double probability = prob[0] ;
-      // Rcpp::Rcout<<"inner "<<i<<" "<< j <<"\n";
-      int count = subsetCount[j] ;
-      int N = subsetN[j] ;
-      density += R::dbinom(count, N, probability, TRUE) ;
-      // Rcpp::Rcout<<"inner "<<i<<" "<< j <<"\n";
+      count = subsetCount[j] ;
+      N = subsetN[j] ;
+      density += R::dbinom(count, N, prob, TRUE) / subsetSize;
     }
     binomDensity[i] = density ;
   }
@@ -63,15 +59,10 @@ NumericVector computeBinomDensity(NumericVector subsetCount, NumericVector subse
 
 NumericVector computeIntegratedDensities(NumericMatrix logdens) {
   double maxdens = max(logdens) ;
-  //Rcpp::Rcout<< maxdens<<" ";
-  NumericVector result(2) ;
 
-  for(int i = 0; i < 2 ; i++) {
-    for(int j = 0; j < logdens.ncol() ; j++) {
-      result(i) += exp(logdens(i, j) - maxdens) ;
-      // Rcpp::Rcout<< logdens(i, j)<<" ";
-    }
-  }
+  NumericVector result(2) ;
+  result[0] = sum(exp(logdens(0, _) - maxdens)) ;
+  result[1] = sum(exp(logdens(1, _) - maxdens)) ;
 
   return result ;
 }
@@ -89,8 +80,9 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
   NumericVector binomDensity ;
   NumericMatrix randomEta ;
-  NumericVector pResponder, densityRatio, integratedDensities;
-  double sigmaHat, muHat;
+  NumericVector integratedDensities;
+  double sigmaHat, muHat ;
+  double priorProb, densityRatio, pResponder ;
   int k, j, m;
 
   int intSampSize = 100 ;
@@ -125,32 +117,28 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         normDens = dnorm(vsample, muHat, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
         randomEta = computeRandomEta(eta, vsample) ;
-        // print(importanceWeights) ;
         binomDensity = computeBinomDensity(subsetCount, subsetN, randomEta) ;
-        // print(binomDensity) ;
-        // Rcpp::Rcout<<"M J= "<<m << " " << j << "\n";
         clusterDensities(k, _) = binomDensity + importanceWeights ;
       }
 
+      integratedDensities = computeIntegratedDensities(clusterDensities) ;
       if(m >= 1) {
-        pResponder = computeResponderProb(isingCoefs, assignment, j, nSubsets) ;
+        priorProb = expit(sum(isingCoefs(j, _) * assignment)) ;
       } else {
-        pResponder = 0.5 ;
+        priorProb = 0.5 ;
       }
 
-      // Rcpp::Rcout<<j << "\n";
-      integratedDensities = computeIntegratedDensities(clusterDensities) ;
-      // print(integratedDensities) ;
-      densityRatio = integratedDensities[0] / integratedDensities[1] * (1.0 - pResponder) / pResponder ;
-      // print(densityRatio) ;
+      densityRatio = integratedDensities[0] / integratedDensities[1] * (1.0 - priorProb) / priorProb ;
       pResponder = 1.0 / (1.0 + densityRatio) ;
-      // print(densityRatio) ;
-      assignment[j] = R::rbinom(1, pResponder[0]) ;
+      if(unifZeroOne() < pResponder) {
+        assignment[j] = 1 ;
+      } else {
+        assignment[j] = 0 ;
+      }
     }
 
     if((m % keepEach) == 0) {
       assignmentMatrix(assignNum++, _) = assignment ;
-      Rcpp::Rcout<<assignment[0]<<assignment[1]<<"\n";
     }
   }
 
