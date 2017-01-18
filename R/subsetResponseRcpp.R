@@ -182,6 +182,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   probSamples <- 100
   clusterDensities <- matrix(nrow = 2, ncol = probSamples)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
+  MHattempts <- 0
+  MHsuccess <- 0
   for(iter in 1:maxIter) {
     # Refitting Model with current means
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
@@ -217,13 +219,13 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     databyid <- by(databyid, databyid$id, function(x) x)
 
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
-    MHattempts <- 0
-    MHsuccess <- 0
     dataLength <- 0
     MHlag <- 5
     condvar <- 1 / diag(invcov)
     assignmentList <- list()
     assignListLength <- 0
+    setNumericVectorToZero(MHattempts)
+    setNumericVectorToZero(MHsuccess)
     for(i in 1:nSubjects) {
       #print(i)
       subjectData <- databyid[[i]]
@@ -233,52 +235,48 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
       keepEach <- 1
+      intSampSize <- 100
 
       # Gibbs sampler for cluster assignments
+      set.seed(iter  + i * 10^4)
+      unifVec <- runif(nsamp * nSubsets)
+      normVec <- rnorm(intSampSize)
       assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
                                          subjectData$nullEta, subjectData$altEta,
-                                         covariance, nsamp, nSubsets, keepEach, MHcoef,
-                                         as.integer(popInd))
-
-      clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
-      assignmentList[[i]] <- assignmentMat
+                                         covariance, nsamp, nSubsets, keepEach, intSampSize,
+                                         MHcoef,
+                                         as.integer(popInd),
+                                         unifVec, normVec)
 
       # Updating global posteriors
       iterPosteriors <- colMeans(assignmentMat)
-      print(iterPosteriors)
-      posteriors[i, ] <- posteriors[i, ] * (max(iter - updateLag, 1) - 1)/max(iter - updateLag, 1) + iterPosteriors/max(iter - updateLag, 1)
+      posteriors[i, ] <- posteriors[i, ] + (iterPosteriors - posteriors[i, ])/max(iter - updateLag, 1)
+      clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
+      assignmentMat <- assignmentMat[seq(from = 5, to = nrow(assignmentMat), by = 5), ]
+      assignmentList[[i]] <- assignmentMat
 
       # MH sampler for random effects
+      unifVec <- runif(nsamp * nSubsets)
+      eta <- subjectData$nullEta
+      responderSubset <- popInd %in% which(clusterAssignments[i, ] == 1)
+      eta[responderSubset] <- subjectData$altEta[responderSubset]
+      assignment <- as.vector(clusterAssignments[i, ])
       randomEst <- as.numeric(estimatedRandomEffects[i, ])
-      for(m in 1:nsamp) {
-        for(j in 1:nSubsets) {
-          eta <- nullEta[popInd == j]
-          if(clusterAssignments[i, j] == 0) {
-            eta <- subjectData$nullEta[popInd == j]
-          } else {
-            eta <- subjectData$altEta[popInd == j]
-          }
-          yj <- y[popInd == j]
-          Nj <- N[popInd == j]
-          MHattempts <- MHattempts + 1
-          current <- as.numeric(randomEst[j])
-          condmean <- as.numeric(condvar[j] * invcov[j, -j] %*% (randomEst[-j]))
-          proposal <- rnorm(1, mean = current, sd = sqrt(covariance[j, j]) * MHcoef)
-          newdens <- sum(dbinom(yj, Nj, expit(eta + proposal), log = TRUE))
-          newdens <- newdens + dnorm(proposal, mean = condmean, sd = sqrt(condvar[j]))
-          olddens <- sum(dbinom(yj, Nj, expit(eta + as.numeric(randomEst[j])), log = TRUE))
-          olddens <- olddens + dnorm(current, mean = condmean, sd = sqrt(condvar[j]))
-          if(runif(1) < exp(newdens - olddens))  {
-            randomEst[j] <- proposal
-            MHsuccess <- MHsuccess + 1
-          }
-        }
-      }
+      randomEst <- randomEffectCoordinateMH(y, N,
+                                            as.integer(i), nsamp, nSubsets,
+                                            MHcoef,
+                                            as.vector(assignment),
+                                            as.integer(popInd),
+                                            as.numeric(eta),
+                                            randomEst,
+                                            as.numeric(condvar), covariance, invcov,
+                                            MHattempts, MHsuccess,
+                                            unifVec)
+
 
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
-      estimatedRandomEffects[i, ] <- currentRandomEst +
-        (randomEst - currentRandomEst) / max(iter - updateLag, 1)
+      estimatedRandomEffects[i, ] <- currentRandomEst + (randomEst - currentRandomEst) / max(iter - updateLag, 1)
 
       # preparing data for glm
       subjectData$randomOffset[1:length(popInd)] <- as.numeric(randomEst[popInd])
@@ -297,10 +295,10 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     if(iter > updateLag) {
       covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
       invcov <- solve(covariance)
-      #print(round(cov2cor(covariance), 3))
     }
 
     # Updating ising
+    set.seed(510)
     randomizeAssignments <- function(x, prob = 0.5) {
       if(runif(1) < prob) {
         coordinate <- sample.int(length(x), 1)
