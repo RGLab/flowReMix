@@ -1,3 +1,12 @@
+randomizeAssignments <- function(x, prob = 0.5) {
+  if(runif(1) < prob) {
+    coordinate <- sample.int(length(x), 1)
+    x[coordinate] <- ifelse(x[coordinate] == 1, 0, 1)
+  }
+
+  return(x)
+}
+
 sqrtMat <- function(X) {
   if(length(X) > 1) {
     return(expm::sqrtm(X))
@@ -18,10 +27,11 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   data = parent.frame(),
                                   treatment,
                                   weights = NULL,
-                                  updateLag = 3,
                                   centerCovariance = TRUE,
-                                  rate = 1, nsamp = 100,
-                                  maxIter = 30, tol = 1e-03) {
+                                  covarianceMethod = c("dense" , "sparse"),
+                                  randomAssignProb = 0.0,
+                                  updateLag = 3, rate = 1, nsamp = 100,
+                                  maxIter = 8, verbose = TRUE) {
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
     stop("Treatment variable must be specified!")
@@ -166,15 +176,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$tempTreatment <- dat$treatment
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
-  sampCoef <- 0.00001
-  sampcov <- sampCoef * covariance
-  sqrtcov <- sqrtMat(sampcov)
   invcov <- solve(covariance)
-  invSampcov <- solve(sampcov)
-  covDet <- as.numeric(determinant(covariance, logarithm = TRUE)$modulus)
-  sampCovDet <- as.numeric(determinant(sampcov, logarithm = TRUE)$modulus)
-  allPosteriors <- matrix(nrow = nSubjects, ncol = maxIter)
-  randomSampList <- lapply(1:2, function(x) x)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
   clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
   iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
@@ -238,7 +240,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       intSampSize <- 100
 
       # Gibbs sampler for cluster assignments
-      set.seed(iter  + i * 10^4)
+      #set.seed(iter  + i * 10^4)
       unifVec <- runif(nsamp * nSubsets)
       normVec <- rnorm(intSampSize)
       assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
@@ -293,27 +295,27 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
     # Updating Covariance
     if(iter > updateLag) {
-      covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
-      invcov <- solve(covariance)
+      if(covarianceMethod[1] == "sparse") {
+        pdsoftFit <- PDSCE::pdsoft.cv(estimatedRandomEffects, init = "dense")
+        covariance <- pdsoftFit$sigma
+        invcov <- pdsoftFit$omega
+      } else {
+        covariance <- cov.wt(estimatedRandomEffects, rep(1, nrow(estimatedRandomEffects)), center = centerCovariance)$cov
+        invcov <- solve(covariance)
+      }
     }
 
     # Updating ising
-    set.seed(510)
-    randomizeAssignments <- function(x, prob = 0.5) {
-      if(runif(1) < prob) {
-        coordinate <- sample.int(length(x), 1)
-        x[coordinate] <- ifelse(x[coordinate] == 1, 0, 1)
-      }
-
-      return(x)
-    }
     assignmentList <- do.call("rbind",assignmentList)
-    assignmentList <- t(apply(assignmentList, 1, randomizeAssignments))
+    if(randomAssignProb > 0 & randomAssignProb <= 1) {
+      assignmentList <- t(apply(assignmentList, 1, randomizeAssignments, prob = randomAssignProb))
+    }
     isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
                                    progressbar = FALSE, plot = FALSE)
     isingCoefs <- isingCoefs + (isingfit$weiadj - isingCoefs) / max(1, iter - updateLag)
-    print(isingCoefs)
+    levelProbs <- colMeans(posteriors)
 
+    # Updating MH coefficient
     MHrate <- MHsuccess / MHattempts
     if(MHrate > 0.35) {
       MHcoef <- MHcoef * 1.5
@@ -325,11 +327,13 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       MHcoef <- MHcoef * .95
     }
 
-    levelProbs <- colMeans(posteriors)
-    print(c(iter, levelProbs))
-    print(c(iter, round(sapply(coefficientList, function(x) x[2]), 2)))
-    print(apply(posteriors, 2, function(x) round(as.numeric(roc(vaccine ~ x)$auc), 3)))
-    print(c(MHcoef, MHrate))
+    if(verbose) {
+      print(isingCoefs)
+      print(c(iter, levelProbs))
+      print(c(iter, round(sapply(coefficientList, function(x) x[2]), 2)))
+      print(apply(posteriors, 2, function(x) round(as.numeric(roc(vaccine ~ x)$auc), 3)))
+      print(c(MHcoef, MHrate))
+    }
   }
 
   uniqueIDs <- sapply(databyid, function(x) x$id[1])

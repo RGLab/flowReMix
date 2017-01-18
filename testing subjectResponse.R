@@ -11,7 +11,8 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1, 2, 3, 5, 4, 6, 7))
+#selected_populations = c(c(1, 2, 3, 5, 4, 6, 7))
+selected_populations = c(c(1, 2, 5, 4, 6, 7))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -24,14 +25,11 @@ data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 
 system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          sub.population = factor(data$population),
-                                         N = parentcount, id =  ptid,
+                                         N = parentcount, id =  ptid, treatment = treatment,
                                          data = data,
-                                         treatment = treatment,
                                          weights = NULL,
-                                         rate = 1, updateLag = 3,
-                                         nsamp = 40,
-                                         centerCovariance = FALSE,
-                                         maxIter = 8, tol = 1e-03))
+                                         rate = 1, updateLag = 3, nsamp = 40, maxIter = 8,
+                                         covarianceMethod = c("dense"), centerCovariance = FALSE))
 
 # system.time(fit <- subsetResponseMixtureNested(count ~  treatment,
 #                                              sub.population = factor(data$population),
