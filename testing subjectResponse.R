@@ -13,6 +13,7 @@ data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
 selected_populations = c(c(1, 2, 3, 5, 4, 6, 7))
 selected_populations = c(c(1, 2, 5, 3, 6, 7))
+#selected_populations = c(c(1, 2, 5))
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -30,7 +31,7 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          data = data,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         rate = 1, updateLag = 3, nsamp = 50, maxIter = 8,
+                                         rate = 1, updateLag = 3, nsamp = 50, maxIter = 12,
                                          sparseGraph = TRUE,
                                          covarianceMethod = c("dense"),
                                          centerCovariance = FALSE))
@@ -56,7 +57,7 @@ for(i in 1:length(selected_populations)) {
   print(plot(rocfit, main = paste(leaves[selected_populations[i]], "- AUC", round(rocfit$auc, 3))))
 }
 
-par(mfrow = c(3, 3), mar = rep(3, 4))
+par(mfrow = c(2, 3), mar = rep(3, 4))
 for(i in 1:length(selected_populations)) {
   post <- posteriors[, i]
   treatment <- vaccine[order(post)]
@@ -128,7 +129,7 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              randomAssignProb = 0,
                                              weights = NULL,
                                              rate = 1, updateLag = 3,
-                                             nsamp = 30, maxIter = 8,
+                                             nsamp = 50, maxIter = 15,
                                              covarianceMethod = "sparse",
                                              sparseGraph = TRUE,
                                              centerCovariance = FALSE))

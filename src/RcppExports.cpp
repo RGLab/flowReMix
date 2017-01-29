@@ -52,8 +52,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // subsetAssignGibbs
-NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, double MHcoef, IntegerVector popInd, NumericVector unifVec, NumericVector normVec);
-RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP intSampSizeSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP, SEXP unifVecSEXP, SEXP normVecSEXP) {
+NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, double MHcoef, IntegerVector popInd, NumericVector unifVec, NumericVector normVec, NumericVector dispersion, bool betaDispersion);
+RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP intSampSizeSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP, SEXP unifVecSEXP, SEXP normVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -72,13 +72,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type unifVec(unifVecSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type normVec(normVecSEXP);
-    __result = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec));
+    Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
+    Rcpp::traits::input_parameter< bool >::type betaDispersion(betaDispersionSEXP);
+    __result = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion));
     return __result;
 END_RCPP
 }
 // randomEffectCoordinateMH
-NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N, int i, int nsamp, int nSubsets, double MHcoef, IntegerVector assignment, IntegerVector popInd, NumericVector eta, NumericVector randomEst, NumericVector condvar, NumericMatrix covariance, NumericMatrix invcov, NumericVector MHattempts, NumericVector MHsuccess, NumericVector unifVec);
-RcppExport SEXP flowReMix_randomEffectCoordinateMH(SEXP ySEXP, SEXP NSEXP, SEXP iSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP MHcoefSEXP, SEXP assignmentSEXP, SEXP popIndSEXP, SEXP etaSEXP, SEXP randomEstSEXP, SEXP condvarSEXP, SEXP covarianceSEXP, SEXP invcovSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP unifVecSEXP) {
+NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N, int i, int nsamp, int nSubsets, double MHcoef, IntegerVector assignment, IntegerVector popInd, NumericVector eta, NumericVector randomEst, NumericVector condvar, NumericMatrix covariance, NumericMatrix invcov, NumericVector MHattempts, NumericVector MHsuccess, NumericVector unifVec, NumericVector dispersion, bool betaDispersion);
+RcppExport SEXP flowReMix_randomEffectCoordinateMH(SEXP ySEXP, SEXP NSEXP, SEXP iSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP MHcoefSEXP, SEXP assignmentSEXP, SEXP popIndSEXP, SEXP etaSEXP, SEXP randomEstSEXP, SEXP condvarSEXP, SEXP covarianceSEXP, SEXP invcovSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP unifVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -98,7 +100,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type MHattempts(MHattemptsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHsuccess(MHsuccessSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type unifVec(unifVecSEXP);
-    __result = Rcpp::wrap(randomEffectCoordinateMH(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec));
+    Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
+    Rcpp::traits::input_parameter< bool >::type betaDispersion(betaDispersionSEXP);
+    __result = Rcpp::wrap(randomEffectCoordinateMH(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion));
     return __result;
 END_RCPP
 }

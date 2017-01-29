@@ -30,6 +30,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   centerCovariance = TRUE,
                                   covarianceMethod = c("dense" , "sparse"),
                                   sparseGraph = FALSE,
+                                  betaDiserpsion = TRUE,
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
                                   maxIter = 8, verbose = TRUE) {
@@ -154,6 +155,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$id <- id
   dat$weights <- weights
   dat$N <- N
+  dat$prop <- y / N
   dat$off <- off
   dat$sub.population <- sub.population
   dat$treatment <- treatment
@@ -187,34 +189,67 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
   MHattempts <- 0
   MHsuccess <- 0
+  M <- rep(10^4, nSubsets)
+  altM <- M
   for(iter in 1:maxIter) {
     # Refitting Model with current means
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
+    oldM <- M
     if(iter > 1) {
-      glmFits <- lapply(dataByPopulation, function(popdata)
-        glm(glmformula, family = "binomial", data = popdata, weights = weights))
+      if(betaDiserpsion & iter > 1) {
+        for(j in 1:nSubsets) {
+          popdata <- dataByPopulation[[j]]
+          if(class(glmFits[[j]])[[1]] == "gamlss") {
+            startFrom <- glmFits[[j]]
+          } else {
+            startFrom <- NULL
+          }
+          tempfit <- NULL
+          try(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
+          family = BB(), data = popdata, start.from = startFrom))
+          if(is.null(tempfit)) {
+            glmFits[[j]] <- glm(glmformula, family = "binomial",
+                                data = dataByPopulation[[j]], weights = weights)
+          } else {
+            glmFits[[j]] <- tempfit
+            rho <- exp(tempfit$sigma.coefficients)
+            M[j] <- max((1 - rho) / rho, 10^3)
+          }
+        }
+      } else {
+        glmFits <- lapply(dataByPopulation, function(popdata)
+          glm(glmformula, family = "binomial", data = popdata, weights = weights))
+      }
       coefficientList <- mapply(function(coef, fit) coef + (coef(fit) - coef)/max(iter - updateLag, 1)^rate,
                                 coefficientList, glmFits, SIMPLIFY = FALSE)
     }
+    M <- oldM + (M - oldM) / max(1, iter - updateLag)
 
     # Updating Prediction
     for(j in 1:length(dataByPopulation)) {
+      coefs <- coefficientList[[j]]
       if(is.factor(dataByPopulation[[j]]$treatment)) {
         dataByPopulation[[j]]$treatment <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
       } else {
         dataByPopulation[[j]]$treatment <- 0
       }
-      offsetBackup <- dataByPopulation[[j]]$randomOffset
-      dataByPopulation[[j]]$randomOffset <- 0
-      newNullEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
+      modelMat <- model.matrix(formula, data = dataByPopulation[[j]])
+      newNullEta <- as.numeric(modelMat %*% coefs)
+
       dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
-      newAltEta <- predict(glmFits[[j]], newdata = dataByPopulation[[j]])
-      nullEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$nullEta)
-      altEta <- ifelse(iter == 1, 0, dataByPopulation[[j]]$altEta)
+      modelMat <- model.matrix(formula, data = dataByPopulation[[j]])
+      newAltEta <- as.numeric(modelMat %*% coefs)
+
+      if(iter > 1) {
+        nullEta <- dataByPopulation[[j]]$nullEta
+        altEta <- dataByPopulation[[j]]$altEta
+      } else {
+        nullEta <- 0
+        altEta <- 0
+      }
       dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - updateLag, 1)^rate
       dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - updateLag, 1)^rate
-      dataByPopulation[[j]]$randomOffset <- offsetBackup
     }
 
     databyid <- do.call("rbind", dataByPopulation)
@@ -249,7 +284,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                          covariance, nsamp, nSubsets, keepEach, intSampSize,
                                          MHcoef,
                                          as.integer(popInd),
-                                         unifVec, normVec)
+                                         unifVec, normVec,
+                                         M, betaDiserpsion)
 
       # Updating global posteriors
       iterPosteriors <- colMeans(assignmentMat)
@@ -274,7 +310,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                             randomEst,
                                             as.numeric(condvar), covariance, invcov,
                                             MHattempts, MHsuccess,
-                                            unifVec)
+                                            unifVec,
+                                            M, betaDiserpsion)
 
 
       # Updating global estimates
@@ -350,8 +387,10 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       #print(isingCoefs)
       print(c(iter, levelProbs))
       print(c(iter, as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
-      #try(print(apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3))))
+      try(print(apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3))))
       print(c(MHcoef, MHrate))
+      print(M)
+      print(altM)
     }
   }
 
@@ -370,6 +409,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   result$isingCov <- isingCoefs
   result$isingfit <- isingfit
   result$unscrambled <- unscrambled
+  result$M <- M
   return(result)
 }
 
