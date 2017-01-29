@@ -122,8 +122,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         }
         etaResid = empEta - eta ;
         muHat = mean(etaResid) ;
-        //vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef) ;
-        vsample = normVec * sigmaHat * MHcoef + muHat ;
+        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef) ;
+        //vsample = normVec * sigmaHat * MHcoef + muHat ;
         sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef, TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
