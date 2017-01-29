@@ -29,6 +29,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   weights = NULL,
                                   centerCovariance = TRUE,
                                   covarianceMethod = c("dense" , "sparse"),
+                                  sparseGraph = FALSE,
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
                                   maxIter = 8, verbose = TRUE) {
@@ -307,31 +308,49 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
     # Updating ising
     assignmentList <- do.call("rbind",assignmentList)
+    unscrambled <- assignmentList
     if(randomAssignProb > 0 & randomAssignProb <= 1) {
       assignmentList <- t(apply(assignmentList, 1, randomizeAssignments, prob = randomAssignProb))
     }
-    isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
-                                   progressbar = FALSE, plot = FALSE)
-    isingCoefs <- isingCoefs + (isingfit$weiadj - isingCoefs) / max(1, iter - updateLag)
-    levelProbs <- colMeans(posteriors)
+
+    if(sparseGraph == TRUE) {
+      isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
+                                     progressbar = FALSE, plot = FALSE)
+      isingtemp <- isingfit$weiadj
+      diag(isingtemp) <- isingfit$thresholds
+      isingtemp[isingtemp == Inf] <- 0
+      isingtemp[isingtemp == -Inf] <- 0
+      isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
+      levelProbs <- colMeans(posteriors)
+    } else {
+      for(j in 1:nSubsets) {
+        firth <- logistf::logistf(assignmentList[, j] ~ assignmentList[, -j],
+                                  datout = FALSE)
+        firth <- coef(firth)
+        intercept <- firth[1]
+        firth[-j] <- firth[-1]
+        firth[j] <- intercept
+        isingCoefs[j, ] <- isingCoefs[j, ] + (firth - isingCoefs[j, ]) /  max(1, iter - updateLag)
+      }
+    }
 
     # Updating MH coefficient
     MHrate <- MHsuccess / MHattempts
     if(MHrate > 0.35) {
       MHcoef <- MHcoef * 1.5
     } else if(MHrate > 0.234) {
-      MHcoef <- MHcoef * 1.05
+      MHcoef <- MHcoef * 1.1
     } else if(MHrate < 0.15) {
       MHcoef <- MHcoef * .5
     } else {
-      MHcoef <- MHcoef * .95
+      MHcoef <- MHcoef * .90
     }
 
     if(verbose) {
-      print(isingCoefs)
+      #print(isingCoefs)
       print(c(iter, levelProbs))
-      print(c(iter, round(sapply(coefficientList, function(x) x[2]), 2)))
-      print(apply(posteriors, 2, function(x) round(as.numeric(roc(vaccine ~ x)$auc), 3)))
+      print(c(iter, as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
+      #try(print(apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3))))
       print(c(MHcoef, MHrate))
     }
   }
@@ -350,6 +369,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                                                           by = 2), ])
   result$isingCov <- isingCoefs
   result$isingfit <- isingfit
+  result$unscrambled <- unscrambled
   return(result)
 }
 
