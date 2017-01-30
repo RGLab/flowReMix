@@ -103,7 +103,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector nullEta, NumericVector altEta,
                                 NumericMatrix covariance,
                                 int nsamp, int nSubsets, int keepEach, int intSampSize,
-                                double MHcoef,
+                                NumericVector MHcoef,
                                 IntegerVector popInd,
                                 NumericVector unifVec, NumericVector normVec,
                                 NumericVector dispersion, bool betaDispersion) {
@@ -121,7 +121,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   int assignNum = 0;
   NumericMatrix clusterDensities(2, intSampSize) ;
   NumericVector iterPosteriors(nSubsets) ;
-  NumericMatrix assignmentMatrix(int(floor(nsamp / keepEach)), nSubsets) ;
+  nsamp = floor(nsamp / keepEach) * keepEach ;
+  NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
   NumericVector assignment(nSubsets) ;
 
   int unifPosition = 0 ;
@@ -145,9 +146,9 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         }
         etaResid = empEta - eta ;
         muHat = mean(etaResid) ;
-        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef) ;
+        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
         //vsample = normVec * sigmaHat * MHcoef + muHat ;
-        sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef, TRUE) ;
+        sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef[j], TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
         randomEta = computeRandomEta(eta, vsample) ;
@@ -226,9 +227,9 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
 
 // [[Rcpp::export]]
-NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
+NumericMatrix randomEffectCoordinateMH(NumericVector y, NumericVector N,
                               int i, int nsamp, int nSubsets,
-                              double MHcoef,
+                              NumericVector MHcoef,
                               IntegerVector assignment,
                               IntegerVector popInd,
                               NumericVector eta,
@@ -238,7 +239,8 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
                               NumericMatrix invcov,
                               NumericVector MHattempts, NumericVector MHsuccess,
                               NumericVector unifVec,
-                              NumericVector dispersion, bool betaDispersion) {
+                              NumericVector dispersion, bool betaDispersion,
+                              int keepEach) {
   int m, j ;
   NumericVector subsetEta ;
   NumericVector subsetCount, subsetN ;
@@ -247,9 +249,13 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
 
   int unifIndex = 0;
 
+  nsamp = floor(nsamp / keepEach) * keepEach ;
+  NumericMatrix sampleMatrix(int(nsamp / keepEach), nSubsets) ;
+  int assignNum = 0 ;
+
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets; j++) {
-      MHattempts = MHattempts + 1 ;
+      MHattempts[j] +=  1 ;
       subsetEta = eta[popInd == (j + 1)] ;
       subsetCount = y[popInd == (j + 1)] ;
       subsetN = N[popInd == (j + 1)] ;
@@ -257,7 +263,7 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
 
       current = randomEst[j] ;
       condmean = computeConditionalMean(j, condvar, invcov, randomEst) ;
-      proposal = rnorm(1)[0] * sqrtsig * MHcoef + current ;
+      proposal = rnorm(1)[0] * sqrtsig * MHcoef[j] + current ;
       newdens = binomDensityForMH(subsetCount, subsetN, subsetEta, proposal,
                                   dispersion[j], betaDispersion) ;
       olddens = binomDensityForMH(subsetCount, subsetN, subsetEta, current,
@@ -271,11 +277,15 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
 
       if(unifVec[unifIndex++] < std::exp(newdens - olddens))  {
         randomEst[j] = proposal ;
-        MHsuccess[0] = MHsuccess[0] + 1 ;
+        MHsuccess[j] += 1 ;
       }
+    }
+
+    if((m % keepEach) == 0) {
+      sampleMatrix(assignNum++, _) = randomEst ;
     }
   }
 
-  return randomEst ;
+  return sampleMatrix ;
 }
 

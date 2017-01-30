@@ -31,7 +31,7 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          data = data,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         rate = 1, updateLag = 3, nsamp = 50, maxIter = 12,
+                                         rate = 1, updateLag = 4, nsamp = 50, maxIter = 10,
                                          sparseGraph = TRUE,
                                          covarianceMethod = c("dense"),
                                          centerCovariance = FALSE))

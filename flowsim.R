@@ -1,12 +1,14 @@
 require(IsingSampler)
 isingmat <- fit$isingCov
 randomcov <- fit$covariance
+overdispersion <- fit$M
 
 n <- 262
 graph <- isingmat
 diag(graph) <- 0
 thresholds <- diag(isingmat)
 assignment <- IsingSampler(n, graph, thresholds)
+IsingFit::IsingFit(assignment, AND = FALSE)
 rintercept <- mvtnorm::rmvnorm(n, sigma = randomcov)
 coefs <- do.call("rbind", fit$coefficients)
 batchEffect <- c(0, 0)
@@ -25,12 +27,14 @@ for(i in 1:n) {
     subjectData$N[row] <- controlN
     subjectData$eta[row] <- coefs[j, 1] + rintercept[i, j] + batchEffect[batch]
     subjectData$subset[row] <- j
+    subjectData$M[row] <- overdispersion[j]
 
     row <- row + 1
     subjectData$treatment[row] <- 1
     subjectData$N[row] <- treatmentN
     subjectData$eta[row] <- subjectData$eta[row - 1] + coefs[j, 2] * assignment[i, j]
     subjectData$subset[row] <- j
+    subjectData$M[row] <- overdispersion[j]
   }
   subjectData$prob <- expit(subjectData$eta)
   subjectData$od <- with(subjectData, rbeta(nrow(subjectData), M * prob, M * (1 - prob)))
@@ -45,7 +49,7 @@ system.time(simfit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              N = N, id =  ptid, treatment = treatment,
                                              data = simdata,
                                              randomAssignProb = 0.0,
-                                             rate = 1, updateLag = 3, nsamp = 40, maxIter = 8,
+                                             rate = 1, updateLag = 5, nsamp = 100, maxIter = 25,
                                              sparseGraph = TRUE,
                                              covarianceMethod = c("dense"),
                                              centerCovariance = FALSE))
