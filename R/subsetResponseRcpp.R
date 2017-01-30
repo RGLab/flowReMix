@@ -33,6 +33,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   betaDiserpsion = TRUE,
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
+                                  initMHcoef = 0.5,
                                   maxIter = 8, verbose = TRUE) {
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
@@ -183,12 +184,21 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
   clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
   iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
-  MHcoef <- rep(0.4, nSubsets)
+  if(length(initMHcoef) == nSubsets) {
+    MHcoef <- initMHcoef
+  } else if(is.null(initMHcoef)) {
+    MHcoef <- rep(0.5, nSubsets)
+  } else {
+    MHcoef <- rep(initMHcoef[1], nSubsets)
+  }
   probSamples <- 100
   clusterDensities <- matrix(nrow = 2, ncol = probSamples)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
-  M <- rep(10^4, nSubsets)
-  altM <- M
+  if(betaDiserpsion) {
+    M <- rep(10^4, nSubsets)
+  } else {
+    M <- rep(10^8, nSubsets)
+  }
   for(iter in 1:maxIter) {
     # Refitting Model with current means
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
@@ -205,7 +215,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
           }
           tempfit <- NULL
           try(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
-          family = BB(), data = popdata, start.from = startFrom))
+          family = BB, data = popdata, start.from = startFrom))
           if(is.null(tempfit)) {
             glmFits[[j]] <- glm(glmformula, family = "binomial",
                                 data = dataByPopulation[[j]], weights = weights)
@@ -394,11 +404,10 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
     if(verbose) {
       #print(isingCoefs)
-      print(c(iter, levelProbs))
-      print(c(iter, as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
-      try(print(apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3))))
-      print(M)
-      print(altM)
+      print(c(iter, levelP = levelProbs))
+      print(c(iter, coef = as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
+      try(print(c(AUC = apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3)))))
+      print(c(M = M))
       print(round(c(MH = MHcoef), 3))
       print(round(ratevec, 3))
     }

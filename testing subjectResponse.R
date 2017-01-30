@@ -31,22 +31,13 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          data = data,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         rate = 1, updateLag = 4, nsamp = 50, maxIter = 10,
-                                         sparseGraph = TRUE,
+                                         rate = 1, updateLag = 8, nsamp = 80, maxIter = 25,
+                                         sparseGraph = TRUE, betaDiserpsion = FALSE,
                                          covarianceMethod = c("dense"),
-                                         centerCovariance = FALSE))
-
-# system.time(fit <- subsetResponseMixtureNested(count ~  treatment,
-#                                              sub.population = factor(data$population),
-#                                              N = parentcount, id =  ptid,
-#                                              data = data,
-#                                              treatment = treatment,
-#                                              weights = NULL,
-#                                              rate = 1, updateLag = 3,
-#                                              nsamp = 40,
-#                                              centerCovariance = FALSE,
-#                                              maxIter = 8, tol = 1e-03))
-
+                                         centerCovariance = FALSE,
+                                         initMHcoef = 3))
+#save(fit, file = "dispersed model 2.Robj")
+#save(fit, file = "results/binom model.Robj")
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))

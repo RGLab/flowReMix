@@ -1,7 +1,10 @@
 require(IsingSampler)
+require(flowReMix)
+load("results/binom model.Robj")
+load("results/dispersed model 2.Robj")
 isingmat <- fit$isingCov
 randomcov <- fit$covariance
-overdispersion <- fit$M
+overdispersion <- fit$dispersion
 
 n <- 262
 graph <- isingmat
@@ -13,7 +16,6 @@ rintercept <- mvtnorm::rmvnorm(n, sigma = randomcov)
 coefs <- do.call("rbind", fit$coefficients)
 batchEffect <- c(0, 0)
 subjectlist <- list()
-M <- 5000
 for(i in 1:n) {
   row <- 0
   subjectData <- data.frame(ptid = rep(i, nrow(coefs) * 2))
@@ -49,10 +51,14 @@ system.time(simfit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              N = N, id =  ptid, treatment = treatment,
                                              data = simdata,
                                              randomAssignProb = 0.0,
-                                             rate = 1, updateLag = 5, nsamp = 100, maxIter = 25,
+                                             rate = 1, updateLag = 10, nsamp = 50, maxIter = 25,
                                              sparseGraph = TRUE,
+                                             betaDiserpsion = TRUE,
+                                             initMHcoef = 3,
                                              covarianceMethod = c("dense"),
                                              centerCovariance = FALSE))
+#save(simfit, file = "results/simfit dispersed")
+#save(simfit, file = "results/simfit binomial.Robj")
 
 require(pROC)
 posteriors <- 1 - simfit$posteriors[, 2:ncol(fit$posteriors), drop = FALSE]
@@ -98,3 +104,40 @@ ggplot(forplot) +
         theme_bw() + scale_colour_gradientn(colours=rainbow(4))
 
 
+# Comparing real data with model data -----------------
+selected_populations = c(c(1, 2, 5, 3, 6, 7))
+par(mfrow = c(2, 3), mar = rep(3, 4))
+for(i in 1:length(selected_populations)) {
+  negprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "negctrl"]
+  envprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "env"]
+  plot(negprop, envprop, pch = ".", col = "red")
+
+  negprop <- log(simdata$count / simdata$N)[simdata$subset == i & simdata$treatment == 0]
+  envprop <- log(simdata$count / simdata$N)[simdata$subset == i & simdata$treatment == 1]
+  points(negprop, envprop, pch = ".", col = "blue")
+  abline(a = 0, b = 1)
+}
+
+forplot <- list()
+length <- 1
+selected_populations <- c(1, 2, 5, 3, 6, 7)
+for(i in 1:length(selected_populations)) {
+  negprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "negctrl"]
+  envprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "env"]
+  forplot[[length]] <- data.frame(negprop = negprop, envprop = envprop,
+                                  subpop = leaves[selected_populations[i]],
+                                  data = "rv144")
+  length <- length + 1
+
+  negprop <- log(simdata$count / simdata$N)[simdata$subset == i & simdata$treatment == 0]
+  envprop <- log(simdata$count / simdata$N)[simdata$subset == i & simdata$treatment == 1]
+  forplot[[length]] <- data.frame(negprop = negprop, envprop = envprop,
+                                  subpop = leaves[selected_populations[i]],
+                                  data = "sim")
+  length <- length + 1
+}
+
+forplot <- do.call("rbind", forplot)
+ggplot(forplot, aes(x = negprop, y = envprop, col = data)) +
+  geom_density_2d(aes(linetype = data)) +
+  theme_bw() + facet_wrap(~ subpop) + geom_abline(intercept = 0, slope = 1)
