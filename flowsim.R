@@ -1,7 +1,7 @@
 require(IsingSampler)
 require(flowReMix)
 load("results/binom model.Robj")
-load("results/dispersed model 2.Robj")
+#load("results/dispersed model 2.Robj")
 isingmat <- fit$isingCov
 randomcov <- fit$covariance
 overdispersion <- fit$dispersion
@@ -51,9 +51,9 @@ system.time(simfit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              N = N, id =  ptid, treatment = treatment,
                                              data = simdata,
                                              randomAssignProb = 0.0,
-                                             rate = 1, updateLag = 10, nsamp = 50, maxIter = 25,
+                                             rate = 1, updateLag = 3, nsamp = 50, maxIter = 10,
                                              sparseGraph = TRUE,
-                                             betaDiserpsion = TRUE,
+                                             betaDiserpsion = FALSE,
                                              initMHcoef = 3,
                                              covarianceMethod = c("dense"),
                                              centerCovariance = FALSE))

@@ -21,23 +21,40 @@ data$treatment <- as.numeric(data$stim == "env")
 data$ptid <- as.numeric(data$ptid)
 data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 10^4
 data$prop <- data$count / data$parentcount
-data$population <- as.factor(data$population)
+data$population <- as.factor(data$populataion)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
+
+preAssign <- function(dat) {
+  subsets <- unique(dat$population)
+  nSubsets <- length(subsets)
+  preAssign <- numeric(nSubsets)
+  prop <- dat$count / dat$parentcount
+  for(j in 1:nSubsets) {
+    negctrl <- prop[dat$stim == "negctrl" & dat$population == subsets[j]]
+    env <- prop[dat$stim == "env" & dat$population == subsets[j]]
+    preAssign[j] <- ifelse(env > negctrl, -1, 0)
+  }
+  result <- data.frame(id = dat$ptid[1], subset = subsets, assign = preAssign)
+  return(result)
+}
+preAssignment <- by(data, INDICES = data$ptid, preAssign)
+preAssignment <- do.call("rbind", preAssignment)
 
 vaccine <- as.numeric(by(data, data$ptid, function(x) x$vaccine[1] == "VACCINE"))
 system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          sub.population = factor(data$population),
                                          N = parentcount, id =  ptid, treatment = treatment,
-                                         data = data,
+                                         data = data, preAssignment = preAssignment,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         rate = 1, updateLag = 8, nsamp = 80, maxIter = 25,
-                                         sparseGraph = TRUE, betaDiserpsion = FALSE,
+                                         rate = 1, updateLag = 5, nsamp = 80, maxIter = 25,
+                                         sparseGraph = TRUE, betaDiserpsion = TRUE,
                                          covarianceMethod = c("dense"),
                                          centerCovariance = FALSE,
                                          initMHcoef = 3))
 #save(fit, file = "dispersed model 2.Robj")
 #save(fit, file = "results/binom model.Robj")
+#save(fit, file = "results/dispersed model 2 wAssignment.Robj")
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
@@ -119,11 +136,13 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              treatment = treatment,
                                              randomAssignProb = 0,
                                              weights = NULL,
-                                             rate = 1, updateLag = 3,
-                                             nsamp = 50, maxIter = 15,
+                                             rate = 1, updateLag = 10,
+                                             nsamp = 50, maxIter = 30,
+                                             initMHcoef = 3,
                                              covarianceMethod = "sparse",
                                              sparseGraph = TRUE,
                                              centerCovariance = FALSE))
+save(fit, file = "results/boolean dispersed fit.Robj")
 subsets <- unique(booldata$Subset)
 
 require(pROC)

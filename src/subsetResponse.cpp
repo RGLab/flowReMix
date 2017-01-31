@@ -106,7 +106,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector MHcoef,
                                 IntegerVector popInd,
                                 NumericVector unifVec, NumericVector normVec,
-                                NumericVector dispersion, bool betaDispersion) {
+                                NumericVector dispersion, bool betaDispersion,
+                                IntegerVector preAssignment) {
 
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
@@ -128,6 +129,11 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   int unifPosition = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
+      if(preAssignment[j] != -1) {
+        assignment[j] = preAssignment[j] ;
+        continue ;
+      }
+      // Rcpp::Rcout<<preAssignment[j]<<" " ;
       subsetNullEta = nullEta[popInd == (j + 1)] ;
       subsetAltEta = altEta[popInd == (j + 1)] ;
 
@@ -161,12 +167,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       if(m >= 1) {
         assignment[j] = 1 ;
         priorProb = expit(sum(isingCoefs(j, _) * assignment)) ;
-        /*
-        if(j == 0 & m == 1) {
-          print(assignment) ;
-          Rcpp::Rcout<<"priorProb "<<priorProb<<"\n" ;
-        }
-         */
       } else {
         priorProb = 0.5 ;
       }
@@ -185,6 +185,9 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
     }
   }
 
+
+
+  // Rcpp::Rcout<<"\n";
   return assignmentMatrix;
 }
 

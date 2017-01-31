@@ -22,10 +22,18 @@ binomDensity <- function(v, prop, N, eta) {
 
 logit <- function(p) log(p / (1 - p))
 
+updateCoefs <- function(coef, fit, iter, updateLag, rate) {
+  update <- coef(fit)
+  notna <- !is.na(update)
+  coef[notna] <- coef[notna] + (update[notna] - coef[notna])/max(iter - updateLag, 1)^rate
+  return(coef)
+}
+
 subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   N = NULL, id,
                                   data = parent.frame(),
                                   treatment,
+                                  preAssignment = NULL,
                                   weights = NULL,
                                   centerCovariance = TRUE,
                                   covarianceMethod = c("dense" , "sparse"),
@@ -176,7 +184,22 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
   covariance <- cov(estimatedRandomEffects)
 
-  # Computing new posterior porbabilities
+  # Setting up preAssignment
+  if(is.null(preAssignment)) {
+    preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
+    preAssignment$assign <- rep(-1, nrow(preAssignment))
+  } else {
+    if(ncol(preAssignment) != 3) stop("preAssignment must have 3 columns: id, subset, assignment")
+    if(nrow(preAssignment) != (nSubsets * nSubjects)) stop("preAssignment must have nSubjects X nSubsets rows.")
+    if(any(!(preAssignment[, 3] %in% c(-1, 0, 1)))) stop("The third column of preAssignment must take values -1, 0 or 1.")
+    if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
+    preAssignment <- data.frame(preAssignment)
+    names(preAssignment) <-  c("id", "subset", "assign")
+  }
+  preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
+  preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
+
+  # More set up....
   dat$tempTreatment <- dat$treatment
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
@@ -229,8 +252,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         glmFits <- lapply(dataByPopulation, function(popdata)
           glm(glmformula, family = "binomial", data = popdata, weights = weights))
       }
-      coefficientList <- mapply(function(coef, fit) coef + (coef(fit) - coef)/max(iter - updateLag, 1)^rate,
-                                coefficientList, glmFits, SIMPLIFY = FALSE)
+      coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
+                                iter, updateLag, rate, SIMPLIFY = FALSE)
     }
     M <- oldM + (M - oldM) / max(1, iter - updateLag)
 
@@ -294,7 +317,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                          MHcoef,
                                          as.integer(popInd),
                                          unifVec, normVec,
-                                         M, betaDiserpsion)
+                                         M, betaDiserpsion,
+                                         as.integer(preAssignment[[i]]$assign))
 
       # Updating global posteriors
       iterPosteriors <- colMeans(assignmentMat)
