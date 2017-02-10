@@ -33,8 +33,26 @@ NumericMatrix computeRandomEta(NumericVector eta, NumericVector vsample) {
   return result ;
 }
 
-NumericVector computeBinomDensity(NumericVector subsetCount, NumericVector subsetN,
-                                  NumericMatrix randomEta) {
+double betaBinomDens(int count, int N, double prob, double M) {
+  double a = M * prob ;
+  double b = M * (1 - prob) ;
+  double logdens = std::lgamma(N  + 1) ;
+  logdens += std::lgamma(count + a) ;
+  logdens += std::lgamma(N - count + b) ;
+  logdens += std::lgamma(a + b) ;
+  logdens -= std::lgamma(count + 1) ;
+  logdens -= std::lgamma(N - count + 1) ;
+  logdens -= std:: lgamma(N + a + b) ;
+  logdens -= std::lgamma(a) ;
+  logdens -= std::lgamma(b) ;
+  return logdens ;
+}
+
+NumericVector computeBinomDensity(NumericVector subsetCount,
+                                  NumericVector subsetN,
+                                  NumericMatrix randomEta,
+                                  double M,
+                                  bool betaDispersion) {
   int sampSize = randomEta.nrow() ;
   int subsetSize = subsetCount.length() ;
   int count, N;
@@ -49,7 +67,11 @@ NumericVector computeBinomDensity(NumericVector subsetCount, NumericVector subse
       prob = expit(prob) ;
       count = subsetCount[j] ;
       N = subsetN[j] ;
-      density += R::dbinom(count, N, prob, TRUE) / subsetSize;
+      if(betaDispersion) {
+        density += betaBinomDens(count, N ,prob, M) ;
+      } else {
+        density += R::dbinom(count, N, prob, TRUE) / subsetSize ;
+      }
     }
     binomDensity[i] = density ;
   }
@@ -81,9 +103,11 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector nullEta, NumericVector altEta,
                                 NumericMatrix covariance,
                                 int nsamp, int nSubsets, int keepEach, int intSampSize,
-                                double MHcoef,
+                                NumericVector MHcoef,
                                 IntegerVector popInd,
-                                NumericVector unifVec, NumericVector normVec) {
+                                NumericVector unifVec, NumericVector normVec,
+                                NumericVector dispersion, bool betaDispersion,
+                                IntegerVector preAssignment) {
 
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
@@ -98,12 +122,18 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   int assignNum = 0;
   NumericMatrix clusterDensities(2, intSampSize) ;
   NumericVector iterPosteriors(nSubsets) ;
-  NumericMatrix assignmentMatrix(int(floor(nsamp / keepEach)), nSubsets) ;
+  nsamp = floor(nsamp / keepEach) * keepEach ;
+  NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
   NumericVector assignment(nSubsets) ;
 
   int unifPosition = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
+      if(preAssignment[j] != -1) {
+        assignment[j] = preAssignment[j] ;
+        continue ;
+      }
+      // Rcpp::Rcout<<preAssignment[j]<<" " ;
       subsetNullEta = nullEta[popInd == (j + 1)] ;
       subsetAltEta = altEta[popInd == (j + 1)] ;
 
@@ -122,13 +152,14 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         }
         etaResid = empEta - eta ;
         muHat = mean(etaResid) ;
-        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef) ;
+        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
         //vsample = normVec * sigmaHat * MHcoef + muHat ;
-        sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef, TRUE) ;
+        sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef[j], TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
         randomEta = computeRandomEta(eta, vsample) ;
-        binomDensity = computeBinomDensity(subsetCount, subsetN, randomEta) ;
+        binomDensity = computeBinomDensity(subsetCount, subsetN, randomEta,
+                                           dispersion[j], betaDispersion) ;
         clusterDensities(k, _) = binomDensity + importanceWeights ;
       }
 
@@ -136,12 +167,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       if(m >= 1) {
         assignment[j] = 1 ;
         priorProb = expit(sum(isingCoefs(j, _) * assignment)) ;
-        /*
-        if(j == 0 & m == 1) {
-          print(assignment) ;
-          Rcpp::Rcout<<"priorProb "<<priorProb<<"\n" ;
-        }
-         */
       } else {
         priorProb = 0.5 ;
       }
@@ -160,6 +185,9 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
     }
   }
 
+
+
+  // Rcpp::Rcout<<"\n";
   return assignmentMatrix;
 }
 
@@ -182,14 +210,19 @@ double computeConditionalMean(int subset,
 }
 
 double binomDensityForMH(NumericVector count, NumericVector N,
-                         NumericVector eta, double proposal) {
+                         NumericVector eta, double proposal,
+                         double M, bool betaDispersion) {
   double prob ;
   double density = 0;
 
   for(int i = 0; i < eta.length(); i++) {
     prob = expit(eta[i] + proposal) ;
     // Rcpp::Rcout<<count[i] << " "<< N[i] << " " << density << "\n";
-    density += R::dbinom(count[i], N[i], prob, TRUE) ;
+    if(betaDispersion) {
+      density += betaBinomDens(count[i], N[i], prob, M) ;
+    } else {
+      density += R::dbinom(count[i], N[i], prob, TRUE) ;
+    }
   }
 
   return density ;
@@ -197,9 +230,9 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
 
 // [[Rcpp::export]]
-NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
+NumericMatrix randomEffectCoordinateMH(NumericVector y, NumericVector N,
                               int i, int nsamp, int nSubsets,
-                              double MHcoef,
+                              NumericVector MHcoef,
                               IntegerVector assignment,
                               IntegerVector popInd,
                               NumericVector eta,
@@ -208,7 +241,9 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
                               NumericMatrix covariance,
                               NumericMatrix invcov,
                               NumericVector MHattempts, NumericVector MHsuccess,
-                              NumericVector unifVec) {
+                              NumericVector unifVec,
+                              NumericVector dispersion, bool betaDispersion,
+                              int keepEach) {
   int m, j ;
   NumericVector subsetEta ;
   NumericVector subsetCount, subsetN ;
@@ -217,9 +252,13 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
 
   int unifIndex = 0;
 
+  nsamp = floor(nsamp / keepEach) * keepEach ;
+  NumericMatrix sampleMatrix(int(nsamp / keepEach), nSubsets) ;
+  int assignNum = 0 ;
+
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets; j++) {
-      MHattempts = MHattempts + 1 ;
+      MHattempts[j] +=  1 ;
       subsetEta = eta[popInd == (j + 1)] ;
       subsetCount = y[popInd == (j + 1)] ;
       subsetN = N[popInd == (j + 1)] ;
@@ -227,9 +266,11 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
 
       current = randomEst[j] ;
       condmean = computeConditionalMean(j, condvar, invcov, randomEst) ;
-      proposal = rnorm(1)[0] * sqrtsig * MHcoef + current ;
-      newdens = binomDensityForMH(subsetCount, subsetN, subsetEta, proposal) ;
-      olddens = binomDensityForMH(subsetCount, subsetN, subsetEta, current) ;
+      proposal = rnorm(1)[0] * sqrtsig * MHcoef[j] + current ;
+      newdens = binomDensityForMH(subsetCount, subsetN, subsetEta, proposal,
+                                  dispersion[j], betaDispersion) ;
+      olddens = binomDensityForMH(subsetCount, subsetN, subsetEta, current,
+                                  dispersion[j], betaDispersion) ;
 
       // Rcpp::Rcout << current << "current porposal" << proposal << "\n" ;
       // Rcpp::Rcout << olddens << "olddens newdens" << newdens << "\n" ;
@@ -239,11 +280,15 @@ NumericVector randomEffectCoordinateMH(NumericVector y, NumericVector N,
 
       if(unifVec[unifIndex++] < std::exp(newdens - olddens))  {
         randomEst[j] = proposal ;
-        MHsuccess[0] = MHsuccess[0] + 1 ;
+        MHsuccess[j] += 1 ;
       }
+    }
+
+    if((m % keepEach) == 0) {
+      sampleMatrix(assignNum++, _) = randomEst ;
     }
   }
 
-  return randomEst ;
+  return sampleMatrix ;
 }
 
