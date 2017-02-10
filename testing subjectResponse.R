@@ -47,7 +47,7 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          data = data, preAssignment = preAssignment,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         rate = 1, updateLag = 5, nsamp = 80, maxIter = 25,
+                                         rate = 1, updateLag = 5, nsamp = 30, maxIter = 25,
                                          sparseGraph = TRUE, betaDiserpsion = TRUE,
                                          covarianceMethod = c("dense"),
                                          centerCovariance = FALSE,
@@ -55,6 +55,7 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
 #save(fit, file = "dispersed model 2.Robj")
 #save(fit, file = "results/binom model.Robj")
 #save(fit, file = "results/dispersed model 2 wAssignment.Robj")
+#load("results/dispersed model 2 wAssignment.Robj")
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
@@ -137,19 +138,25 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              randomAssignProb = 0,
                                              weights = NULL,
                                              rate = 1, updateLag = 10,
-                                             nsamp = 50, maxIter = 30,
+                                             nsamp = 100, maxIter = 30,
                                              initMHcoef = 3,
                                              covarianceMethod = "sparse",
                                              sparseGraph = TRUE,
                                              centerCovariance = FALSE))
-save(fit, file = "results/boolean dispersed fit.Robj")
+#save(fit, file = "results/boolean dispersed fit.Robj")
+#save(fit, file = "results/boolean dispersed fit2.Robj")
+load("results/boolean dispersed fit2.Robj")
+subsetIndex <- 1:length(subsets)
+#subsetIndex <- c(3, 5, 6, 10, 12, 13, 14, 20, 23)
 subsets <- unique(booldata$Subset)
 
 require(pROC)
 posteriors <- fit$posteriors[, 2:ncol(fit$posteriors), drop = FALSE]
-par(mfrow = c(4, 6), mar = rep(1, 4))
+#par(mfrow = c(4, 6), mar = rep(1, 4))
+par(mfrow = c(3, 3), mar = rep(1, 4))
 auc <- numeric(length(subsets))
-for(i in 1:length(subsets)) {
+for(j in 1:length((subsetIndex))) {
+  i <- subsetIndex[j]
   try(rocfit <- roc(!vaccine ~ posteriors[, i]))
   try(rocfit <- roc(vaccine ~ posteriors[, i]))
   auc[i] <- rocfit$auc
@@ -158,7 +165,9 @@ for(i in 1:length(subsets)) {
 
 
 par(mfrow = c(4, 6), mar = rep(2, 4))
-for(i in 1:length(subsets)) {
+par(mfrow = c(3, 3), mar = rep(2, 4))
+for(j in 1:length((subsetIndex))) {
+  i <- subsetIndex[j]
   post <- posteriors[, i]
   treatment <- vaccine[order(post)]
   uniquePost <- sort(unique(post))
@@ -174,7 +183,8 @@ for(i in 1:length(subsets)) {
 
 
 forplot <- list()
-for(i in 1:length(subsets)) {
+for(j in 1:length(subsetIndex)) {
+  i <- subsetIndex[j]
   post <- posteriors[, i]
   negprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[i] & booldata$stim == "nonstim"]
   envprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[i] & booldata$stim == "stim"]
@@ -201,5 +211,127 @@ pdf("figures/cell subset table B.pdf", height=8, width=6)
 grid.table(table, rows = NULL)
 dev.off()
 
+par(mfrow = c(1, 1))
+plot(fit$isingfit)
+
+# Plotting network -----------------------
+require(GGally)
+library(network)
+library(sna)
+network <- fit$isingfit$weiadj
+nodes <- ggnet2(network(net))$data
+edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
+p <- nrow(network)
+row <- 1
+for(j in 2:p) {
+  for(i in 1:(j-1)) {
+    if(network[i, j] != 0) {
+      edges[row, ] <- unlist(c(nodes[i, 6:7], nodes[j, 6:7], network[i, j]))
+      row <- row + 1
+    }
+  }
+}
+
+edges <- data.frame(edges)
+names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
+edges$width <- with(edges, abs(width) / max(abs(width)) * sign(width))
+nodes$probs <- fit$levelProbs
+coefficients <- sapply(fit$coefficients, function(x) x[2])
+for(i in 1:nrow(nodes)) {
+  if(coefficients[i] < 0) {
+    nodes$probs[i] <- 1 - nodes$probs[i]
+  }
+}
+nodes$auc <- auc
+nodes$mFunctional <- 1:nrow(nodes) >= 6
+names(edges)[5] <- "Dependence"
+ggplot() +
+  scale_colour_gradient(limits=c(0, 1), low="white", high = "black") +
+  geom_segment(data = edges, aes(x = xstart, y = ystart,
+                                          xend = xend, yend = yend,
+                                          alpha = Dependence,
+                                          col = Dependence),
+               size = 1) +
+  scale_fill_gradientn(colours=rainbow(4)) +
+  geom_point(data = nodes[1:5, ], aes(x = x, y = y, fill = auc), shape = 25,
+             size = 8, col = "white") +
+  geom_point(data = nodes[6:23, ], aes(x = x, y = y, fill = auc), shape = 21,
+             size = 8, col = "white") +
+  scale_size(range = c(0.3, 1)) +
+  scale_shape(solid = FALSE) +
+  geom_text(data = nodes, aes(x = x, y = y, label = 1:23)) +
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
+
+
+
+
+
+# Malaria dataset ----------------------------
+data(malaria)
+names(malaria)
+table(malaria$experiment)
+unique(malaria$ptid)
+unique(malaria$population)
+populations <- unique(malaria$population)
+parents <- unique(malaria$parent)
+leaves <- populations[!(populations %in% parents) ]
+unique(malaria$stim)
+malaria <- subset(malaria, stim %in% c("control", "PfRBC"))
+malaria <- subset(malaria, population %in% leaves)
+
+# just one subset
+parents <- parents[parents %in% unique(malaria$parent)]
+fitList <- list()
+for(j in 11:length(parents)) {
+  i <- j
+  tempdat <- subset(malaria, parent == parents[j])
+  tempdat <- tempdat[order(tempdat$ptid, tempdat$population, tempdat$stim), ]
+  if(i == 1) {
+    tempdat <- subset(tempdat, population != "4+/IL4+")
+  } else if(i == 3) {
+    tempdat <- subset(tempdat, population != "PD-1+/IL21+")
+    next
+  } else if(i == 4) {
+    next
+  } else if(i == 6) {
+    tempdat <- subset(tempdat, population != "8+/CXCR5+/TNFa+")
+    next
+  } else if(i == 7) {
+    next
+  } else if(j == 9) {
+    next
+  } else if(j == 10) {
+    next
+  }
+  tempdat$treatment <- factor(as.numeric(tempdat$stim == "PfRBC"))
+  tempdat <- subset(tempdat, visitno != "pos")
+  system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment * visitno,
+                                               sub.population = factor(tempdat$population),
+                                               N = parentcount, id =  ptid,
+                                               data = tempdat,
+                                               treatment = treatment,
+                                               updateLag = 5,
+                                               nsamp = 40, maxIter = 15,
+                                               initMHcoef = 1,
+                                               randomAssignProb = 0.1,
+                                               covarianceMethod = "sparse",
+                                               sparseGraph = TRUE,
+                                               centerCovariance = FALSE))
+  fitList[[j]] <- fit
+}
+
+
+
+par(mfrow = c(2, 3), mar = rep(3, 4))
+for(i in 1:length(fitList)) {
+  if(!is.null(fitList[[i]])){
+    plot(fitList[[i]]$isingfit)
+  }
+}
 
 

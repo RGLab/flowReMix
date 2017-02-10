@@ -182,7 +182,9 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   nSubsets <- length(glmFits)
   levelProbs <- rep(0.5, nSubsets)
   estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
-  covariance <- cov(estimatedRandomEffects)
+  covariance <- PDSCE::pdsoft.cv(estimatedRandomEffects, init = "diag", nsplits = 10)
+  invcov <- covariance$omega
+  covariance <- covariance$sigma
 
   # Setting up preAssignment
   if(is.null(preAssignment)) {
@@ -203,7 +205,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$tempTreatment <- dat$treatment
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
-  invcov <- solve(covariance)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
   clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
   iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
@@ -389,14 +390,20 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     }
 
     if(sparseGraph == TRUE) {
-      isingfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
-                                     progressbar = FALSE, plot = FALSE)
-      isingtemp <- isingfit$weiadj
-      diag(isingtemp) <- isingfit$thresholds
-      isingtemp[isingtemp == Inf] <- 0
-      isingtemp[isingtemp == -Inf] <- 0
-      isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
-      levelProbs <- colMeans(posteriors)
+      tempfit <- NULL
+      try(tempfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
+                                     progressbar = FALSE, plot = FALSE))
+      if(!is.null(tempfit)) {
+        isingfit <- tempfit
+        isingtemp <- isingfit$weiadj
+        diag(isingtemp) <- isingfit$thresholds
+        isingtemp[isingtemp == Inf] <- 0
+        isingtemp[isingtemp == -Inf] <- 0
+        isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
+        levelProbs <- colMeans(posteriors)
+      } else {
+        print("hello")
+      }
     } else {
       for(j in 1:nSubsets) {
         firth <- logistf::logistf(assignmentList[, j] ~ assignmentList[, -j],
@@ -430,7 +437,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       #print(isingCoefs)
       print(c(iter, levelP = levelProbs))
       print(c(iter, coef = as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
-      try(print(c(AUC = apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3)))))
+      #try(print(c(AUC = apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3)))))
       print(c(M = M))
       print(round(c(MH = MHcoef), 3))
       print(round(ratevec, 3))
