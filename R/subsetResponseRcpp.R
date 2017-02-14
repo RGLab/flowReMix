@@ -29,6 +29,11 @@ updateCoefs <- function(coef, fit, iter, updateLag, rate) {
   return(coef)
 }
 
+replicateDataset <- function(data, replicate) {
+  data$id <- paste(data$id, "%%%", replicate, sep = "")
+  return(data)
+}
+
 subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   N = NULL, id,
                                   data = parent.frame(),
@@ -42,7 +47,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
                                   initMHcoef = 0.5,
-                                  maxIter = 8, verbose = TRUE) {
+                                  maxIter = 8, verbose = TRUE,
+                                  dataReplicates = 1) {
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
     stop("Treatment variable must be specified!")
@@ -168,6 +174,11 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$off <- off
   dat$sub.population <- sub.population
   dat$treatment <- treatment
+  # replicating
+  if(dataReplicates > 1) {
+    dat <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(dat, x)))
+  }
+
   subpopInd <- as.numeric(dat$sub.population)
   uniqueSubpop <- sort(unique(subpopInd))
   dat$subpopInd <- subpopInd
@@ -454,11 +465,26 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     }
   }
 
+  # Processing posteriors
+  posteriors <- data.frame(posteriors)
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
+  if(dataReplicates <= 1) {
+    posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
+    names(posteriors) <- unique(dat$sub.population)
+  } else {
+    realIDs <- gsub("\\%%%.*", "", uniqueIDs)
+    post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
+    postid <- names(post)
+    posteriors <- data.frame(do.call("rbind", post))
+    names(posteriors) <- unique(dat$sub.population)
+    posteriors <- cbind(id = postid, 1 - posteriors)
+  }
+
+  # Preparing output
   result <- list()
+  result$posteriors <- posteriors
   result$levelProbs <- levelProbs
   result$coefficients <- coefficientList
-  result$posteriors <- cbind(uniqueIDs, 1 - posteriors)
   result$covariance <- covariance
   result$randomEffects <- estimatedRandomEffects
   result$isingCov <- isingCoefs

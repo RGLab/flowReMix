@@ -400,19 +400,20 @@ for(j in 11:length(parents)) {
     jackdat <- subset(tempdat, ptid != id)
     jackdat$visitno <- factor(as.character(jackdat$visitno))
     jackdat$treatment <- (as.numeric(jackdat$stim == "PfRBC"))
-    jackdat <- do.call("rbind", lapply(1:7, function(x) replicateDataset(jackdat, x)))
+    #jackdat <- do.call("rbind", lapply(1:7, function(x) replicateDataset(jackdat, x)))
     jackfit <- subsetResponseMixtureRcpp(count ~  treatment * visitno,
                                          sub.population = factor(jackdat$population),
                                          N = parentcount, id =  ptid,
                                          data = jackdat,
                                          treatment = treatment,
                                          updateLag = 3,
-                                         nsamp = 20, maxIter = 5,
+                                         nsamp = 20, maxIter = 2,
                                          initMHcoef = 1,
                                          randomAssignProb = 0.1,
                                          covarianceMethod = "sparse",
                                          sparseGraph = TRUE, betaDispersion = FALSE,
-                                         centerCovariance = FALSE)
+                                         centerCovariance = FALSE,
+                                         dataReplicates = 2)
     jackFitList[[i]] <- jackfit
   }
 }
