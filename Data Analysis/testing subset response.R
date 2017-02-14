@@ -288,28 +288,30 @@ malaria <- subset(malaria, population %in% leaves)
 parents <- parents[parents %in% unique(malaria$parent)]
 fitList <- list()
 for(j in 11:length(parents)) {
+  # Fitting model --------------------------
   i <- j
   tempdat <- subset(malaria, parent == parents[j])
   tempdat <- tempdat[order(tempdat$ptid, tempdat$population, tempdat$stim), ]
+  by(tempdat, tempdat$population, function(x) do.call("cbind", by(x, x$visitno, function(y) y$count)))
   if(i == 1) {
     tempdat <- subset(tempdat, population != "4+/IL4+")
-  } else if(i == 3) {
-    tempdat <- subset(tempdat, population != "PD-1+/IL21+")
-    next
-  } else if(i == 4) {
-    next
-  } else if(i == 6) {
-    tempdat <- subset(tempdat, population != "8+/CXCR5+/TNFa+")
-    next
-  } else if(i == 7) {
-    next
-  } else if(j == 9) {
-    next
-  } else if(j == 10) {
-    next
   }
+  if(i == 3) {
+    tempdat <- subset(tempdat, !(population %in% c("PD-1+/IL21+", "PD-1+/IL4+")))
+  }
+  #else if(i == 4) {
+  #   next
+  # } else if(i == 6) {
+  #   tempdat <- subset(tempdat, population != "8+/CXCR5+/TNFa+")
+  #   next
+  # } else if(i == 7) {
+  #   next
+  # } else if(j == 9) {
+  #   next
+  # } else if(j == 10) {
+  #   next
+  # }
   tempdat$treatment <- factor(as.numeric(tempdat$stim == "PfRBC"))
-  tempdat <- subset(tempdat, visitno != "pos")
   system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment * visitno,
                                                sub.population = factor(tempdat$population),
                                                N = parentcount, id =  ptid,
@@ -320,12 +322,100 @@ for(j in 11:length(parents)) {
                                                initMHcoef = 1,
                                                randomAssignProb = 0.1,
                                                covarianceMethod = "sparse",
-                                               sparseGraph = TRUE,
+                                               sparseGraph = TRUE, betaDispersion = TRUE,
                                                centerCovariance = FALSE))
   fitList[[j]] <- fit
+
+  # Scatter and counts over time plots
+  tempdat <- subset(malaria, parent == parents[j])
+  tempdat$daynum <- 0
+  tempdat$daynum[tempdat$visitno == "Day 9"] <- 1
+  tempdat$daynum[tempdat$visitno == "pos"] <- 2
+  tempdat$daynum[tempdat$visitno == "Day 28"] <- 3
+  tempdat$daynum[tempdat$visitno == "Day 56"] <- 4
+  tempdat$daynum[tempdat$visitno == "Day 168"] <- 5
+  tempdat$logprop <- with(tempdat, log((count + 1)/parentcount + 10^-5))
+  tempdat$visitno <- factor(tempdat$visitno,
+                            levels = c("Day 0", "Day 9", "pos", "Day 28", "Day 56", "Day 168"))
+
+  ggplot(tempdat) +
+    geom_boxplot(aes(x = visitno, y = logprop, col = stim)) +
+    theme_bw() +
+    facet_wrap(~ population, scales = "free")
+
+  control <- subset(tempdat, stim == "control")
+  stim <- subset(tempdat, stim == "PfRBC")
+  names(stim)[13] <- "stimprop"
+  names(control)[13] <- "controlprop"
+  tempdat <- merge(stim, control, by = c("ptid", "population", "visitno"))
+
+  ggplot(tempdat) + geom_point(aes(x = controlprop, y = stimprop, col = ptid)) +
+    geom_abline(intercept = 0, slope = 1) +
+    facet_grid(visitno ~ population, scales = "free")
+
+  ggplot(tempdat) +
+    geom_line(alpha = 0.5, aes(x = daynum.x, y = stimprop - controlprop, col = ptid)) +
+    facet_wrap(~ population, scales = "free_y") +
+    geom_hline(yintercept = 0)
+
+  ggplot(tempdat) +
+    geom_boxplot(alpha = 0.5, aes(x = visitno, y = stimprop - controlprop)) +
+    facet_wrap(~ population, scales = "free_y") +
+    geom_hline(yintercept = 0)
+
+  # Predicted values ----------------------
+  times <- unique(tempdat$visitno)
+  ntimes <- length(times)
+  predlist <- list()
+  for(i in 1:length(fit$coefficients)) {
+    pred <- data.frame(times = rep(times, 2),
+                       type = c(rep("nonresponse", ntimes),
+                                rep("response", ntimes)))
+    coefs <- fit$coefficients[[i]]
+    # nonresponse
+    predictions <- rep(coefs[[1]], ntimes)
+    predictions <- predictions + c(0, coefs[c(6, 4, 5, 3)])
+    pred$eta[1:ntimes] <- predictions
+    # response
+    predictions <- predictions + coefs[c(2, 10, 8, 9, 7)]
+    pred$eta[(ntimes + 1):(ntimes * 2)] <- predictions
+    pred$prop <- 1 / (1 + exp(-pred$eta))
+    pred$population <- names(fit$coefficients)[i]
+    predlist[[i]] <- pred
+  }
+
+  predicted <- do.call("rbind", predlist)
+  ggplot(subset(predicted, population != "PD-1+/IFNg+")) +
+    geom_line(aes(x = as.numeric(times), y = log(prop), col = population, linetype = type))
+
+  # Jackknife errors --------------------
+  replicateDataset <- function(data, replicate) {
+    data$ptid <- paste(data$ptid, "%%%", replicate, sep = "")
+    return(data)
+  }
+
+  jackFitList <- list()
+  for(i in 1:length(unique(tempdat$ptid))) {
+    id <- unique(tempdat$ptid)[i]
+    jackdat <- subset(tempdat, ptid != id)
+    jackdat$visitno <- factor(as.character(jackdat$visitno))
+    jackdat$treatment <- (as.numeric(jackdat$stim == "PfRBC"))
+    jackdat <- do.call("rbind", lapply(1:7, function(x) replicateDataset(jackdat, x)))
+    jackfit <- subsetResponseMixtureRcpp(count ~  treatment * visitno,
+                                         sub.population = factor(jackdat$population),
+                                         N = parentcount, id =  ptid,
+                                         data = jackdat,
+                                         treatment = treatment,
+                                         updateLag = 3,
+                                         nsamp = 20, maxIter = 5,
+                                         initMHcoef = 1,
+                                         randomAssignProb = 0.1,
+                                         covarianceMethod = "sparse",
+                                         sparseGraph = TRUE, betaDispersion = FALSE,
+                                         centerCovariance = FALSE)
+    jackFitList[[i]] <- jackfit
+  }
 }
-
-
 
 par(mfrow = c(2, 3), mar = rep(3, 4))
 for(i in 1:length(fitList)) {
@@ -333,5 +423,69 @@ for(i in 1:length(fitList)) {
     plot(fitList[[i]]$isingfit)
   }
 }
+
+
+# Plotting graphs
+par(mfrow = c(2, 3), mar = rep(3, 4))
+for(i in 1:length(fitList)) {
+  if(!is.null(fitList[[i]])){
+    plot(fitList[[i]]$isingfit)
+  }
+}
+
+# Creating dataset for plotting pairwise scatters.
+j <- 5
+fit <- fitList[[j]]
+tempdat <- subset(malaria, parent == parents[j])
+tempdat$daynum <- 0
+tempdat$daynum[tempdat$visitno == "Day 9"] <- 1
+tempdat$daynum[tempdat$visitno == "pos"] <- 2
+tempdat$daynum[tempdat$visitno == "Day 28"] <- 3
+tempdat$daynum[tempdat$visitno == "Day 56"] <- 4
+tempdat$daynum[tempdat$visitno == "Day 168"] <- 5
+tempdat$logprop <- with(tempdat, log((count + 1)/parentcount + 10^-5))
+control <- subset(tempdat, stim == "control")
+stim <- subset(tempdat, stim == "PfRBC")
+names(stim)[13] <- "stimprop"
+names(control)[13] <- "controlprop"
+tempdat <- merge(stim, control, by = c("ptid", "population", "visitno"))
+
+ggplot(tempdat) + geom_point(aes(x = controlprop, y = stimprop, col = ptid)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(population ~ visitno, scales = "free_y")
+
+ggplot(tempdat, aes(x = daynum.x, y = stimprop - controlprop, col = ptid)) +
+  geom_point() + geom_line() +
+  facet_wrap(~ population, scales = "free_y") +
+  geom_hline(yintercept = 0)
+
+# Extract predicted values
+times <- unique(tempdat$visitno)
+ntimes <- length(times)
+predlist <- list()
+for(i in 1:length(fit)) {
+  pred <- data.frame(times = rep(times, 2),
+                     type = c(rep("response", ntimes),
+                              rep("nonresponse", ntimes)))
+  coefs <- fit$coefficients[[i]]
+  # nonresponse
+  predictions <- rep(coefs[[1]], ntimes)
+  predictions <- predictions + c(0, coefs[c(6, 4, 5, 3)])
+  pred$eta[1:ntimes] <- predictions
+  # response
+  predictions <- predictions + coefs[c(2, 10, 8, 9, 7)]
+  pred$eta[(ntimes + 1):(ntimes * 2)] <- predictions
+  pred$prop <- 1 / (1 + exp(-pred$eta))
+  pred$population <- names(fit$coefficients)[i]
+  predlist[[i]] <- pred
+}
+
+predicted <- do.call("rbind", predlist)
+ggplot(subset(predicted, population != "PD-1+/IFNg+")) +
+  geom_line(aes(x = as.numeric(times), y = log(prop), col = population, linetype = type))
+
+
+
+
 
 

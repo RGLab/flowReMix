@@ -38,7 +38,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   centerCovariance = TRUE,
                                   covarianceMethod = c("dense" , "sparse"),
                                   sparseGraph = FALSE,
-                                  betaDiserpsion = TRUE,
+                                  betaDispersion = TRUE,
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
                                   initMHcoef = 0.5,
@@ -182,9 +182,16 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   nSubsets <- length(glmFits)
   levelProbs <- rep(0.5, nSubsets)
   estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
+
+  # Sometime the initalization will yield a vector of `zero` random effects
+  invalid <- apply(estimatedRandomEffects, 2, function(x) all(x == 0))
+  if(any(invalid)) {
+    estimatedRandomEffects[, invalid] <- rnorm(sum(invalid) * nrow(estimatedRandomEffects), sd = sd(unlist(estimatedRandomEffects)))
+  }
   covariance <- PDSCE::pdsoft.cv(estimatedRandomEffects, init = "diag", nsplits = 10)
   invcov <- covariance$omega
   covariance <- covariance$sigma
+  isingfit <- NULL
 
   # Setting up preAssignment
   if(is.null(preAssignment)) {
@@ -218,7 +225,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   probSamples <- 100
   clusterDensities <- matrix(nrow = 2, ncol = probSamples)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
-  if(betaDiserpsion) {
+  if(betaDispersion) {
     M <- rep(10^4, nSubsets)
   } else {
     M <- rep(10^8, nSubsets)
@@ -229,7 +236,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
     if(iter > 1) {
-      if(betaDiserpsion & iter > 1) {
+      if(betaDispersion & iter > 1) {
         for(j in 1:nSubsets) {
           popdata <- dataByPopulation[[j]]
           if(class(glmFits[[j]])[[1]] == "gamlss") {
@@ -239,10 +246,10 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
           }
           tempfit <- NULL
           try(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
-          family = BB, data = popdata, start.from = startFrom))
+          family = gamlss.dist::BB, data = popdata, start.from = startFrom))
           if(is.null(tempfit)) {
-            glmFits[[j]] <- glm(glmformula, family = "binomial",
-                                data = dataByPopulation[[j]], weights = weights)
+            try(glmFits[[j]] <- glm(glmformula, family = "binomial",
+                                data = dataByPopulation[[j]], weights = weights))
           } else {
             glmFits[[j]] <- tempfit
             rho <- exp(tempfit$sigma.coefficients)
@@ -266,7 +273,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       } else {
         dataByPopulation[[j]]$treatment <- 0
       }
-      modelMat <- model.matrix(formula, data = dataByPopulation[[j]])
+      modelMat <- NULL
+      try(modelMat <- model.matrix(formula, data = dataByPopulation[[j]]))
       newNullEta <- as.numeric(modelMat %*% coefs)
 
       dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
@@ -318,7 +326,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                          MHcoef,
                                          as.integer(popInd),
                                          unifVec, normVec,
-                                         M, betaDiserpsion,
+                                         M, betaDispersion,
                                          as.integer(preAssignment[[i]]$assign))
 
       # Updating global posteriors
@@ -345,7 +353,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                             as.numeric(condvar), covariance, invcov,
                                             MHattempts, MHsuccess,
                                             unifVec,
-                                            M, betaDiserpsion,
+                                            M, betaDispersion,
                                             keepEach)
       randomEst <- randomMat[nrow(randomMat), ]
       randomList[[i]] <- randomMat
@@ -375,11 +383,11 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       if(covarianceMethod[1] == "sparse") {
         pdsoftFit <- PDSCE::pdsoft.cv(randomList, init = "dense")
         covariance <- pdsoftFit$sigma
+        invcov <- pdsoftFit$omega
       } else {
         covariance <- cov.wt(randomList, rep(1, nrow(randomList)), center = centerCovariance)$cov
+        invcov <- solve(covariance)
       }
-      covariance <- oldCovariance + (covariance - oldCovariance) / max(1, iter - updateLag)
-      invcov <- solve(covariance)
     }
 
     # Updating ising
@@ -388,8 +396,10 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     if(randomAssignProb > 0 & randomAssignProb <= 1) {
       assignmentList <- t(apply(assignmentList, 1, randomizeAssignments, prob = randomAssignProb))
     }
+    assignmentList <- data.frame(assignmentList)
+    names(assignmentList) <- unique(sub.population)
 
-    if(sparseGraph == TRUE) {
+    if(sparseGraph == TRUE & nSubsets > 2) {
       tempfit <- NULL
       try(tempfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
                                      progressbar = FALSE, plot = FALSE))
