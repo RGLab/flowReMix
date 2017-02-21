@@ -22,8 +22,17 @@ binomDensity <- function(v, prop, N, eta) {
 
 logit <- function(p) log(p / (1 - p))
 
-updateCoefs <- function(coef, fit, iter, updateLag, rate) {
-  update <- coef(fit)
+updateCoefs <- function(coef, fit, iter, updateLag, rate, flag) {
+  if(flag > 0 & flag <= 2) {
+    coef <- c(coef[1], rep(0, length(coef) - 1))
+    return(coef)
+  }
+
+  if(class(fit)[1] == "cv.glmnet") {
+    update <- as.numeric(coef(fit, s = "lambda.min"))
+  } else {
+    update <- as.numeric(coef(fit))
+  }
   notna <- !is.na(update)
   coef[notna] <- coef[notna] + (update[notna] - coef[notna])/max(iter - updateLag, 1)^rate
   return(coef)
@@ -32,6 +41,25 @@ updateCoefs <- function(coef, fit, iter, updateLag, rate) {
 replicateDataset <- function(data, replicate) {
   data$id <- paste(data$id, "%%%", replicate, sep = "")
   return(data)
+}
+
+estimateIntercept <- function(propMat) {
+  prop <- propMat[, 1] + 10^-5
+  estProp <- propMat[, 2] + 10^-5
+  logit <- log(prop/(1 - prop))
+  estLogit <- log(estProp / (1 - estProp))
+  return(mean(logit - estLogit))
+}
+
+initializeModel <- function(dat, formula) {
+  fit <- glm(formula, family = "binomial", weights = weights, data = dat)
+  coef <- coef(fit)
+  prop <- dat$y / dat$N
+  estProp <- predict(fit, type = "response")
+  propMat <- cbind(prop, estProp)
+  randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
+  randomEffects <- randomEffects[order(unique(dat$id))]
+  return(list(fit = fit, coef = coef, randomEffects = randomEffects))
 }
 
 subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
@@ -43,12 +71,14 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   centerCovariance = TRUE,
                                   covarianceMethod = c("dense" , "sparse"),
                                   sparseGraph = FALSE,
+                                  smallCounts = FALSE,
                                   betaDispersion = TRUE,
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
                                   initMHcoef = 0.5,
                                   maxIter = 8, verbose = TRUE,
                                   dataReplicates = 1) {
+  if(smallCounts & betaDispersion) stop("smallCounts and betaDispersion can't be both set to TRUE! (please choose one)")
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
     stop("Treatment variable must be specified!")
@@ -176,7 +206,11 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$treatment <- treatment
   # replicating
   if(dataReplicates > 1) {
+    if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
+    dataReplicates <- round(dataReplicates)
     dat <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(dat, x)))
+  } else {
+    dataReplicates <- 1
   }
 
   subpopInd <- as.numeric(dat$sub.population)
@@ -184,15 +218,19 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$subpopInd <- subpopInd
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
   initFormula <- update.formula(formula, cbind(y, N - y) ~ . + (1|id))
+  initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
 
-  glmFits <- by(dat, dat$sub.population, function(X) lme4::glmer(initFormula, family = "binomial", data = X))
-  coefficientList <- lapply(glmFits, function(x) colMeans(coef(x)[[1]]))
+  #glmFits <- by(dat, dat$sub.population, function(X) lme4::glmer(initFormula, family = "binomial", data = X))
+  initialization <- by(dat, dat$sub.population, initializeModel, initFormula)
+  coefficientList <- lapply(initialization, function(x) x$coef)
+  glmFits <- lapply(initialization, function(x) x$fit)
+  estimatedRandomEffects <- sapply(initialization, function(x) x$randomEffects)
 
   # Estimating covariance structure from marginal fits (step 0)
   nSubjects <- length(unique(dat$id))
   nSubsets <- length(glmFits)
   levelProbs <- rep(0.5, nSubsets)
-  estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
+  # estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
 
   # Sometime the initalization will yield a vector of `zero` random effects
   invalid <- apply(estimatedRandomEffects, 2, function(x) all(x == 0))
@@ -210,12 +248,14 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     preAssignment$assign <- rep(-1, nrow(preAssignment))
   } else {
     if(ncol(preAssignment) != 3) stop("preAssignment must have 3 columns: id, subset, assignment")
-    if(nrow(preAssignment) != (nSubsets * nSubjects)) stop("preAssignment must have nSubjects X nSubsets rows.")
     if(any(!(preAssignment[, 3] %in% c(-1, 0, 1)))) stop("The third column of preAssignment must take values -1, 0 or 1.")
-    if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
     preAssignment <- data.frame(preAssignment)
     names(preAssignment) <-  c("id", "subset", "assign")
+    preAssignment <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(preAssignment, x)))
+    if(nrow(preAssignment) != (nSubsets * nSubjects)) stop("preAssignment must have nSubjects X nSubsets rows.")
+    if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
   }
+
   preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
   preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
 
@@ -241,13 +281,16 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   } else {
     M <- rep(10^8, nSubsets)
   }
+
+  flagEquation <- rep(0, nSubsets)
+
   for(iter in 1:maxIter) {
     # Refitting Model with current means
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
     if(iter > 1) {
-      if(betaDispersion & iter > 1) {
+      if(betaDispersion) {
         for(j in 1:nSubsets) {
           popdata <- dataByPopulation[[j]]
           if(class(glmFits[[j]])[[1]] == "gamlss") {
@@ -259,20 +302,31 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
           try(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
           family = gamlss.dist::BB, data = popdata, start.from = startFrom))
           if(is.null(tempfit)) {
-            try(glmFits[[j]] <- glm(glmformula, family = "binomial",
-                                data = dataByPopulation[[j]], weights = weights))
+            try(glmFits[[j]] <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
           } else {
             glmFits[[j]] <- tempfit
             rho <- exp(tempfit$sigma.coefficients)
             M[j] <- max((1 - rho) / rho, 10^3)
           }
         }
-      } else {
-        glmFits <- lapply(dataByPopulation, function(popdata)
-          glm(glmformula, family = "binomial", data = popdata, weights = weights))
+      } else if(smallCounts) {
+        glmFits <- lapply(dataByPopulation, function(popdata) {
+          X <- model.matrix(glmformula, data = popdata)[, - 1]
+          y <- cbind(popdata$N - popdata$y, popdata$y)
+          fit <- glmnet::cv.glmnet(X, y, family = "binomial")
+        })
+        } else {
+        for(j in 1:nSubsets) {
+          tempfit <- NULL
+          try(tempfit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
+          if(!is.null(tempfit)) {
+            glmFits[[j]] <- tempfit
+          }
+        }
       }
       coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
-                                iter, updateLag, rate, SIMPLIFY = FALSE)
+                                iter, updateLag, rate, flagEquation,
+                                SIMPLIFY = FALSE)
     }
     M <- oldM + (M - oldM) / max(1, iter - updateLag)
 
@@ -422,8 +476,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         isingtemp[isingtemp == -Inf] <- 0
         isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
         levelProbs <- colMeans(posteriors)
-      } else {
-        print("hello")
       }
     } else {
       for(j in 1:nSubsets) {
