@@ -37,26 +37,27 @@ data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 1
 data$prop <- data$count / data$parentcount
 data$population <- as.factor(data$populataion)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
+data$treatment2 <- data$treatment
 
 preAssignment <- by(data, INDICES = data$ptid, preAssign)
 preAssignment <- do.call("rbind", preAssignment)
 
 vaccine <- as.numeric(by(data, data$ptid, function(x) x$vaccine[1] == "VACCINE"))
-system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
+system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment2 + age + gender,
                                          sub.population = factor(data$population),
                                          N = parentcount, id =  ptid,
-                                         treatment = treatment,
+                                         treatment = treatment2,
                                          data = data,
                                          preAssignment = NULL,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         rate = 1, updateLag = 7, nsamp = 30, maxIter = 15,
-                                         graphMethod = c("sparse", "dense", "none"),
-                                         betaDispersion = TRUE,
-                                         covarianceMethod = c("sparse"),
+                                         updateLag = 5, nsamp = 10, maxIter = 15,
+                                         isingMethod = "none",
+                                         covarianceMethod = "diagonal",
+                                         regressionMethod = "binom",
                                          centerCovariance = FALSE,
                                          initMHcoef = 3,
-                                         dataReplicates = 5))
+                                         dataReplicates = 2))
 #save(fit, file = "dispersed model 2.Robj")
 #save(fit, file = "results/binom model.Robj")
 #save(fit, file = "results/dispersed model 2 wAssignment.Robj")

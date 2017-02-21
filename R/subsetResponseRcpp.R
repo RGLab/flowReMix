@@ -73,10 +73,30 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   isingMethod = c("sparse", "dense", "none"),
                                   regressionMethod = c("binom", "betabinom", "sparse"),
                                   randomAssignProb = 0.0,
-                                  updateLag = 3, rate = 1, nsamp = 100,
+                                  updateLag = 3,
+                                  nsamp = 100,
                                   initMHcoef = 0.5,
                                   maxIter = 8, verbose = TRUE,
                                   dataReplicates = 1) {
+  # Checking if inputs are valid --------------------------
+  rate <- 1
+  dataReplicates <- max(floor(dataReplicates), 1)
+  updateLag <- max(ceiling(updateLag), 1)
+  if(updateLag < 2) {
+    warning("We recommend using an updateLag of at least 3 to let the algorithm warm up.")
+  }
+
+  maxIter <- max(ceiling(maxIter), 1)
+  if(maxIter < 4) {
+    warning("We recommend running the EM algorithm for at least 4 iterations.")
+  }
+
+  nsamp <- ceiling(nsamp)
+  if(nsamp < 5) {
+    nsamp <- 5
+    warning("Number of samples per MH iteration must be 5 or larger!")
+  }
+
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
     stop("Treatment variable must be specified!")
@@ -105,7 +125,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     stop("covarianceMethod must be one of sparse, dense or diagonal")
   }
 
-  #### Getting all relevant variables from call
+  #### Getting all relevant variables from call --------------------
   # Getting model frame
   dat <- model.frame(formula, data, na.action=na.pass)
   n <- dim(dat)[1]
@@ -213,7 +233,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   # Sub-population must be a factor
   if(!is.factor(sub.population)) stop("Sub-population must be a factor!")
 
-  #################################
   # Creating working dataset
   y <- model.frame(formula, data)
   y <- model.response(y)
@@ -225,7 +244,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   dat$off <- off
   dat$sub.population <- sub.population
   dat$treatment <- treatment
-  # replicating
+
+  # replicating data set ---------------------
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
@@ -237,33 +257,28 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   subpopInd <- as.numeric(dat$sub.population)
   uniqueSubpop <- sort(unique(subpopInd))
   dat$subpopInd <- subpopInd
+
+  # Editing formulas ------------------------------
+  covariates <- deparse(formula[[3]])
+  covariates <- gsub(as.character(call$treatment), "treatment", covariates)
+  formula <- update.formula(formula, as.formula(paste(". ~", covariates)))
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
-  initFormula <- update.formula(formula, cbind(y, N - y) ~ . + (1|id))
   initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
 
-  #glmFits <- by(dat, dat$sub.population, function(X) lme4::glmer(initFormula, family = "binomial", data = X))
+  # Initializing covariates and random effects------------------
   initialization <- by(dat, dat$sub.population, initializeModel, initFormula)
   coefficientList <- lapply(initialization, function(x) x$coef)
   glmFits <- lapply(initialization, function(x) x$fit)
   estimatedRandomEffects <- sapply(initialization, function(x) x$randomEffects)
-
-  # Estimating covariance structure from marginal fits (step 0)
+  # Initializing covariance from diagonal covariance
   nSubjects <- length(unique(dat$id))
   nSubsets <- length(glmFits)
   levelProbs <- rep(0.5, nSubsets)
-  # estimatedRandomEffects <- do.call("cbind", sapply(glmFits, function(x) lme4::ranef(x)))
-
-  # Sometime the initalization will yield a vector of `zero` random effects
-  invalid <- apply(estimatedRandomEffects, 2, function(x) all(x == 0))
-  if(any(invalid)) {
-    estimatedRandomEffects[, invalid] <- rnorm(sum(invalid) * nrow(estimatedRandomEffects), sd = sd(unlist(estimatedRandomEffects)))
-  }
-
-  covariance <- diag(apply(estimatedRandomEffects, 2, function(x) var))
-  invcov <- 1 / covariance
+  covariance <- diag(apply(estimatedRandomEffects, 2, var))
+  invcov <- diag(1 / diag(covariance))
   isingfit <- NULL
 
-  # Setting up preAssignment
+  # Setting up preAssignment ----------------------
   if(is.null(preAssignment)) {
     preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
     preAssignment$assign <- rep(-1, nrow(preAssignment))
@@ -280,7 +295,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
   preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
 
-  # More set up....
+  # More preparations ---------------------------
   dat$tempTreatment <- dat$treatment
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
@@ -294,6 +309,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   } else {
     MHcoef <- rep(initMHcoef[1], nSubsets)
   }
+
   probSamples <- 100
   clusterDensities <- matrix(nrow = 2, ncol = probSamples)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
@@ -305,8 +321,9 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
   flagEquation <- rep(0, nSubsets)
 
+  # Starting analysis -------------------------------
   for(iter in 1:maxIter) {
-    # Refitting Model with current means
+    # Refitting Model with current random effects/assignments
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
@@ -391,8 +408,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     assignListLength <- 0
     MHattempts <- rep(0, nSubsets)
     MHsuccess <- rep(0, nSubsets)
+    # S-step
     for(i in 1:nSubjects) {
-      #print(i)
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       N <- subjectData$N
@@ -403,7 +420,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       intSampSize <- 100
 
       # Gibbs sampler for cluster assignments
-      #set.seed(iter  + i * 10^4)
       unifVec <- runif(nsamp * nSubsets)
       normVec <- rnorm(intSampSize)
       assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
@@ -477,7 +493,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
           randomList <- apply(randomList, 2, function(x) x - mean(x))
         }
         covariance <- diag(apply(randomList, 2, function(x) mean(x^2)))
-        invcov <- 1 / covariance
+        invcov <- diag(1 / diag(covariance))
       }
     }
 
@@ -517,7 +533,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       levelProbabilities <- colMeans(assignmentList)
       isingCoefs <- matrix(0, nrow = nSubsets, ncol = nSubsets)
       minprob <- 10^-4
-      diag(isingCoefs) <- logit(min(max(levelProbabilities, minprob)), 1 - minprob)
+      diag(isingCoefs) <- logit(pmin(pmax(levelProbabilities, minprob), 1 - minprob))
     }
 
     # Updating MH coefficient
@@ -538,10 +554,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
 
     if(verbose) {
-      #print(isingCoefs)
       print(c(iter, levelP = levelProbs))
       print(c(iter, coef = as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
-      #try(print(c(AUC = apply(posteriors, 2, function(x) round(as.numeric(roc(!vaccine ~ x)$auc), 3)))))
       print(c(M = M))
       print(round(c(MH = MHcoef), 3))
       print(round(ratevec, 3))
