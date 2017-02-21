@@ -296,5 +296,5 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment * visitno,
                                              centerCovariance = FALSE,
                                              preAssignment = preAssignment,
                                              dataReplicates = 10))
-save(fit, "Data Analysis/results/malaria everything.Robj")
-
+#load("Data Analysis/results/malaria everything.Robj")
+plot(fit$isingfit)

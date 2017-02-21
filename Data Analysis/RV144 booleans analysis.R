@@ -7,15 +7,12 @@ require(reshape2)
 booldata <- melt(booleans, c("PTID", "Subset"))
 names(booldata)[3:4] <- c("stim", "count")
 
-forParentcount <- rv144
-forParentcount <- as.data.frame(forParentcount)
-forParentcount <- subset(forParentcount,
-                         parent == "4+" & stim == "env")
-forParentcount <- forParentcount[, c(2, 5, 11)]
-forParentcount <- unique(forParentcount)
+booldata <- by(booldata, INDICES = list(booldata$PTID, booldata$stim), function(x) {
+  x$parentcount <- sum(x$count)
+  return(x)
+})
+booldata <- do.call("rbind", booldata)
 
-booldata <- merge(booldata, forParentcount, by.x = "PTID", by.y = "ptid",
-                  all.x = TRUE, all.y = FALSE)
 booldata <- subset(booldata, Subset != "!TNFa&!IFNg&!IL4&!IL2&!CD154&!IL17a")
 booldata$treatment <- as.numeric(booldata$stim == "stim")
 uniquepop <- unique(booldata$Subset)
@@ -24,6 +21,25 @@ booldata <- subset(booldata, !is.na(Subset))
 allsubset <- booldata
 booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
 
+# Naming ------------------
+subsets <- unique(booldata$Subset)
+booldata$Subset <- as.character(booldata$Subset)
+nfunctions <- numeric(length(subsets))
+for(i in 1:length(subsets)) {
+  split <- strsplit(as.character(subsets[i]), "&")[[1]]
+  first <- substr(split, 1, 1)
+  nfunction <- sum(first != "!")
+  nfunctions[i] <- nfunction
+  name <- paste(split[first != "!"], collapse = ",")
+  booldata$nfunction[booldata$Subset == subsets[[i]]] <- nfunction
+  booldata$Subset[booldata$Subset == subsets[[i]]] <- name
+}
+subsets <- unique(booldata$Subset)
+
+
+
+
+# Analysis -------------
 vaccine <- as.numeric(by(booldata, booldata$PTID, function(x) x$vaccine[1] == "VACCINE"))
 require(pROC)
 system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
@@ -33,15 +49,16 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              treatment = treatment,
                                              randomAssignProb = 0,
                                              weights = NULL,
-                                             rate = 1, updateLag = 8,
-                                             nsamp = 30, maxIter = 16,
+                                             rate = 1, updateLag = 10,
+                                             nsamp = 30, maxIter = 20,
                                              initMHcoef = 3,
                                              covarianceMethod = "sparse",
-                                             sparseGraph = TRUE,
+                                             isingMethod = "sparse",
+                                             regressionMethod = "betabinom",
                                              centerCovariance = FALSE,
                                              dataReplicates = 5))
-#save(fit, file = "results/boolean dispersed fit3.Robj")
-load("data analysis/results/boolean dispersed fit2.Robj")
+save(fit, file = "data analysis/results/boolean dispersed fit3.Robj")
+#load("data analysis/results/boolean dispersed fit2.Robj")
 subsetIndex <- 1:length(subsets)
 #subsetIndex <- c(3, 5, 6, 10, 12, 13, 14, 20, 23)
 subsets <- unique(booldata$Subset)
@@ -55,15 +72,20 @@ for(j in 1:length((subsetIndex))) {
   i <- subsetIndex[j]
   try(rocfit <- roc(!vaccine ~ posteriors[, i]))
   auc[i] <- rocfit$auc
-  print(plot(rocfit, main = paste(i, "- AUC", round(rocfit$auc, 3))))
+  print(plot(rocfit, main = paste(subsets[i], "- AUC", round(rocfit$auc, 3)),
+             cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6))
 }
 
-# Aggregate AUC
+# Subject level posterior aggeregate?
+posteriors <- fit$posteriors[, -1]
+posteriors <- 1 - posteriors
 weights <- apply(posteriors, 2, var)
 weights <- weights / sum(weights)
 aggregate <- as.vector(posteriors %*% weights)
 rocfit <- roc(vaccine ~ aggregate)
-plot(pROC::roc(vaccine ~ aggregate), main = paste("overall -", round(rocfit$auc, 3)))
+plot(pROC::roc(vaccine ~ aggregate),
+     main = paste("AUC - Overall", round(rocfit$auc, 3)),
+     cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)
 
 
 par(mfrow = c(4, 6), mar = rep(2, 4))
@@ -86,7 +108,7 @@ for(j in 1:length((subsetIndex))) {
 forplot <- list()
 for(j in 1:length(subsetIndex)) {
   i <- subsetIndex[j]
-  post <- posteriors[, i]
+  post <- 1- posteriors[, i]
   negprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[i] & booldata$stim == "nonstim"]
   envprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[i] & booldata$stim == "stim"]
   forplot[[i]] <- data.frame(subset = subsets[i],
@@ -97,8 +119,8 @@ for(j in 1:length(subsetIndex)) {
 forplot <- do.call("rbind", forplot[c(1:21, 23)])
 require(ggplot2)
 print(ggplot(forplot) +
-        geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine == 1)) +
-        facet_wrap(~ subset, scales = 'free', ncol = 6) +
+        geom_point(aes(x = negprop, y = envprop, col = vaccine, shape = vaccine == 1)) +
+        facet_wrap(~ subset, scales = 'free', ncol = 5) +
         geom_abline(slope = 1, intercept = 0) +
         theme_bw() + scale_colour_gradientn(colours=rainbow(4)))
 
@@ -144,6 +166,8 @@ for(i in 1:nrow(nodes)) {
 }
 nodes$auc <- auc
 nodes$mFunctional <- 1:nrow(nodes) >= 6
+nodes$label <- subsets
+nodes$nfunctions <- nfunctions
 names(edges)[5] <- "Dependence"
 ggplot() +
   scale_colour_gradient(limits=c(0, 1), low="white", high = "black") +
@@ -153,13 +177,13 @@ ggplot() +
                                  col = Dependence),
                size = 1) +
   scale_fill_gradientn(colours=rainbow(4)) +
-  geom_point(data = nodes[1:5, ], aes(x = x, y = y, fill = auc), shape = 25,
-             size = 8, col = "white") +
-  geom_point(data = nodes[6:23, ], aes(x = x, y = y, fill = auc), shape = 21,
-             size = 8, col = "white") +
+  geom_point(data = nodes[1:5, ], aes(x = x, y = y, fill = nfunctions), shape = 21,
+             size = 12, col = "white") +
+  geom_point(data = nodes[6:23, ], aes(x = x, y = y, fill = nfunctions), shape = 21,
+             size = 12, col = "white") +
   scale_size(range = c(0.3, 1)) +
   scale_shape(solid = FALSE) +
-  geom_text(data = nodes, aes(x = x, y = y, label = 1:23)) +
+  geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
   theme(axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
         axis.title.x=element_blank(),
@@ -174,7 +198,9 @@ weights <- apply(posteriors, 2, var)
 weights <- weights / sum(weights)
 aggregate <- as.vector(posteriors %*% weights)
 rocfit <- roc(vaccine ~ aggregate)
-plot(pROC::roc(vaccine ~ aggregate), main = paste("AUC -", round(rocfit$auc, 3)))
+plot(pROC::roc(vaccine ~ aggregate),
+     main = paste("AUC - Overall", round(rocfit$auc, 3)),
+     cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)
 
 
 

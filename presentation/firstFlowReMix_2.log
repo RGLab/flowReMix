@@ -1,4 +1,4 @@
-This is LuaTeX, Version beta-0.79.1 (TeX Live 2014) (rev 4971)  (format=lualatex 2014.5.25)  20 FEB 2017 21:59
+This is LuaTeX, Version beta-0.79.1 (TeX Live 2014) (rev 4971)  (format=lualatex 2014.5.25)  21 FEB 2017 13:10
  restricted \write18 enabled.
  file:line:error style messages enabled.
 **firstFlowReMix_2.tex
@@ -999,89 +999,110 @@ Overfull \vbox (6.63199pt too high) detected at line 89
 [3
 
 <./figures/flowcytintro.png>]
+<figures/datasetExample.png, id=103, 470.75874pt x 303.1325pt>
+File: figures/datasetExample.png Graphic file (type png)
+
+<use figures/datasetExample.png>
+Package pdftex.def Info: figures/datasetExample.png used on input line 99.
+(pdftex.def)             Requested size: 341.43306pt x 219.85562pt.
+
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 99--99
+ [] 
+ []
+
+
+Overfull \vbox (40.10867pt too high) detected at line 99
+ []
+
+[4
+
+<./figures/datasetExample.png>]
 LaTeX Font Info:    Font shape `OMS/phv/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 111.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 120.
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 111.
- [4
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 120.
+ [5
 
 ]
-<figures/marginalScatterNoPost.jpeg, id=131, 730.73pt x 366.36874pt>
+<figures/marginalScatterNoPost.jpeg, id=159, 846.16125pt x 366.36874pt>
 File: figures/marginalScatterNoPost.jpeg Graphic file (type jpg)
 
 <use figures/marginalScatterNoPost.jpeg>
 Package pdftex.def Info: figures/marginalScatterNoPost.jpeg used on input line 1
-20.
-(pdftex.def)             Requested size: 292.28682pt x 146.54489pt.
- [5
+29.
+(pdftex.def)             Requested size: 338.45851pt x 146.54489pt.
 
-<./figures/marginalScatterNoPost.jpeg>] <figures/compassCaption.jpeg, id=158, 1
-750.54pt x 897.3525pt>
-File: figures/compassCaption.jpeg Graphic file (type jpg)
-
-<use figures/compassCaption.jpeg>
-Package pdftex.def Info: figures/compassCaption.jpeg used on input line 132.
-(pdftex.def)             Requested size: 315.0836pt x 161.51648pt.
-
-Overfull \hbox (7.79373pt too wide) in paragraph at lines 132--132
+Overfull \hbox (31.16864pt too wide) in paragraph at lines 129--129
  [] 
  []
 
 [6
 
-<./figures/compassCaption.jpeg>]
+<./figures/marginalScatterNoPost.jpeg>]
+<figures/compassCaption.jpeg, id=186, 1750.54pt x 897.3525pt>
 File: figures/compassCaption.jpeg Graphic file (type jpg)
- <use figures/compassCaption.jpeg>
-Package pdftex.def Info: figures/compassCaption.jpeg used on input line 132.
+
+<use figures/compassCaption.jpeg>
+Package pdftex.def Info: figures/compassCaption.jpeg used on input line 141.
 (pdftex.def)             Requested size: 315.0836pt x 161.51648pt.
 
-Overfull \hbox (7.79373pt too wide) in paragraph at lines 132--132
+Overfull \hbox (7.79373pt too wide) in paragraph at lines 141--141
  [] 
  []
 
 [7
 
+<./figures/compassCaption.jpeg>]
+File: figures/compassCaption.jpeg Graphic file (type jpg)
+ <use figures/compassCaption.jpeg>
+Package pdftex.def Info: figures/compassCaption.jpeg used on input line 141.
+(pdftex.def)             Requested size: 315.0836pt x 161.51648pt.
+
+Overfull \hbox (7.79373pt too wide) in paragraph at lines 141--141
+ [] 
+ []
+
+[8
+
 ]
-LaTeX Font Info:    Try loading font information for U+msa on input line 161.
+LaTeX Font Info:    Try loading font information for U+msa on input line 173.
  (/usr/local/texlive/2014/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 161.
+LaTeX Font Info:    Try loading font information for U+msb on input line 173.
 
 (/usr/local/texlive/2014/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <10.95> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 161.
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 173.
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <8> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 161.
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 173.
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <6> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 161.
- [8
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 173.
+ [9
 
-] [9
+] [10
 
 ]
-[10
+[11
 
-] [11
+] [12
 
-] <figures/CHMIboxplot.jpeg, id=322, 700.6175pt x 366.36874pt>
+] <figures/CHMIboxplot.jpeg, id=351, 700.6175pt x 366.36874pt>
 File: figures/CHMIboxplot.jpeg Graphic file (type jpg)
 
 <use figures/CHMIboxplot.jpeg>
-Package pdftex.def Info: figures/CHMIboxplot.jpeg used on input line 197.
+Package pdftex.def Info: figures/CHMIboxplot.jpeg used on input line 209.
 (pdftex.def)             Requested size: 332.79677pt x 174.02695pt.
 
-Overfull \hbox (25.5069pt too wide) in paragraph at lines 197--197
+Overfull \hbox (25.5069pt too wide) in paragraph at lines 209--209
  [] 
  []
 
-[12
+[13
 
-<./figures/CHMIboxplot.jpeg>] [13
-
-] [14
+<./figures/CHMIboxplot.jpeg>] [14
 
 ] [15
 
@@ -1091,66 +1112,66 @@ Overfull \hbox (25.5069pt too wide) in paragraph at lines 197--197
 
 ] [18
 
+] [19
+
 ]
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <10> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 292.
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 304.
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <7> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 292.
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 304.
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <5> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 292.
- [19
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 304.
+ [20
 
-] [20
+] [21
 
 ]
-[21
+[22
 
-] [22
+] [23
 
-] <figures/T4cd154scatter.jpeg, id=613, 970.62625pt x 372.39125pt>
+] <figures/T4cd154scatter.jpeg, id=641, 970.62625pt x 372.39125pt>
 File: figures/T4cd154scatter.jpeg Graphic file (type jpg)
 
 <use figures/T4cd154scatter.jpeg>
-Package pdftex.def Info: figures/T4cd154scatter.jpeg used on input line 323.
+Package pdftex.def Info: figures/T4cd154scatter.jpeg used on input line 335.
 (pdftex.def)             Requested size: 341.43306pt x 130.99802pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 323--323
- [] 
- []
-
-[23
-
-<./figures/T4cd154scatter.jpeg>]
-<figures/T4cd154roc.jpeg, id=640, 970.62625pt x 372.39125pt>
-File: figures/T4cd154roc.jpeg Graphic file (type jpg)
-
-<use figures/T4cd154roc.jpeg>
-Package pdftex.def Info: figures/T4cd154roc.jpeg used on input line 332.
-(pdftex.def)             Requested size: 341.43306pt x 130.99802pt.
-
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 332--332
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 335--335
  [] 
  []
 
 [24
 
-<./figures/T4cd154roc.jpeg>]
-<figures/mimosaComparison.jpeg, id=668, 970.62625pt x 372.39125pt>
-File: figures/mimosaComparison.jpeg Graphic file (type jpg)
+<./figures/T4cd154scatter.jpeg>]
+<figures/T4cd154roc.jpeg, id=669, 970.62625pt x 372.39125pt>
+File: figures/T4cd154roc.jpeg Graphic file (type jpg)
 
-<use figures/mimosaComparison.jpeg>
-Package pdftex.def Info: figures/mimosaComparison.jpeg used on input line 342.
+<use figures/T4cd154roc.jpeg>
+Package pdftex.def Info: figures/T4cd154roc.jpeg used on input line 344.
 (pdftex.def)             Requested size: 341.43306pt x 130.99802pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 342--342
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 344--344
  [] 
  []
 
 [25
 
-<./figures/mimosaComparison.jpeg>] [26
+<./figures/T4cd154roc.jpeg>]
+<figures/mimosaComparison.jpeg, id=696, 970.62625pt x 372.39125pt>
+File: figures/mimosaComparison.jpeg Graphic file (type jpg)
 
-] [27
+<use figures/mimosaComparison.jpeg>
+Package pdftex.def Info: figures/mimosaComparison.jpeg used on input line 354.
+(pdftex.def)             Requested size: 341.43306pt x 130.99802pt.
+
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 354--354
+ [] 
+ []
+
+[26
+
+<./figures/mimosaComparison.jpeg>] [27
 
 ] [28
 
@@ -1162,305 +1183,299 @@ Overfull \hbox (34.14319pt too wide) in paragraph at lines 342--342
 
 ] [32
 
+] [33
+
 ]
-<figures/subsetBinomialScatter.jpeg, id=882, 970.62625pt x 367.3725pt>
+<figures/subsetBinomialScatter.jpeg, id=910, 970.62625pt x 367.3725pt>
 File: figures/subsetBinomialScatter.jpeg Graphic file (type jpg)
 
 <use figures/subsetBinomialScatter.jpeg>
 Package pdftex.def Info: figures/subsetBinomialScatter.jpeg used on input line 4
-16.
+28.
 (pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 416--416
- [] 
- []
-
-[33
-
-<./figures/subsetBinomialScatter.jpeg>]
-<figures/subsetBinomialAUC.jpeg, id=909, 970.62625pt x 367.3725pt>
-File: figures/subsetBinomialAUC.jpeg Graphic file (type jpg)
-
-<use figures/subsetBinomialAUC.jpeg>
-Package pdftex.def Info: figures/subsetBinomialAUC.jpeg used on input line 424.
-(pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
-
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 424--424
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 428--428
  [] 
  []
 
 [34
 
-<./figures/subsetBinomialAUC.jpeg>]
-<figures/subsetBinomialFDR.jpeg, id=936, 970.62625pt x 367.3725pt>
-File: figures/subsetBinomialFDR.jpeg Graphic file (type jpg)
+<./figures/subsetBinomialScatter.jpeg>]
+<figures/subsetBinomialAUC.jpeg, id=937, 970.62625pt x 367.3725pt>
+File: figures/subsetBinomialAUC.jpeg Graphic file (type jpg)
 
-<use figures/subsetBinomialFDR.jpeg>
-Package pdftex.def Info: figures/subsetBinomialFDR.jpeg used on input line 433.
+<use figures/subsetBinomialAUC.jpeg>
+Package pdftex.def Info: figures/subsetBinomialAUC.jpeg used on input line 436.
 (pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 433--433
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 436--436
  [] 
  []
 
 [35
 
-<./figures/subsetBinomialFDR.jpeg>] [36
+<./figures/subsetBinomialAUC.jpeg>]
+<figures/subsetBinomialFDR.jpeg, id=964, 970.62625pt x 367.3725pt>
+File: figures/subsetBinomialFDR.jpeg Graphic file (type jpg)
 
-] [37
+<use figures/subsetBinomialFDR.jpeg>
+Package pdftex.def Info: figures/subsetBinomialFDR.jpeg used on input line 445.
+(pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
+
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 445--445
+ [] 
+ []
+
+[36
+
+<./figures/subsetBinomialFDR.jpeg>] [37
 
 ] [38
 
+] [39
+
 ]
-<figures/artificialBinomFDR.jpeg, id=1042, 644.4075pt x 367.3725pt>
+<figures/artificialBinomFDR.jpeg, id=1070, 644.4075pt x 367.3725pt>
 File: figures/artificialBinomFDR.jpeg Graphic file (type jpg)
 
 <use figures/artificialBinomFDR.jpeg>
-Package pdftex.def Info: figures/artificialBinomFDR.jpeg used on input line 468.
+Package pdftex.def Info: figures/artificialBinomFDR.jpeg used on input line 480.
 
 (pdftex.def)             Requested size: 341.43306pt x 194.65604pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 468--468
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 480--480
  [] 
  []
 
 
-Overfull \vbox (14.90909pt too high) detected at line 468
- []
-
-[39
-
-<./figures/artificialBinomFDR.jpeg>]
-<figures/artificialBinomROC.jpeg, id=1069, 644.4075pt x 367.3725pt>
-File: figures/artificialBinomROC.jpeg Graphic file (type jpg)
-
-<use figures/artificialBinomROC.jpeg>
-Package pdftex.def Info: figures/artificialBinomROC.jpeg used on input line 477.
-
-(pdftex.def)             Requested size: 341.43306pt x 194.65604pt.
-
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 477--477
- [] 
- []
-
-
-Overfull \vbox (14.90909pt too high) detected at line 477
+Overfull \vbox (14.90909pt too high) detected at line 480
  []
 
 [40
 
-<./figures/artificialBinomROC.jpeg>]
-<figures/artificialBinomScatter.jpeg, id=1097, 644.4075pt x 367.3725pt>
-File: figures/artificialBinomScatter.jpeg Graphic file (type jpg)
+<./figures/artificialBinomFDR.jpeg>]
+<figures/artificialBinomROC.jpeg, id=1098, 644.4075pt x 367.3725pt>
+File: figures/artificialBinomROC.jpeg Graphic file (type jpg)
 
-<use figures/artificialBinomScatter.jpeg>
-Package pdftex.def Info: figures/artificialBinomScatter.jpeg used on input line 
-486.
+<use figures/artificialBinomROC.jpeg>
+Package pdftex.def Info: figures/artificialBinomROC.jpeg used on input line 489.
+
 (pdftex.def)             Requested size: 341.43306pt x 194.65604pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 486--486
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 489--489
  [] 
  []
 
 
-Overfull \vbox (14.90909pt too high) detected at line 486
+Overfull \vbox (14.90909pt too high) detected at line 489
  []
 
 [41
 
-<./figures/artificialBinomScatter.jpeg>] [42
+<./figures/artificialBinomROC.jpeg>]
+<figures/artificialBinomScatter.jpeg, id=1126, 644.4075pt x 367.3725pt>
+File: figures/artificialBinomScatter.jpeg Graphic file (type jpg)
 
-] [43
+<use figures/artificialBinomScatter.jpeg>
+Package pdftex.def Info: figures/artificialBinomScatter.jpeg used on input line 
+498.
+(pdftex.def)             Requested size: 341.43306pt x 194.65604pt.
 
-]
-<figures/simVsRealContour.jpeg, id=1177, 654.445pt x 367.3725pt>
-File: figures/simVsRealContour.jpeg Graphic file (type jpg)
-
-<use figures/simVsRealContour.jpeg>
-Package pdftex.def Info: figures/simVsRealContour.jpeg used on input line 531.
-(pdftex.def)             Requested size: 341.43306pt x 191.66261pt.
-
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 531--531
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 498--498
  [] 
  []
 
-[44
 
-<./figures/simVsRealContour.jpeg>]
-<figures/marginalBBscatter.jpeg, id=1205, 970.62625pt x 367.3725pt>
-File: figures/marginalBBscatter.jpeg Graphic file (type jpg)
+Overfull \vbox (14.90909pt too high) detected at line 498
+ []
 
-<use figures/marginalBBscatter.jpeg>
-Package pdftex.def Info: figures/marginalBBscatter.jpeg used on input line 540.
-(pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
+[42
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 540--540
+<./figures/artificialBinomScatter.jpeg>] [43
+
+] [44
+
+]
+<figures/simVsRealContour.jpeg, id=1206, 654.445pt x 367.3725pt>
+File: figures/simVsRealContour.jpeg Graphic file (type jpg)
+
+<use figures/simVsRealContour.jpeg>
+Package pdftex.def Info: figures/simVsRealContour.jpeg used on input line 543.
+(pdftex.def)             Requested size: 341.43306pt x 191.66261pt.
+
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 543--543
  [] 
  []
 
 [45
 
-<./figures/marginalBBscatter.jpeg>]
-<figures/marginalBBroc.jpeg, id=1232, 970.62625pt x 367.3725pt>
-File: figures/marginalBBroc.jpeg Graphic file (type jpg)
+<./figures/simVsRealContour.jpeg>]
+<figures/marginalBBscatter.jpeg, id=1233, 970.62625pt x 367.3725pt>
+File: figures/marginalBBscatter.jpeg Graphic file (type jpg)
 
-<use figures/marginalBBroc.jpeg>
-Package pdftex.def Info: figures/marginalBBroc.jpeg used on input line 549.
+<use figures/marginalBBscatter.jpeg>
+Package pdftex.def Info: figures/marginalBBscatter.jpeg used on input line 552.
 (pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 549--549
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 552--552
  [] 
  []
 
 [46
 
-<./figures/marginalBBroc.jpeg>]
-<figures/marginalBBfdr.jpeg, id=1259, 970.62625pt x 367.3725pt>
-File: figures/marginalBBfdr.jpeg Graphic file (type jpg)
+<./figures/marginalBBscatter.jpeg>]
+<figures/marginalBBroc.jpeg, id=1260, 970.62625pt x 367.3725pt>
+File: figures/marginalBBroc.jpeg Graphic file (type jpg)
 
-<use figures/marginalBBfdr.jpeg>
-Package pdftex.def Info: figures/marginalBBfdr.jpeg used on input line 558.
+<use figures/marginalBBroc.jpeg>
+Package pdftex.def Info: figures/marginalBBroc.jpeg used on input line 561.
 (pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 558--558
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 561--561
  [] 
  []
 
 [47
 
-<./figures/marginalBBfdr.jpeg>]
-<figures/fullBooleansScatter.jpeg, id=1286, 970.62625pt x 367.3725pt>
-File: figures/fullBooleansScatter.jpeg Graphic file (type jpg)
+<./figures/marginalBBroc.jpeg>]
+<figures/marginalBBfdr.jpeg, id=1287, 970.62625pt x 367.3725pt>
+File: figures/marginalBBfdr.jpeg Graphic file (type jpg)
 
-<use figures/fullBooleansScatter.jpeg>
-Package pdftex.def Info: figures/fullBooleansScatter.jpeg used on input line 568
-.
-(pdftex.def)             Requested size: 284.52756pt x 107.69005pt.
- [48
+<use figures/marginalBBfdr.jpeg>
+Package pdftex.def Info: figures/marginalBBfdr.jpeg used on input line 570.
+(pdftex.def)             Requested size: 341.43306pt x 129.23254pt.
 
-<./figures/fullBooleansScatter.jpeg>] <figures/boolScatterLessWide.jpeg, id=131
-4, 663.47874pt x 367.3725pt>
-File: figures/boolScatterLessWide.jpeg Graphic file (type jpg)
-
-<use figures/boolScatterLessWide.jpeg>
-Package pdftex.def Info: figures/boolScatterLessWide.jpeg used on input line 577
-.
-(pdftex.def)             Requested size: 341.43306pt x 189.05598pt.
-
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 577--577
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 570--570
  [] 
  []
 
+[48
 
-Overfull \vbox (9.30904pt too high) detected at line 577
+<./figures/marginalBBfdr.jpeg>]
+<figures/booleansFullScatter.jpeg, id=1315, 970.62625pt x 501.875pt>
+File: figures/booleansFullScatter.jpeg Graphic file (type jpg)
+
+<use figures/booleansFullScatter.jpeg>
+Package pdftex.def Info: figures/booleansFullScatter.jpeg used on input line 580
+.
+(pdftex.def)             Requested size: 375.57628pt x 194.19885pt.
+
+Overfull \hbox (68.2864pt too wide) in paragraph at lines 580--580
+ [] 
  []
 
 [49
 
-<./figures/boolScatterLessWide.jpeg>]
-<figures/boolROC.jpeg, id=1341, 726.715pt x 367.3725pt>
-File: figures/boolROC.jpeg Graphic file (type jpg)
+<./figures/booleansFullScatter.jpeg>]
+<figures/booleansAUC2.jpeg, id=1342, 970.62625pt x 501.875pt>
+File: figures/booleansAUC2.jpeg Graphic file (type jpg)
 
-<use figures/boolROC.jpeg>
-Package pdftex.def Info: figures/boolROC.jpeg used on input line 586.
-(pdftex.def)             Requested size: 341.43306pt x 172.60342pt.
+<use figures/booleansAUC2.jpeg>
+Package pdftex.def Info: figures/booleansAUC2.jpeg used on input line 589.
+(pdftex.def)             Requested size: 341.43306pt x 176.5472pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 586--586
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 589--589
  [] 
  []
 
 [50
 
-<./figures/boolROC.jpeg>]
-<figures/boolFDR.jpeg, id=1368, 726.715pt x 367.3725pt>
-File: figures/boolFDR.jpeg Graphic file (type jpg)
+<./figures/booleansAUC2.jpeg>]
+<figures/booleansGraphAUC.jpeg, id=1369, 653.44125pt x 366.36874pt>
+File: figures/booleansGraphAUC.jpeg Graphic file (type jpg)
 
-<use figures/boolFDR.jpeg>
-Package pdftex.def Info: figures/boolFDR.jpeg used on input line 595.
-(pdftex.def)             Requested size: 341.43306pt x 172.60342pt.
+<use figures/booleansGraphAUC.jpeg>
+Package pdftex.def Info: figures/booleansGraphAUC.jpeg used on input line 598.
+(pdftex.def)             Requested size: 284.52756pt x 159.52563pt.
+ [51
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 595--595
- [] 
- []
+<./figures/booleansGraphAUC.jpeg>]
+<figures/booleansGraphFunctions.jpeg, id=1397, 653.44125pt x 366.36874pt>
+File: figures/booleansGraphFunctions.jpeg Graphic file (type jpg)
 
-[51
-
-<./figures/boolFDR.jpeg>]
-<figures/boolNetworkProbs.jpeg, id=1396, 555.07375pt x 367.3725pt>
-File: figures/boolNetworkProbs.jpeg Graphic file (type jpg)
-
-<use figures/boolNetworkProbs.jpeg>
-Package pdftex.def Info: figures/boolNetworkProbs.jpeg used on input line 604.
-(pdftex.def)             Requested size: 284.52756pt x 188.31604pt.
+<use figures/booleansGraphFunctions.jpeg>
+Package pdftex.def Info: figures/booleansGraphFunctions.jpeg used on input line 
+607.
+(pdftex.def)             Requested size: 284.52756pt x 159.52563pt.
  [52
 
-<./figures/boolNetworkProbs.jpeg>]
-<figures/boolNetworkAUC.jpeg, id=1424, 555.07375pt x 367.3725pt>
-File: figures/boolNetworkAUC.jpeg Graphic file (type jpg)
+<./figures/booleansGraphFunctions.jpeg>] [53
 
-<use figures/boolNetworkAUC.jpeg>
-Package pdftex.def Info: figures/boolNetworkAUC.jpeg used on input line 613.
-(pdftex.def)             Requested size: 284.52756pt x 188.31604pt.
- [53
-
-<./figures/boolNetworkAUC.jpeg>] [54
-
-]
-<figures/4plusSmoothed.jpeg, id=1477, 970.62625pt x 366.36874pt>
+] <figures/4plusSmoothed.jpeg, id=1451, 970.62625pt x 366.36874pt>
 File: figures/4plusSmoothed.jpeg Graphic file (type jpg)
 
 <use figures/4plusSmoothed.jpeg>
-Package pdftex.def Info: figures/4plusSmoothed.jpeg used on input line 649.
+Package pdftex.def Info: figures/4plusSmoothed.jpeg used on input line 643.
 (pdftex.def)             Requested size: 369.88582pt x 139.61847pt.
 
-Overfull \hbox (62.59595pt too wide) in paragraph at lines 649--649
+Overfull \hbox (62.59595pt too wide) in paragraph at lines 643--643
  [] 
+ []
+
+[54
+
+<./figures/4plusSmoothed.jpeg>]
+<figures/malariaQvals.pdf, id=1478, 916.85817pt x 1186.5228pt>
+File: figures/malariaQvals.pdf Graphic file (type pdf)
+
+<use figures/malariaQvals.pdf>
+Package pdftex.def Info: figures/malariaQvals.pdf used on input line 652.
+(pdftex.def)             Requested size: 341.43306pt x 441.84903pt.
+
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 652--652
+ [] 
+ []
+
+
+Overfull \vbox (262.10208pt too high) detected at line 652
  []
 
 [55
 
-<./figures/4plusSmoothed.jpeg>]
-<figures/malariaQvals.pdf, id=1504, 916.85817pt x 1186.5228pt>
-File: figures/malariaQvals.pdf Graphic file (type pdf)
+<./figures/malariaQvals.pdf>]
+<figures/malariaGraph.jpeg, id=1537, 903.375pt x 501.875pt>
+File: figures/malariaGraph.jpeg Graphic file (type jpg)
 
-<use figures/malariaQvals.pdf>
-Package pdftex.def Info: figures/malariaQvals.pdf used on input line 658.
-(pdftex.def)             Requested size: 341.43306pt x 441.84903pt.
+<use figures/malariaGraph.jpeg>
+Package pdftex.def Info: figures/malariaGraph.jpeg used on input line 661.
+(pdftex.def)             Requested size: 341.43306pt x 189.68831pt.
 
-Overfull \hbox (34.14319pt too wide) in paragraph at lines 658--658
+Overfull \hbox (34.14319pt too wide) in paragraph at lines 661--661
  [] 
  []
 
 
-Overfull \vbox (262.10208pt too high) detected at line 658
+Overfull \vbox (9.94136pt too high) detected at line 661
  []
 
 [56
 
-<./figures/malariaQvals.pdf>] [57
+<./figures/malariaGraph.jpeg>] [57
+
+] [58
 
 ]
 \tf@nav=\write6
 \tf@toc=\write7
 \tf@snm=\write8
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 675.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 675.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 685.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 685.
  (./firstFlowReMix_2.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 675.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 675.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 685.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 685.
 Package rerunfilecheck Info: File `firstFlowReMix_2.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 675.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 685.
 )
 
 Here is how much of LuaTeX's memory you used:
- 19244 strings out of 494695
+ 19236 strings out of 494695
  100000,460012 words of node,token memory allocated
- 1513 words of node memory still in use:
+ 1514 words of node memory still in use:
    29 hlist, 10 vlist, 2 rule, 2 disc, 58 glue, 4 kern, 17 penalty, 36 glyph, 84
  glue_spec, 3 write, 7 local_par, 1 pdf_refxform, 14 pdf_colorstack nodes
-   avail lists: 2:26,3:408,4:761,5:182,6:1164,7:27,8:27,9:294,10:124
- 21421 multiletter control sequences out of 65536+600000
+   avail lists: 2:26,3:409,4:761,5:182,6:1224,7:27,8:27,9:294,10:124
+ 21423 multiletter control sequences out of 65536+600000
  109 fonts using 4291887 bytes
  56i,15n,55p,395b,623s stack positions out of 5000i,500n,10000p,200000b,100000s
 {/usr/local/texlive/2014/texmf-dist/fonts/enc/dvips/base/8r.enc}<</usr/local/tex
@@ -1475,10 +1490,10 @@ texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb><</usr/local/texlive/2014/te
 xmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb><</usr/local/texlive/2014/texmf-dis
 t/fonts/type1/urw/helvetic/uhvr8a.pfb><</usr/local/texlive/2014/texmf-dist/fonts
 /type1/urw/helvetic/uhvro8a.pfb>
-Output written on firstFlowReMix_2.pdf (57 pages, 2748345 bytes).
+Output written on firstFlowReMix_2.pdf (58 pages, 2917680 bytes).
 
-PDF statistics: 1624 PDF objects out of 1728 (max. 8388607)
- 1500 compressed objects within 15 object streams
- 115 named destinations out of 1000 (max. 131072)
+PDF statistics: 1658 PDF objects out of 1728 (max. 8388607)
+ 1529 compressed objects within 16 object streams
+ 117 named destinations out of 1000 (max. 131072)
  28 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -69,19 +69,40 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   preAssignment = NULL,
                                   weights = NULL,
                                   centerCovariance = TRUE,
-                                  covarianceMethod = c("dense" , "sparse"),
-                                  sparseGraph = FALSE,
-                                  smallCounts = FALSE,
-                                  betaDispersion = TRUE,
+                                  covarianceMethod = c("sparse", "dense", "diagonal"),
+                                  isingMethod = c("sparse", "dense", "none"),
+                                  regressionMethod = c("binom", "betabinom", "sparse"),
                                   randomAssignProb = 0.0,
                                   updateLag = 3, rate = 1, nsamp = 100,
                                   initMHcoef = 0.5,
                                   maxIter = 8, verbose = TRUE,
                                   dataReplicates = 1) {
-  if(smallCounts & betaDispersion) stop("smallCounts and betaDispersion can't be both set to TRUE! (please choose one)")
   call <- as.list(match.call())
   if(is.null(call$treatment)) {
     stop("Treatment variable must be specified!")
+  }
+
+  if(length(isingMethod) > 1) isingModel<- isingModel[1]
+  if(!(isingMethod %in% c("sparse", "dense", "none"))) {
+    stop("isingMethod must be one of sparse, dense or none")
+  }
+
+  if(length(regressionMethod) > 1) regressionMethod <- regressionMethod[1]
+  if(!(regressionMethod %in% c(c("binom", "betabinom", "sparse")))) stop("regressionMethod must be one of binom, betabinom or sparse")
+  if(regressionMethod == "binom") {
+    smallCounts <- FALSE
+    betaDispersion <- FALSE
+  } else if(regressionMethod == "betabinom") {
+    smallCounts <- FALSE
+    betaDispersion <- TRUE
+  } else {
+    smallCounts <- TRUE
+    betaDispersion <- FALSE
+  }
+
+  if(length(covarianceMethod) > 1) covarianceMethod <- covarianceMethod[1]
+  if(!(isingMethod %in% c("sparse", "dense", "none"))) {
+    stop("covarianceMethod must be one of sparse, dense or diagonal")
   }
 
   #### Getting all relevant variables from call
@@ -237,9 +258,9 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   if(any(invalid)) {
     estimatedRandomEffects[, invalid] <- rnorm(sum(invalid) * nrow(estimatedRandomEffects), sd = sd(unlist(estimatedRandomEffects)))
   }
-  covariance <- PDSCE::pdsoft.cv(estimatedRandomEffects, init = "diag", nsplits = 10)
-  invcov <- covariance$omega
-  covariance <- covariance$sigma
+
+  covariance <- diag(apply(estimatedRandomEffects, 2, function(x) var))
+  invcov <- 1 / covariance
   isingfit <- NULL
 
   # Setting up preAssignment
@@ -423,7 +444,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       randomEst <- randomMat[nrow(randomMat), ]
       randomList[[i]] <- randomMat
 
-
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
       estimatedRandomEffects[i, ] <- currentRandomEst + (colMeans(randomMat) - currentRandomEst) / max(iter - updateLag, 1)
@@ -445,13 +465,19 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
-      if(covarianceMethod[1] == "sparse") {
+      if(covarianceMethod == "sparse") {
         pdsoftFit <- PDSCE::pdsoft.cv(randomList, init = "dense")
         covariance <- pdsoftFit$sigma
         invcov <- pdsoftFit$omega
-      } else {
+      } else if(covarianceMethod == "dense") {
         covariance <- cov.wt(randomList, rep(1, nrow(randomList)), center = centerCovariance)$cov
         invcov <- solve(covariance)
+      } else if(covarianceMethod == "diagonal") {
+        if(centerCovariance) {
+          randomList <- apply(randomList, 2, function(x) x - mean(x))
+        }
+        covariance <- diag(apply(randomList, 2, function(x) mean(x^2)))
+        invcov <- 1 / covariance
       }
     }
 
@@ -464,7 +490,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     assignmentList <- data.frame(assignmentList)
     names(assignmentList) <- unique(sub.population)
 
-    if(sparseGraph == TRUE & nSubsets > 2) {
+    if(isingMethod == "sparse" & nSubsets > 2) {
       tempfit <- NULL
       try(tempfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
                                      progressbar = FALSE, plot = FALSE))
@@ -477,7 +503,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
         levelProbs <- colMeans(posteriors)
       }
-    } else {
+    } else if(isingMethod == "dense") {
       for(j in 1:nSubsets) {
         firth <- logistf::logistf(assignmentList[, j] ~ assignmentList[, -j],
                                   datout = FALSE)
@@ -487,6 +513,11 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         firth[j] <- intercept
         isingCoefs[j, ] <- isingCoefs[j, ] + (firth - isingCoefs[j, ]) /  max(1, iter - updateLag)
       }
+    } else {
+      levelProbabilities <- colMeans(assignmentList)
+      isingCoefs <- matrix(0, nrow = nSubsets, ncol = nSubsets)
+      minprob <- 10^-4
+      diag(isingCoefs) <- logit(min(max(levelProbabilities, minprob)), 1 - minprob)
     }
 
     # Updating MH coefficient

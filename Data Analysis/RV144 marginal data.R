@@ -51,7 +51,8 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
                                          rate = 1, updateLag = 7, nsamp = 30, maxIter = 15,
-                                         sparseGraph = TRUE, betaDispersion = TRUE,
+                                         graphMethod = c("sparse", "dense", "none"),
+                                         betaDispersion = TRUE,
                                          covarianceMethod = c("sparse"),
                                          centerCovariance = FALSE,
                                          initMHcoef = 3,
@@ -101,11 +102,12 @@ for(i in 1:length(selected_populations)) {
 
 forplot <- do.call("rbind", forplot)
 require(ggplot2)
-print(ggplot(forplot) +
-  geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine)) +
+ggplot(forplot) +
+  geom_point(aes(x = negprop, y = envprop, col = vaccine, shape = vaccine),
+             alpha = 0.75) +
   facet_wrap(~ subset, scales = 'free') +
   geom_abline(slope = 1, intercept = 0) +
-  theme_bw() + scale_colour_gradientn(colours=rainbow(1)))
+  theme_bw() #+ scale_colour_gradientn(colours=rainbow(1))
 
 
 

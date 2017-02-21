@@ -92,6 +92,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}
+\frametitle{Introduction to Cytometry Count Data}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/datasetExample} \caption{}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
 \frametitle{The RV144 HIV Vaccine Study}
 \begin{itemize}
 \item \textbf{286 Subjects}
@@ -102,7 +111,7 @@
 \vspace{0.2 cm}
 \item \textbf{2 Types of stimulus} 
 	\begin{itemize}
-	\item HIV virus
+	\item HIV antigen
 	\item Negative control
 	\end{itemize}
 \vspace{0.2 cm}
@@ -138,25 +147,28 @@
 Current models are baseline/stimulation models. 
 \begin{itemize}
 \item  Unstimulated blood sample are compared stimulated ones.
-\item Goal is to identify subsets that respond to stimulation.
 \end{itemize}
 \vspace{0.3 cm}
 
 \pause
-For the $i$th subject out of $n$,
+For the unstimulated sample of the $i$th subject out of $n$, we sample a count proportion:
 $$
-p_{i0} \sim Dir(\alpha_{0},\beta_{0})
+p_{i0} \sim \text{Dirichlet}(\alpha_{0},\beta_{0}),
+$$$$
+y_{i0} \sim \text{Multinomial}(N_{i0}, p_{i0}).
 $$
+
 
 \vspace{0.3 cm}
 \pause
-Let $\tau_i \in \{0,1\}^{p}$ be a vector indicating whether a subject shows response in one of the $p$ cell subsets:
+Let $k_i \in \{0,1\}^{p}$ indicate in which subsets $i$ responds:
 $$
-\tau_i \sim Bin(w),
+k_{ij} \sim \text{Ber}(w_j),
 $$$$
-p_{i1,\tau = 0} \sim \delta(p_{i0,\tau = 0})
+p_{i1,\tau = 0} \sim \delta(p_{i0,\tau = 0}), \;\;\;\;
+p_{i1, \tau = 1} | p_{i0,\tau = 0}  \propto \text{Dirichlet}(\alpha_1, \beta_{1})
 $$$$
-p_{i1, \tau = 1} | p_{i0,\tau = 0}  \propto Dir(\alpha_1, \beta_{1})
+y_{i1} \sim \text{Multinomial}(N_{i1}, p_{i1})
 $$
 \end{frame}
 
@@ -199,23 +211,6 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}
-\frametitle{Motivation - Unique Challanges}
-\begin{itemize}
-\item \textbf{Dependence}
-	\begin{itemize}
-	\item Within sample between cell subsets.
-	\item Within subject / across time.  
-	\end{itemize}
-\vspace{0.76 cm}
-\item \textbf{Heterogenous treatment effect}
-\vspace{0.76 cm}
-\item \textbf{Over-dispersed Binomial counts}
-\end{itemize}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}
 \frametitle{Motivation - A Regression Model}
 \begin{itemize}
 \item We want to be able to include covariates:
@@ -244,23 +239,40 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}
+\frametitle{Motivation - Unique Challanges}
+\begin{itemize}
+\item \textbf{Dependence}
+	\begin{itemize}
+	\item Within sample between cell subsets.
+	\item Within subject / across time.  
+	\end{itemize}
+\vspace{0.76 cm}
+\item \textbf{Heterogenous treatment effect}
+\vspace{0.76 cm}
+\item \textbf{Over-dispersed Binomial counts}
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
 \frametitle{A Marginal Model - Single Subset}
 \begin{framed}
-Indexing: \textbf{i}-subject, \textbf{l}- stimulation/time-point.
+Indexing: \textbf{i}-subject, \textbf{t}- stimulation/time-point.
 \end{framed}
 
 \begin{itemize}
 \item Binomial count data $\Rightarrow$ Logistic model.
 $$
-\text{logit}(p_{il}) = X_{il} \beta
+\text{logit}(p_{it}) = X_{it} \beta
 $$$$
-y_{il} \sim \text{Binom}(N_{il}, p_{il})
+y_{it} \sim \text{Binom}(N_{it}, p_{it})
 $$
 
 \pause
 \item Dependence $\Rightarrow$ `random' subject baseline:
 $$
-\text{logit}(p_{il}) = X_{il} \beta + \nu_i
+\text{logit}(p_{it}) = X_{it} \beta + \nu_i
 $$$$
 \nu_i \sim N(0, \sigma^{2})
 $$
@@ -272,13 +284,13 @@ $$
 \begin{frame}
 \frametitle{A Marginal Model - Single Subset}
 \begin{framed}
-Indexing: \textbf{i}-subject, \textbf{l}- stimulation, \textbf{k}- cluster.
+Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{k}- cluster.
 \end{framed}
 
 \begin{itemize}
 \item Non-response $\Rightarrow$ Mixture-Model:
 $$
-\text{logit}(p_{ilk}) = X_{il} \beta + T_{il}\tau_{k} + \nu_i
+\text{logit}(p_{itk}) = X_{it} \beta + T_{it}\tau_{k} + \nu_i
 $$
 	\begin{itemize}
 	\item $T$ a matrix of covariates related to the treatment.
@@ -563,7 +575,7 @@ $$
 \frametitle{RV144 - Booleans Dataset}
 226 vaccinees, and 36 placebos, 24 cell-subsets.
 \begin{figure}[]
-\includegraphics[width=10 cm]{figures/fullBooleansScatter}
+\includegraphics[width=13.2 cm]{figures/booleansFullScatter}
 \end{figure}
 \end{frame}
 
@@ -572,7 +584,7 @@ $$
 \begin{frame}
 \frametitle{RV144 - Booleans Dataset}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/boolScatterLessWide} \caption{Scatter plots for RV144 booleans dataset}
+\includegraphics[width=12 cm]{figures/booleansAUC2} \caption{ROC for RV144 booleans dataset}
 \end{figure}
 \end{frame}
 
@@ -581,7 +593,7 @@ $$
 \begin{frame}
 \frametitle{RV144 - Booleans Dataset}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/boolROC} \caption{ROC for RV144 booleans dataset}
+\includegraphics[width=10 cm]{figures/booleansGraphAUC} \caption{Estimated Ising Model}
 \end{figure}
 \end{frame}
 
@@ -590,25 +602,7 @@ $$
 \begin{frame}
 \frametitle{RV144 - Booleans Dataset}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/boolFDR} \caption{FDR for RV144 booleans dataset}
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{RV144 - Booleans Dataset}
-\begin{figure}[]
-\includegraphics[width=10 cm]{figures/boolNetworkProbs} \caption{Estimated Ising Model}
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{RV144 - Booleans Dataset}
-\begin{figure}[]
-\includegraphics[width=10 cm]{figures/boolNetworkAUC} \caption{Estimated Ising Model}
+\includegraphics[width=10 cm]{figures/booleansGraphFunctions} \caption{Estimated Ising Model}
 \end{figure}
 \end{frame}
 
@@ -655,6 +649,22 @@ $$
 \begin{figure}[]
 \includegraphics[width=12 cm]{figures/malariaQvals} \caption{Stimulated vs. Unstimulated}
 \end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Controlled Human Malaria Infection Study}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/malariaGraph} \caption{Stimulated vs. Unstimulated}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Computation}
+
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
