@@ -261,22 +261,34 @@ $$
 Indexing: \textbf{i}-subject, \textbf{t}- stimulation/time-point.
 \end{framed}
 
-\begin{itemize}
-\item Binomial count data $\Rightarrow$ Logistic model.
+Overdispersion $\Rightarrow$ Beta Binomial Model.
 $$
-\text{logit}(p_{it}) = X_{it} \beta
+\text{logit}(\mu_{it}) = X_{it} \beta,
+$$$$
+p_{it} \sim \text{Beta}(M\mu, M(1 - \mu)),
+$$$$
+y_{it} \sim \text{Binom}(N_{it}, p_{it})
+$$
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
+\frametitle{A Marginal Model - Single Subset}
+\begin{framed}
+Indexing: \textbf{i}-subject, \textbf{t}- stimulation/time-point.
+\end{framed}
+Dependence $\Rightarrow$ `random' subject baseline:
+$$
+\nu_i \sim N(0, \sigma^{2})
+$$$$
+\text{logit}(\mu_{it}) = X_{it} \beta + \nu_i
+$$$$
+p_{it} \sim \text{Beta}(M\mu, M(1 - \mu)),
 $$$$
 y_{it} \sim \text{Binom}(N_{it}, p_{it})
 $$
 
-\pause
-\item Dependence $\Rightarrow$ `random' subject baseline:
-$$
-\text{logit}(p_{it}) = X_{it} \beta + \nu_i
-$$$$
-\nu_i \sim N(0, \sigma^{2})
-$$
-\end{itemize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
@@ -287,18 +299,37 @@ $$
 Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{k}- cluster.
 \end{framed}
 
-\begin{itemize}
-\item Non-response $\Rightarrow$ Mixture-Model:
+Non-response $\Rightarrow$ Mixture-Model:
 $$
-\text{logit}(p_{itk}) = X_{it} \beta + T_{it}\tau_{k} + \nu_i
+k \sim Ber(\pi),
+$$$$
+\text{logit}(\mu_{itk}) = X_{it} \beta + T_{it}\tau_{k} + \nu_i,
 $$
 	\begin{itemize}
 	\item $T$ a matrix of covariates related to the treatment.
 	\item $\tau_k$ equals $0$ if $k=0$ or $\tau\neq0$ if $k = 1$.
 	\end{itemize}
-\end{itemize}
+\end{frame}
 
-\pause
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{A Marginal Model - Recap}
+\begin{framed}
+Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{k}- cluster.
+\end{framed}
+$$
+\nu_i \sim N(0, \sigma^{2}),
+$$$$
+k \sim Ber(\pi),
+$$$$
+\text{logit}(\mu_{itk}) = X_{it} \beta + T_{it}\tau_{k} + \nu_i,
+$$$$
+p_{it} \sim \text{Beta}(M\mu, M(1 - \mu)),
+$$$$
+y_{it} \sim \text{Binom}(N_{it}, p_{it})
+$$
+
 \vspace{0.3 cm}
 \textbf{Model can be estimated via an EM algorithm}
 \end{frame}
@@ -329,7 +360,8 @@ How do we evaluate the model?
 \frametitle{Marginal Model - Results}
 \begin{center}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/T4cd154scatter} \caption{Scatter plot for T4+/CD154+ - Marginal Model}
+\includegraphics[width=12 cm]{figures/marginalBooleansIndependenceScatter}
+ \caption{Posterior Probabilities for RV144 dataset - Independence Model}
 \end{figure}
 \end{center}
 \end{frame}
@@ -337,18 +369,19 @@ How do we evaluate the model?
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{Marginal Model - Results}
+\frametitle{Comparison w/ MIMOSA - Finak et al. (2013) }
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/T4cd154roc} \caption{ROC/FDR plots for T4+/CD154+ - Marginal Model}
+\includegraphics[width=11 cm]{figures/mimosaComparisonROC} 
+\caption{Comparison with MIMOSA (univariate COMPASS)}
 \end{figure}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{Finak et al. (2013) - MIMOSA}
+\frametitle{Comparison w/ MIMOSA - Finak et al. (2013) }
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/mimosaComparison} 
+\includegraphics[width=11 cm]{figures/mimosaComparisonFDR} 
 \caption{Comparison with MIMOSA (univariate COMPASS)}
 \end{figure}
 \end{frame}
@@ -366,7 +399,7 @@ Performing analysis for each cell-subset at a time doesn't use all of the inform
 \item Correlation structure might be of interest in itself. 
 \pause
 \vspace{0.3 cm}
-\item Response is very likely not independent across cell-subsets.
+\item Response is probably not independent across cell-subsets.
 \vspace{0.3 cm}
 \item We might be able to improve classification of response by looking at several cell-subsets at once.  
 \end{itemize}
@@ -377,7 +410,7 @@ Performing analysis for each cell-subset at a time doesn't use all of the inform
 \begin{frame}
 \frametitle{A Hidden Markov Random Field Model}
 \begin{framed}
-Indexing: \textbf{i}-subject, \textbf{l}- stimulation, \textbf{j}- subset, \textbf{k}- cluster.
+Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{j}- subset, \textbf{k}- cluster.
 \end{framed}
 
 Denote cluster (Response) by a $k \in \{0,1\}^{p}$ vector with $1$ indicating a responsive subset.
@@ -402,28 +435,26 @@ We can induce sparsity through an $\ell_1$ penalty.
 \begin{frame}
 \frametitle{A Hidden Markov Random Field Model}
 \begin{framed}
-Indexing: \textbf{i}-subject, \textbf{l}- stimulation, \textbf{j}- subset, \textbf{k}- cluster.
+Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{j}- subset, \textbf{k}- cluster.
 \end{framed}
 
-\vspace{0.3 cm}
-
 $$
-\nu_i \sim N_p(0, \Sigma),
+\nu_i \sim N(0, \Sigma),
 $$$$
-k_i \sim \text{Ising}(\theta),
+k_i \sim \text{Ising}(\theta).
 $$$$
-\text{logit}(\mu_{ijlk}) = X_{ijl} \beta + T_{ijl}\tau_{k_i} + \nu_{ij} ,
+\text{logit}(\mu_{ijtk}) = X_{ijt} \beta + T_{ijt}\tau_{k_i} + \nu_{ij} ,
 $$$$
-y_{ijlk} \sim \text{Binom}(N_{il}, \mu_{ijlk}).
+y_{ijtk} \sim \text{Beta-Binomial}(N_{it}, \mu_{ijtk}, M_j) ,
 $$
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{HMRF Modle - Results}
+\frametitle{HMRF Model - Results}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/subsetBinomialScatter} \caption{Scatter Plot for HMRF Modle Model}
+\includegraphics[width=11 cm]{figures/HMRFscatter} \caption{Scatter Plot for HMRF Modle Model}
 \end{figure}
 \end{frame}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
@@ -431,7 +462,7 @@ $$
 \begin{frame}
 \frametitle{Subset-Response Model - Results}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/subsetBinomialAUC} \caption{ROC for HMRF Modle}
+\includegraphics[width=11 cm]{figures/HMRFroc} \caption{ROC for HMRF Modle}
 \end{figure}
 \end{frame}
 
@@ -473,69 +504,6 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{Simulated Binomial Data - Results}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/artificialBinomFDR} \caption{FDR for Simulated Binomial Data}
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{Simulated Binomial Data - Results}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/artificialBinomROC} \caption{ROC for Simulated Binomial Data}
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{Simulated Binomial Data - Results}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/artificialBinomScatter} \caption{Scatter plot for Simulated Binomial Data}
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{An Overdispersed Model}
-We are clearly missing some variablility... 
-\vspace{0.3 cm}
-
-Assume a Beta-Binomial Model:
-$$
-\text{logit}(\mu) = X\beta + T\tau + \nu,
-$$$$
-p \sim \text{Beta}(M\mu, M(1-\mu)), \;\;\;\;\; M>0,
-$$$$
-y \sim \text{Binom}(N, p).
-$$
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{An Overdispersed Model - Recap}
-\begin{framed}
-Indexing: \textbf{i}-subject, \textbf{l}- stimulation, \textbf{j}- subset, \textbf{k}- cluster.
-\end{framed}
-
-$$
-\nu_i \sim N(0, \Sigma),
-$$$$
-k_i \sim \text{Ising}(\theta).
-$$$$
-\text{logit}(\mu_{ijlk}) = X_{ijl} \beta + T_{ijl}\tau_{k_i} + \nu_{ij} ,
-$$$$
-y_{ijlk} \sim \text{Beta-Binomial}(N_{il}, \mu_{ijlk}, M_j) ,
-$$
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
 \frametitle{How close are we to the distribution of the data?}
 \begin{figure}[]
 \includegraphics[width=12 cm]{figures/simVsRealContour} 
@@ -545,28 +513,15 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{Overdispersed Model - Results}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/marginalBBscatter} \caption{Scatter plot for Overdispersed Model }
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{Overdispersed Model - Results}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/marginalBBroc} \caption{ROC for Overdispersed Model}
-\end{figure}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{Overdispersed Model - Results}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/marginalBBfdr} \caption{FDR for Overdispersed Model}
-\end{figure}
+\frametitle{RV144 Booleans Dataset}
+\begin{itemize}
+\item So far we worked with marginal counts - can be obtained from bulk assays. 
+\pause
+\vspace{0.8 cm}
+\item single-cell measurements enable a more comprehensive understanding of cellular functions. 
+\vspace{0.8 cm}
+\item  \textbf{The degree of functionality} (numbered of expressed cytokines) of responsive cell-subsets has been correlated with favorable outcomes in vaccine studies. 
+\end{itemize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]

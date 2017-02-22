@@ -266,7 +266,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
 
   # Initializing covariates and random effects------------------
-  initialization <- by(dat, dat$sub.population, initializeModel, initFormula)
+  dataByPopulation <- by(dat, dat$sub.population, function(x) x)
+  initialization <- lapply(dataByPopulation, initializeModel, formula = initFormula)
   coefficientList <- lapply(initialization, function(x) x$coef)
   glmFits <- lapply(initialization, function(x) x$fit)
   estimatedRandomEffects <- sapply(initialization, function(x) x$randomEffects)
@@ -287,7 +288,9 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     if(any(!(preAssignment[, 3] %in% c(-1, 0, 1)))) stop("The third column of preAssignment must take values -1, 0 or 1.")
     preAssignment <- data.frame(preAssignment)
     names(preAssignment) <-  c("id", "subset", "assign")
-    preAssignment <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(preAssignment, x)))
+    if(dataReplicates > 1) {
+      preAssignment <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(preAssignment, x)))
+    }
     if(nrow(preAssignment) != (nSubsets * nSubjects)) stop("preAssignment must have nSubjects X nSubsets rows.")
     if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
   }
@@ -416,7 +419,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       y <- subjectData$y
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
-      keepEach <- 1
+      keepEach <- 5
       intSampSize <- 100
 
       # Gibbs sampler for cluster assignments
@@ -504,7 +507,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       assignmentList <- t(apply(assignmentList, 1, randomizeAssignments, prob = randomAssignProb))
     }
     assignmentList <- data.frame(assignmentList)
-    names(assignmentList) <- unique(sub.population)
+    names(assignmentList) <- names(dataByPopulation)
 
     if(isingMethod == "sparse" & nSubsets > 2) {
       tempfit <- NULL
@@ -517,7 +520,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         isingtemp[isingtemp == Inf] <- 0
         isingtemp[isingtemp == -Inf] <- 0
         isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
-        levelProbs <- colMeans(posteriors)
       }
     } else if(isingMethod == "dense") {
       for(j in 1:nSubsets) {
@@ -535,6 +537,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       minprob <- 10^-4
       diag(isingCoefs) <- logit(pmin(pmax(levelProbabilities, minprob), 1 - minprob))
     }
+    levelProbs <- colMeans(posteriors)
 
     # Updating MH coefficient
     ratevec <- numeric(nSubsets)
@@ -567,14 +570,15 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
   if(dataReplicates <= 1) {
     posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
-    names(posteriors) <- unique(dat$sub.population)
+    names(posteriors) <- c(as.character(call$id), names(dataByPopulation))
   } else {
     realIDs <- gsub("\\%%%.*", "", uniqueIDs)
     post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
     postid <- names(post)
     posteriors <- data.frame(do.call("rbind", post))
-    names(posteriors) <- unique(dat$sub.population)
+    names(posteriors) <- names(dataByPopulation)
     posteriors <- cbind(id = postid, 1 - posteriors)
+    names(posteriors)[1] <- as.character(call$id)
   }
 
   # Preparing output

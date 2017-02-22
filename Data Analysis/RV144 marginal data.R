@@ -43,7 +43,7 @@ preAssignment <- by(data, INDICES = data$ptid, preAssign)
 preAssignment <- do.call("rbind", preAssignment)
 
 vaccine <- as.numeric(by(data, data$ptid, function(x) x$vaccine[1] == "VACCINE"))
-system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment2 + age + gender,
+system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          sub.population = factor(data$population),
                                          N = parentcount, id =  ptid,
                                          treatment = treatment2,
@@ -51,25 +51,28 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment2 + age + gender,
                                          preAssignment = NULL,
                                          randomAssignProb = 0.0,
                                          weights = NULL,
-                                         updateLag = 5, nsamp = 10, maxIter = 15,
-                                         isingMethod = "none",
-                                         covarianceMethod = "diagonal",
-                                         regressionMethod = "binom",
-                                         centerCovariance = FALSE,
+                                         updateLag = 10, nsamp = 40, maxIter = 20,
+                                         isingMethod = "sparse",
+                                         covarianceMethod = "dense",
+                                         regressionMethod = "betabinom",
+                                         centerCovariance = TRUE,
                                          initMHcoef = 3,
-                                         dataReplicates = 2))
+                                         dataReplicates = 4))
 #save(fit, file = "dispersed model 2.Robj")
 #save(fit, file = "results/binom model.Robj")
 #save(fit, file = "results/dispersed model 2 wAssignment.Robj")
 #load("results/dispersed model 2 wAssignment.Robj")
 #save(fit, file = "dispersed model 3.Robj")
-load(file = "dispersed model 4.Robj")
+#load(file = "dispersed model 4.Robj")
+#load(file = "data analysis/results/marginal independence model od.Robj")
+#save(fit, file = "marginal independence model od w covariance.Robj")
+save(fit, file = "data analysis/results/marginal model od w ising2.Robj")
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
 posteriors <- fit$posteriors
-posteriors$id <- as.numeric(as.character(posteriors$id))
-posteriors <- posteriors[order(posteriors$id), -1]
+posteriors$ptid <- as.numeric(as.character(posteriors$ptid))
+posteriors <- posteriors[order(posteriors$ptid), -1]
 par(mfrow = c(2, 3), mar = rep(3, 4))
 for(i in 1:length(selected_populations)) {
   rocfit <- roc(vaccine ~ posteriors[, i])
@@ -87,7 +90,8 @@ for(i in 1:length(selected_populations)) {
   print(plot(nominalFDR, empFDR, type = "l", xlim = c(0, 1), ylim = c(0, 1), col = "red", main = leaves[selected_populations[i]]))
   lines(nominalFDR, power, col = "blue", lty = 2)
   abline(a = 0, b = 1)
-  abline(v = c(0.05, 0.1), h = c(0.8, 0.9), col = "grey")
+  legend('topright', col = c("red", "blue"), lty = 1:2,
+         legend = c("FDR", "power"))
 }
 
 forplot <- list()
@@ -104,11 +108,11 @@ for(i in 1:length(selected_populations)) {
 forplot <- do.call("rbind", forplot)
 require(ggplot2)
 ggplot(forplot) +
-  geom_point(aes(x = negprop, y = envprop, col = vaccine, shape = vaccine),
+  geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine),
              alpha = 0.75) +
   facet_wrap(~ subset, scales = 'free') +
   geom_abline(slope = 1, intercept = 0) +
-  theme_bw() #+ scale_colour_gradientn(colours=rainbow(1))
+  theme_bw() + scale_colour_gradientn(colours=rainbow(4))
 
 
 

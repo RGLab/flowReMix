@@ -1,7 +1,8 @@
 require(IsingSampler)
 require(flowReMix)
-load("results/binom model.Robj")
-#load("results/dispersed model 2.Robj")
+set.seed(500)
+#load("results/binom model.Robj")
+load("data analysis/results/dispersed model 2.Robj")
 isingmat <- fit$isingCov
 randomcov <- fit$covariance
 overdispersion <- fit$dispersion
@@ -59,6 +60,8 @@ system.time(simfit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              centerCovariance = FALSE))
 #save(simfit, file = "results/simfit dispersed")
 #save(simfit, file = "results/simfit binomial.Robj")
+#load(file = "simulations/results/simfit dispersed")
+
 
 require(pROC)
 posteriors <- 1 - simfit$posteriors[, 2:ncol(fit$posteriors), drop = FALSE]
@@ -107,6 +110,8 @@ ggplot(forplot) +
 # Comparing real data with model data -----------------
 selected_populations = c(c(1, 2, 5, 3, 6, 7))
 par(mfrow = c(2, 3), mar = rep(3, 4))
+
+
 for(i in 1:length(selected_populations)) {
   negprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "negctrl"]
   envprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "env"]
