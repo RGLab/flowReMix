@@ -77,7 +77,8 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
                                   nsamp = 100,
                                   initMHcoef = 0.5,
                                   maxIter = 8, verbose = TRUE,
-                                  dataReplicates = 1) {
+                                  dataReplicates = 1,
+                                  maxDispersion = 10^4) {
   # Checking if inputs are valid --------------------------
   rate <- 1
   dataReplicates <- max(floor(dataReplicates), 1)
@@ -347,7 +348,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
           } else {
             glmFits[[j]] <- tempfit
             rho <- exp(tempfit$sigma.coefficients)
-            M[j] <- max((1 - rho) / rho, 10^3)
+            M[j] <- max((1 - rho) / rho, maxDispersion)
           }
         }
       } else if(smallCounts) {
@@ -438,7 +439,6 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       iterPosteriors <- colMeans(assignmentMat)
       posteriors[i, ] <- posteriors[i, ] + (iterPosteriors - posteriors[i, ])/max(iter - updateLag, 1)
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
-      assignmentMat <- assignmentMat[seq(from = 5, to = nrow(assignmentMat), by = 5), ]
       assignmentList[[i]] <- assignmentMat
 
       # MH sampler for random effects
@@ -501,6 +501,10 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     }
 
     # Updating ising
+    if(iter == maxIter) {
+      exportAssignment <- assignmentList
+      names(exportAssignment) <- names(databyid)
+    }
     assignmentList <- do.call("rbind",assignmentList)
     unscrambled <- assignmentList
     if(randomAssignProb > 0 & randomAssignProb <= 1) {
@@ -591,6 +595,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   result$isingCov <- isingCoefs
   result$isingfit <- isingfit
   result$dispersion <- M
+  result$assignmentList <- exportAssignment
   return(result)
 }
 

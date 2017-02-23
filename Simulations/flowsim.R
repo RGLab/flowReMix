@@ -1,8 +1,9 @@
 require(IsingSampler)
 require(flowReMix)
+expit <- function(x) 1 / (1 + exp(-x))
 set.seed(500)
 #load("results/binom model.Robj")
-load("data analysis/results/dispersed model 2.Robj")
+load(file = "data analysis/results/marginal model od w ising3.Robj")
 isingmat <- fit$isingCov
 randomcov <- fit$covariance
 overdispersion <- fit$dispersion
@@ -52,26 +53,30 @@ system.time(simfit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              N = N, id =  ptid, treatment = treatment,
                                              data = simdata,
                                              randomAssignProb = 0.0,
-                                             rate = 1, updateLag = 3, nsamp = 50, maxIter = 10,
-                                             sparseGraph = TRUE,
-                                             betaDiserpsion = FALSE,
+                                             updateLag = 10, nsamp = 40,
+                                             maxIter = 15,
+                                             isingMethod = "sparse",
+                                             covarianceMethod = "dense",
+                                             regressionMethod = "betabinom",
                                              initMHcoef = 3,
-                                             covarianceMethod = c("dense"),
-                                             centerCovariance = FALSE))
-#save(simfit, file = "results/simfit dispersed")
+                                             centerCovariance = FALSE,
+                                             dataReplicates = 5))
+save(simfit, file = "results/simfit dispersed 2")
 #save(simfit, file = "results/simfit binomial.Robj")
 #load(file = "simulations/results/simfit dispersed")
 
 
 require(pROC)
-posteriors <- 1 - simfit$posteriors[, 2:ncol(fit$posteriors), drop = FALSE]
+posteriors <- simfit$posteriors
+posteriors <- posteriors[order(as.numeric(as.character(posteriors$ptid))), ]
+posteriors <- 1 - posteriors[, -1]
 par(mfrow = c(2, 3), mar = rep(3, 4))
 for(i in 1:length(selected_populations)) {
   rocfit <- roc(assignment[, i] ~ posteriors[, i])
   print(plot(rocfit, main = paste(i, "- AUC", round(rocfit$auc, 3))))
 }
 
-par(mfrow = c(3, 3), mar = rep(3, 4))
+par(mfrow = c(2, 3), mar = rep(3, 4))
 for(i in 1:length(selected_populations)) {
   post <- 1 - posteriors[, i]
   vaccine <- assignment[, i]
@@ -86,7 +91,9 @@ for(i in 1:length(selected_populations)) {
   abline(v = c(0.05, 0.1), h = c(0.8, 0.9), col = "grey")
 }
 
-posteriors <- 1 - simfit$posteriors[, 2:ncol(fit$posteriors), drop = FALSE]
+posteriors <- simfit$posteriors
+posteriors <- posteriors[order(as.numeric(as.character(posteriors$ptid))), ]
+posteriors <- 1 - posteriors[, -1]
 forplot <- list()
 for(i in 1:length(selected_populations)) {
   post <- 1 - posteriors[, i]

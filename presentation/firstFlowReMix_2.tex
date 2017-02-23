@@ -10,6 +10,7 @@
 \usepackage{graphicx, epsfig}
 \usepackage{setspace}
 \usepackage{color}
+\usepackage{subfigure}
 
 \definecolor{darkgreen}{rgb}{0,0.4,0}
 \definecolor{cgreen}{rgb}{0,0.5,0}
@@ -46,7 +47,11 @@
 \begin{document}
 
 
-\title{\textbf{\LARGE{flowReMix}}  \\ (temporary name)  \vspace{ 1 cm }\\ \large{A \textbf{Mixture} of \textbf{Mixed} Beta-Binomial \textbf{Regression} Models for Analyzing \textbf{Flow}-Cytometry Count data}}
+\title{\LARGE{Analyzing Flow-Cytometry Count Data with Regression Mixtures}}
+
+\author{\large{\textbf{Amit Meir}} \\ \emph{University of Washington} \\ \vspace{1 cm} Joint work with \\ \vspace{0.1 cm} \textbf{Raphael Gottardo} and \textbf{Greg Finak} 
+\\ \emph{Hutchinson Cancer Research Center}}
+
 
 \vspace{1 cm}
 
@@ -62,27 +67,35 @@
 \begin{frame}
 \frametitle{Outline}
 \begin{enumerate}
-\item Introduction to Flow-Cytometry
+\item \textbf{Introduction} to Flow-Cytometry
 \vspace{0.3 cm}
-\item Motivation
+\item \textbf{Motivation}
+	\begin{itemize}
+	\item Existing methods
+	\item Why a regression model?
+	\end{itemize}
 \vspace{0.3 cm}
-\item Models:
+\item \textbf{Models}:
 	\begin{itemize}
 	\item A Marginal Model
 	\item A Joint HMRF model
 	\end{itemize}
 	\vspace{0.3 cm}
-\item Data analysis. 
+\item \textbf{Data analysis}
+	\begin{itemize}
+	\item RV144 HIV Vaccine Trial
+	\item Controlled Human Malaria Infection Study.
+	\end{itemize}
 
 \vspace{0.3 cm}
-\item  Computation
+\item  \textbf{Computation} (time permitting)
 \end{enumerate}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}
-\frametitle{Introduction to Cytometry Count Data}
+\frametitle{The RV144 HIV Vaccine Trial}
 \begin{center}
 \includegraphics[scale=0.4]{figures/flowcytintro}
 \end{center}
@@ -92,7 +105,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}
-\frametitle{Introduction to Cytometry Count Data}
+\frametitle{The RV144 HIV Vaccine Trial}
 \begin{figure}[]
 \includegraphics[width=12 cm]{figures/datasetExample} \caption{}
 \end{figure}
@@ -101,12 +114,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}
-\frametitle{The RV144 HIV Vaccine Study}
+\frametitle{The RV144 HIV Vaccine Trial}
 \begin{itemize}
-\item \textbf{286 Subjects}
+\item \textbf{262 Subjects}
 	\begin{itemize}
-	\item 246 Cases
-	\item 40 Controls
+	\item 226 Cases
+	\item 36 Controls
 	\end{itemize}
 \vspace{0.2 cm}
 \item \textbf{2 Types of stimulus} 
@@ -177,7 +190,7 @@ $$
 \begin{frame}
 \frametitle{Controlled Human Malaria Infection Study}
 \begin{itemize}
-\item 9 Tanzanian adults were infected with Malaria.
+\item 9 subjects were infected with Malaria.
 	\begin{itemize}
 	\item +3 controls.
 	\end{itemize}
@@ -195,7 +208,10 @@ $$
 	\end{itemize}
 	\vspace{0.75 cm}
 	
-\item 113 measured cell-types divided into 8 groups. 
+\item 53 cell subsets.
+	\begin{itemize}
+	\item (10 types of cytokines in 8 cell-types)
+	\end{itemize} 
 \end{itemize}
 \end{frame}
 
@@ -204,7 +220,7 @@ $$
 \begin{frame}
 \frametitle{Controlled Human Malaria Infection Study}
 \begin{center}
-\includegraphics[scale=0.475]{figures/CHMIboxplot}
+\includegraphics[scale=0.38]{figures/malariaBoxplotsFourPlus}
 \end{center}
 \end{frame}
 
@@ -301,7 +317,7 @@ Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{k}- cluster.
 
 Non-response $\Rightarrow$ Mixture-Model:
 $$
-k \sim Ber(\pi),
+k \sim Ber(\theta),
 $$$$
 \text{logit}(\mu_{itk}) = X_{it} \beta + T_{it}\tau_{k} + \nu_i,
 $$
@@ -321,7 +337,7 @@ Indexing: \textbf{i}-subject, \textbf{t}- stimulation, \textbf{k}- cluster.
 $$
 \nu_i \sim N(0, \sigma^{2}),
 $$$$
-k \sim Ber(\pi),
+k \sim Ber(\theta),
 $$$$
 \text{logit}(\mu_{itk}) = X_{it} \beta + T_{it}\tau_{k} + \nu_i,
 $$$$
@@ -452,17 +468,21 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
+\frametitle{Marginal Model - Results}
+\begin{center}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/marginalBooleansIndependenceScatter}
+ \caption{Posterior Probabilities for RV144 dataset - Independence Model}
+\end{figure}
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
 \frametitle{HMRF Model - Results}
 \begin{figure}[]
-\includegraphics[width=11 cm]{figures/HMRFscatter} \caption{Scatter Plot for HMRF Modle Model}
-\end{figure}
-\end{frame}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
-
-\begin{frame}
-\frametitle{Subset-Response Model - Results}
-\begin{figure}[]
-\includegraphics[width=11 cm]{figures/HMRFroc} \caption{ROC for HMRF Modle}
+\includegraphics[width=11 cm]{figures/HMRFscatter2} \caption{Scatter Plot for HMRF Modle Model}
 \end{figure}
 \end{frame}
 
@@ -471,7 +491,16 @@ $$
 \begin{frame}
 \frametitle{Subset-Response Model - Results}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/subsetBinomialFDR} \caption{FDR for HMRF Modle}
+\includegraphics[width=11 cm]{figures/HMRFroc2} \caption{ROC for HMRF Modle}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Subset-Response Model - Results}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/HMRFfdr2} \caption{FDR for HMRF Modle}
 \end{figure}
 \end{frame}
 
@@ -513,6 +542,33 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
+\frametitle{Results for Simulated Data}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/simdataROC} 
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Results for Simulated Data}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/simdataFDR} 
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{RV144 Booleans Dataset}
+\begin{figure}[]
+\includegraphics[width=12 cm]{figures/datasetExample} \caption{}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
 \frametitle{RV144 Booleans Dataset}
 \begin{itemize}
 \item So far we worked with marginal counts - can be obtained from bulk assays. 
@@ -527,10 +583,33 @@ $$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
+\frametitle{The RV144 Booleans Dataset}
+\begin{itemize}
+\item \textbf{262 Subjects}
+	\begin{itemize}
+	\item 226 Cases
+	\item 36 Controls
+	\end{itemize}
+\vspace{0.2 cm}
+\item \textbf{2 Types of stimulus} 
+	\begin{itemize}
+	\item HIV antigen
+	\item Negative control
+	\end{itemize}
+\vspace{0.2 cm}
+\item \textbf{23 types of cells with non-negligible counts.} 
+	\begin{itemize}
+	\item (At least two instances of \emph{count} $\geq 5$)
+	\end{itemize}
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
 \frametitle{RV144 - Booleans Dataset}
-226 vaccinees, and 36 placebos, 24 cell-subsets.
 \begin{figure}[]
-\includegraphics[width=13.2 cm]{figures/booleansFullScatter}
+\includegraphics[width=12 cm]{figures/booleansFullScatter}
 \end{figure}
 \end{frame}
 
@@ -539,7 +618,7 @@ $$
 \begin{frame}
 \frametitle{RV144 - Booleans Dataset}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/booleansAUC2} \caption{ROC for RV144 booleans dataset}
+\includegraphics[width=12 cm]{figures/booleansScatterLess} 
 \end{figure}
 \end{frame}
 
@@ -548,7 +627,7 @@ $$
 \begin{frame}
 \frametitle{RV144 - Booleans Dataset}
 \begin{figure}[]
-\includegraphics[width=10 cm]{figures/booleansGraphAUC} \caption{Estimated Ising Model}
+\includegraphics[width=12 cm]{figures/BooleansROCless}
 \end{figure}
 \end{frame}
 
@@ -557,7 +636,37 @@ $$
 \begin{frame}
 \frametitle{RV144 - Booleans Dataset}
 \begin{figure}[]
-\includegraphics[width=10 cm]{figures/booleansGraphFunctions} \caption{Estimated Ising Model}
+\includegraphics[width=12 cm]{figures/booleansAUCaggregate}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{RV144 - Booleans Dataset}
+\begin{figure}[]
+\includegraphics[width=10 cm]{figures/booleansNetworkCD154} 
+\caption{Estimated Ising Model - Red marks CD154}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{RV144 - Booleans Dataset}
+\begin{figure}[]
+\includegraphics[width= 10.5 cm]{figures/booleansNetworkAUC} 
+\caption{Estimated Ising Model - Red marks AUC}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+
+\begin{frame}
+\frametitle{Controlled Human Malaria Infection Study}
+\begin{figure}[]
+\includegraphics[width=11 cm]{figures/malariaGraphic}
 \end{figure}
 \end{frame}
 
@@ -566,7 +675,7 @@ $$
 \begin{frame}
 \frametitle{Controlled Human Malaria Infection Study}
 \begin{itemize}
-\item 9 Tanzanian adults were infected with Malaria.
+\item 9 subjects were infected with Malaria.
 	\begin{itemize}
 	\item +3 controls.
 	\end{itemize}
@@ -584,7 +693,10 @@ $$
 	\end{itemize}
 	\vspace{0.75 cm}
 	
-\item 113 measured cell-types divided into 8 groups. 
+\item 53 cell subsets.
+	\begin{itemize}
+	\item (10 types of cytokines in 8 cell-types)
+	\end{itemize} 
 \end{itemize}
 \end{frame}
 
@@ -592,8 +704,71 @@ $$
 
 \begin{frame}
 \frametitle{Controlled Human Malaria Infection Study}
+\begin{itemize}
+\item  Individuals  who  experience malaria  infections develop  immunity.
+	\begin{itemize}
+	\item All subject may exhibit response to stimulation.
+	\item Even at day 0!
+	\item What is the profile of the immune response?
+	\end{itemize}
+	
+\pause
+\vspace{0.5 cm}
+\item The  immunity is not long lived.
+	\begin{itemize}
+	\item We might expect to see a rise in response during experiment.
+	\item How fast does the response return to baseline?
+	\end{itemize}
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Controlled Human Malaria Infection Study}
+malaraFourPlusSmoothed
 \begin{figure}[]
-\includegraphics[width=13 cm]{figures/4plusSmoothed} \caption{Stimulated vs. Unstimulated}
+\includegraphics[width=12 cm]{figures/fourPlusSmoothedNarrow} \caption{CD4 Helper Cells}
+\end{figure}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{FDR Adjusted p-values for CHMI Study}
+Standard errors for significance tests computed using Jackknife. 
+\vspace{0.4 cm}
+
+% latex table generated in R 3.3.2 by xtable 1.8-2 package
+% Thu Feb 23 03:35:46 2017
+\begin{table}[ht]
+\centering
+\scalebox{0.65}{
+\begin{tabular}{rlllllrll}
+  \hline
+ & 4+ & 4+/CXCR5+ & 56+dim & 56+hi & 8+ & 8+/CXCR5+ & NK T cells & PD-1+ \\ 
+  \hline
+154+ & \colorbox{yellow}{0.029} & \colorbox{yellow}{0.004} &  &  & 0.103 & 0.75 & \colorbox{yellow}{0.006} & \colorbox{yellow}{0.024} \\ 
+  CCR7+ & 0.649 & 0.996 &  &  & 0.596 & 0.51 &  &  \\ 
+  CD45A+ & 0.575 & 0.307 &  &  & 0.543 & 0.54 &  &  \\ 
+  IFNg+ & \colorbox{yellow}{0.001} & \colorbox{yellow}{0.006} & \colorbox{yellow}{0.065} & 0.146 & \colorbox{yellow}{0.001} &  & \colorbox{yellow}{0.052} & \colorbox{yellow}{0.097} \\ 
+  IL2+ & \colorbox{yellow}{0} & \colorbox{yellow}{0.005} &  &  & 0.119 & 0.56 & 0.321 & \colorbox{yellow}{0.052} \\ 
+  IL21+ & 0.676 & 0.649 & 0.751 & 0.589 & 0.649 &  & 0.71 &  \\ 
+  IL4+ & 0.12 & 0.543 &  & 0.751 & 0.649 &  & 0.583 &  \\ 
+  TNFa+ & \colorbox{yellow}{0} & \colorbox{yellow}{0.001} & 0.261 & 0.309 & 0.276 &  & \colorbox{yellow}{0.053} & \colorbox{yellow}{0.09} \\ 
+  GzB+ & 0.583 &  & 0.511 & \colorbox{yellow}{0.001} & 0.589 &  & 0.596 &  \\ 
+  PD-1+ & 0.751 &  &  &  & 0.596 & 0.83 &  &  \\ 
+   \hline
+\end{tabular}}
+\end{table}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Controlled Human Malaria Infection Study}
+\begin{figure}[]
+\includegraphics[width=13 cm]{figures/MalariaSignificantAt10} \caption{Significant Subsets}
 \end{figure}
 \end{frame}
 
@@ -602,24 +777,75 @@ $$
 \begin{frame}
 \frametitle{Controlled Human Malaria Infection Study}
 \begin{figure}[]
-\includegraphics[width=12 cm]{figures/malariaQvals} \caption{Stimulated vs. Unstimulated}
+\includegraphics[width=10 cm]{figures/malariaNetwork} \caption{Estimated Graph - Red marks probability of response}
 \end{figure}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{Controlled Human Malaria Infection Study}
-\begin{figure}[]
-\includegraphics[width=12 cm]{figures/malariaGraph} \caption{Stimulated vs. Unstimulated}
-\end{figure}
+\frametitle{Computation - A Difficult Likelihood}
+With cluster assignments and random effects known:
+$$
+f(y_{i} | \nu_i, k_i) = \prod_{j}\prod_{t}f(y_{ijt} | \nu_{ij}, k_{ij})
+$$
+\vspace{0.2 cm}
+
+\pause
+The log-likelihood of the data is given by:
+$$
+\ell(\beta,\tau,\theta,\Sigma) = 
+\sum_{i=1}^{n}\log\left(\sum_{k\in \{0,1\}^{J}} P_\theta(k) \int_{\mathbb{R}^{J}} f_{\beta,\tau}(y_i | \nu_{i}, k_i) \varphi(\nu_i;0, \Sigma) d\nu_i\right)
+$$
+\vspace{0.2 cm}
+
+The log-likelihood is intractable for large $J$. 
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
 
 \begin{frame}
-\frametitle{Computation}
+\frametitle{Computation - How About EM?}
+The integrals are replaced with conditional expectations:
+$$
+\sum_{i=1}^{n}\log\left(\sum_{k\in \{0,1\}^{J}} P_\theta(k | y_i) \int_{\mathbb{R}^{J}} f_{\beta,\tau}(y_i | \nu_{i}, k_i) f_{\Sigma}(\nu_i| y_i, k) d\nu_i\right)
+$$
 
+\pause
+\vspace{0.3 cm}
+We can use sampling to approximate the intractable integrals:
+$$
+k_{i1}^*,...,k_{iM}^* \sim P_\theta(k|y_i)
+$$$$
+\nu_{i1}^* \sim f(\nu_i|y_i, k_{i1}),...,\nu_{iM}^* \sim f(\nu_i|y_i, k_{iM})
+$$$$
+(\beta, \tau, \theta, \Sigma) = \arg\max \sum_{i=1}^{n}\frac{1}{M}\sum_{m=1}^{M} \sum_{j} \sum_{t} \log f(y_{ijt} | \nu_{im}^{*}, k_{im}^{*})
+$$
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]
+
+\begin{frame}
+\frametitle{Computation - Stochastic EM Algorithm}
+We alternate between a stochastic E-step and an M-step. 
+
+
+
+\vspace{0.75 cm}
+\textbf{S - Step}
+\begin{itemize}
+\item $\boldsymbol{k^*}$ - Gibbs sampler.
+\item $\boldsymbol{\nu^* | k^*}$ - component-wise MH algorithm. 
+\end{itemize}
+
+
+\vspace{0.75 cm}
+\textbf{M - Step}
+\begin{itemize}
+\item $\boldsymbol{\beta, \tau}$ - \textbf{glm, glmnet} for sparsity or \textbf{gamlss} for BB.
+\item $\boldsymbol{\theta}$ - Pseudo-likelihood or \textbf{isingFit} for sparsity .
+\item $\boldsymbol{\Sigma}$ - Option for sparse estimation via \textbf{PSDE} package.
+\end{itemize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%]

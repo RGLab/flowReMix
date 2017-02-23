@@ -51,36 +51,40 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                              treatment = treatment,
                                              randomAssignProb = 0,
                                              weights = NULL,
-                                             updateLag = 10, nsamp = 30, maxIter = 20,
+                                             updateLag = 20, nsamp = 50, maxIter = 30,
                                              initMHcoef = 3,
                                              covarianceMethod = "sparse",
                                              isingMethod = "sparse",
                                              regressionMethod = "betabinom",
                                              centerCovariance = FALSE,
-                                             dataReplicates = 5))
-save(fit, file = "data analysis/results/boolean dispersed fit3.Robj")
-#load("data analysis/results/boolean dispersed fit2.Robj")
-subsetIndex <- 1:length(subsets)
-#subsetIndex <- c(3, 5, 6, 10, 12, 13, 14, 20, 23)
+                                             dataReplicates = 10,
+                                             maxDispersion = 10^3))
+#save(fit, file = "data analysis/results/boolean dispersed fit6.Robj")
+load("data analysis/results/boolean dispersed fit3.Robj")
 subsets <- unique(booldata$Subset)
+subsetIndex <- 1:length(subsets)
+subsetIndex <- c(1, 21, 13, 19)
+subsets <- unique(booldata$Subset)[subsetIndex]
 
 require(pROC)
 posteriors <- fit$posteriors[, -1, drop = FALSE]
 par(mfrow = c(4, 6), mar = rep(1, 4))
-#par(mfrow = c(3, 3), mar = rep(1, 4))
+par(mfrow = c(2, 2), mar = rep(1, 4))
 auc <- numeric(length(subsets))
-for(j in 1:length((subsetIndex))) {
-  i <- which(names(posteriors) == subsets[subsetIndex[j]])
+for(j in 1:length(subsets)) {
+  i <- which(names(posteriors) == subsets[j])
   try(rocfit <- roc(!vaccine ~ posteriors[, i]))
   auc[i] <- rocfit$auc
-  print(plot(rocfit, main = paste(subsets[i], "- AUC", round(rocfit$auc, 3)),
+  print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
              cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6))
 }
 
 # Subject level posterior aggeregate?
+par(mfrow = c(1, 1), mar = rep(5, 5))
 weights <- apply(posteriors, 2, var)
 weights <- weights / sum(weights)
 aggregate <- as.vector(as.matrix(posteriors) %*% weights)
+aggregate <- apply(posteriors, 1, function(x) sum(log(x + 10^-4)))
 rocfit <- roc(vaccine ~ aggregate)
 plot(pROC::roc(vaccine ~ aggregate),
      main = paste("AUC - Overall", round(rocfit$auc, 3)),
@@ -88,8 +92,9 @@ plot(pROC::roc(vaccine ~ aggregate),
 
 
 par(mfrow = c(4, 6), mar = rep(2, 4))
-for(j in 1:length((subsetIndex))) {
-  i <- which(names(posteriors) == subsets[subsetIndex[j]])
+par(mfrow = c(2, 2), mar = rep(4, 4))
+for(j in 1:length(subsets)) {
+  i <- which(names(posteriors) == subsets[j])
   post <- posteriors[, i]
   treatment <- vaccine[order(post)]
   uniquePost <- sort(unique(post))
@@ -97,7 +102,7 @@ for(j in 1:length((subsetIndex))) {
   empFDR <- sapply(uniquePost, function(x) 1 - mean(vaccine[post <= x]))
   power <- sapply(uniquePost, function(x) sum(vaccine[post <= x]) / sum(vaccine))
   print(plot(nominalFDR, empFDR, type = "l", xlim = c(0, 1), ylim = c(0, 1), col = "red",
-             main = paste(subsets[i], "- AUC ", round(auc[i], 2))))
+             main = paste(subsets[j])))
   lines(nominalFDR, power, col = "blue", lty = 2)
   abline(a = 0, b = 1)
   abline(v = c(0.05, 0.1), h = c(0.8, 0.9), col = "grey")
@@ -105,21 +110,22 @@ for(j in 1:length((subsetIndex))) {
 
 forplot <- list()
 booldata <- booldata[order(as.character(booldata$PTID)), ]
-for(j in 1:length(subsetIndex)) {
-  i <- which(names(posteriors) == subsets[subsetIndex[j]])
+for(j in 1:length(subsets)) {
+  i <- which(names(posteriors) == subsets[j])
   post <- 1 - posteriors[, i]
-  negprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[i] & booldata$stim == "nonstim"]
-  envprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[i] & booldata$stim == "stim"]
-  forplot[[i]] <- data.frame(subset = subsets[i],
+  negprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[j] & booldata$stim == "nonstim"]
+  envprop <- log(booldata$count / booldata$parentcount)[booldata$Subset == subsets[j] & booldata$stim == "stim"]
+  forplot[[j]] <- data.frame(subset = subsets[j],
                              negprop = negprop, envprop = envprop,
                              posterior = post, vaccine = vaccine)
 }
 
-forplot <- do.call("rbind", forplot[c(1:21, 23)])
+#forplot <- do.call("rbind", forplot[c(1:21, 23)])
+forplot <- do.call("rbind", forplot)
 require(ggplot2)
 print(ggplot(forplot) +
         geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine == 1)) +
-        facet_wrap(~ subset, scales = 'free', ncol = 5) +
+        facet_wrap(~ subset, scales = 'free', ncol = 2) +
         geom_abline(slope = 1, intercept = 0) +
         theme_bw() + scale_colour_gradientn(colours=rainbow(4)))
 
@@ -164,10 +170,10 @@ for(i in 1:nrow(nodes)) {
   }
 }
 nodes$auc <- auc
-nodes$mFunctional <- 1:nrow(nodes) >= 6
-nodes$label <- subsets
-nodes$nfunctions <- nfunctions
+nodes$label <- rownames(fit$isingfit$weiadj)
+nodes$nfunctions <- sapply(regmatches(nodes$label, gregexpr(",", nodes$label)), length) + 1
 names(edges)[5] <- "Dependence"
+nodes$CD154 <- as.numeric(grepl("CD154", nodes$label))
 ggplot() +
   scale_colour_gradient(limits=c(0, 1), low="white", high = "black") +
   geom_segment(data = edges, aes(x = xstart, y = ystart,
@@ -175,10 +181,12 @@ ggplot() +
                                  alpha = Dependence,
                                  col = Dependence),
                size = 1) +
-  scale_fill_gradientn(colours=rainbow(4)) +
-  geom_point(data = nodes[1:5, ], aes(x = x, y = y, fill = nfunctions), shape = 21,
+  scale_fill_gradient(low = "grey", high = "red", limits = c(0.48, 1)) +
+  #scale_fill_gradient(low = "grey", high = "red", limits = c(1, 5)) +
+  #scale_fill_gradient(low = "grey", high = "red", limits = c(0, 1)) +
+  geom_point(data = nodes[1:5, ], aes(x = x, y = y, fill = auc), shape = 21,
              size = 12, col = "white") +
-  geom_point(data = nodes[6:23, ], aes(x = x, y = y, fill = nfunctions), shape = 21,
+  geom_point(data = nodes[6:23, ], aes(x = x, y = y, fill = auc), shape = 21,
              size = 12, col = "white") +
   scale_size(range = c(0.3, 1)) +
   scale_shape(solid = FALSE) +
@@ -188,5 +196,5 @@ ggplot() +
         axis.title.x=element_blank(),
         axis.title.y=element_blank(),
         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.background=element_blank())
+        panel.grid.minor=element_blank(),plot.background=element_blank(), legend.position = "none")
 
