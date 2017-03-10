@@ -133,9 +133,16 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         assignment[j] = preAssignment[j] ;
         continue ;
       }
+
       // Rcpp::Rcout<<preAssignment[j]<<" " ;
       subsetNullEta = nullEta[popInd == (j + 1)] ;
       subsetAltEta = altEta[popInd == (j + 1)] ;
+
+      // Some cell populations for a specific subject may be missing
+      if(subsetNullEta.length() == 0) {
+        continue ;
+      }
+
 
       sigmaHat = sqrt(covariance(j, j)) ;
       subsetProp = prop[popInd == (j + 1)]  ;
@@ -263,6 +270,11 @@ NumericMatrix randomEffectCoordinateMH(NumericVector y, NumericVector N,
       subsetCount = y[popInd == (j + 1)] ;
       subsetN = N[popInd == (j + 1)] ;
       sqrtsig = sqrt(covariance(j, j)) ;
+
+      // Some cell populations for a specific subject may be missing
+      if(subsetEta.length() == 0) {
+        continue ;
+      }
 
       current = randomEst[j] ;
       condmean = computeConditionalMean(j, condvar, invcov, randomEst) ;

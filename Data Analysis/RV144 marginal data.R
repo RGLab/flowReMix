@@ -57,8 +57,8 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
                                          regressionMethod = "betabinom",
                                          centerCovariance = FALSE,
                                          initMHcoef = 3,
-                                         dataReplicates = 5,
-                                         maxDispersion = 10^2))
+                                         dataReplicates = 2,
+                                         maxDispersion = 10^3))
 #save(fit, file = "dispersed model 2.Robj")
 #save(fit, file = "results/binom model.Robj")
 #save(fit, file = "results/dispersed model 2 wAssignment.Robj")
@@ -67,7 +67,7 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
 #load(file = "dispersed model 4.Robj")
 #load(file = "data analysis/results/marginal independence model od.Robj")
 #save(fit, file = "marginal independence model od w covariance.Robj")
-save(fit, file = "data analysis/results/marginal model od w ising4.Robj")
+#save(fit, file = "data analysis/results/marginal model od w ising4.Robj")
 
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))

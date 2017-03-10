@@ -44,8 +44,8 @@ replicateDataset <- function(data, replicate) {
 }
 
 estimateIntercept <- function(propMat) {
-  prop <- propMat[, 1] + 10^-5
-  estProp <- propMat[, 2] + 10^-5
+  prop <- pmin(propMat[, 1] + 10^-5, .99)
+  estProp <- pmin(propMat[, 2] + 10^-5, .99)
   logit <- log(prop/(1 - prop))
   estLogit <- log(estProp / (1 - estProp))
   return(mean(logit - estLogit))
@@ -271,10 +271,16 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   initialization <- lapply(dataByPopulation, initializeModel, formula = initFormula)
   coefficientList <- lapply(initialization, function(x) x$coef)
   glmFits <- lapply(initialization, function(x) x$fit)
-  estimatedRandomEffects <- sapply(initialization, function(x) x$randomEffects)
-  # Initializing covariance from diagonal covariance
   nSubjects <- length(unique(dat$id))
   nSubsets <- length(glmFits)
+  estimatedRandomEffects <- lapply(initialization, function(x) x$randomEffects)
+  estimatedRandomEffects <- lapply(estimatedRandomEffects, function(x) {
+    if(length(x) < nSubjects) x <- c(x, sample(x, nSubjects - length(x), replace = TRUE))
+    return(x)
+    })
+  estimatedRandomEffects <- do.call("cbind", estimatedRandomEffects)
+
+  # Initializing covariance from diagonal covariance
   levelProbs <- rep(0.5, nSubsets)
   covariance <- diag(apply(estimatedRandomEffects, 2, var))
   invcov <- diag(1 / diag(covariance))
@@ -355,7 +361,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         glmFits <- lapply(dataByPopulation, function(popdata) {
           X <- model.matrix(glmformula, data = popdata)[, - 1]
           y <- cbind(popdata$N - popdata$y, popdata$y)
-          fit <- glmnet::cv.glmnet(X, y, family = "binomial")
+          fit <- glmnet::cv.glmnet(X, y, weights = weights, family = "binomial")
         })
         } else {
         for(j in 1:nSubsets) {
@@ -380,12 +386,19 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       } else {
         dataByPopulation[[j]]$treatment <- 0
       }
+
       modelMat <- NULL
       try(modelMat <- model.matrix(formula, data = dataByPopulation[[j]]))
+      if(!all(colnames(modelMat) %in% names(coefs))) {
+        modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
+      }
       newNullEta <- as.numeric(modelMat %*% coefs)
 
       dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
       modelMat <- model.matrix(formula, data = dataByPopulation[[j]])
+      if(!all(colnames(modelMat) %in% names(coefs))) {
+        modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
+      }
       newAltEta <- as.numeric(modelMat %*% coefs)
 
       if(iter > 1) {

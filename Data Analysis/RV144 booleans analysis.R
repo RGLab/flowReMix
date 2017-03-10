@@ -63,13 +63,13 @@ system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
 load("data analysis/results/boolean dispersed fit3.Robj")
 subsets <- unique(booldata$Subset)
 subsetIndex <- 1:length(subsets)
-subsetIndex <- c(1, 21, 13, 19)
+#subsetIndex <- c(1, 21, 13, 19)
 subsets <- unique(booldata$Subset)[subsetIndex]
 
 require(pROC)
 posteriors <- fit$posteriors[, -1, drop = FALSE]
 par(mfrow = c(4, 6), mar = rep(1, 4))
-par(mfrow = c(2, 2), mar = rep(1, 4))
+#par(mfrow = c(2, 2), mar = rep(1, 4))
 auc <- numeric(length(subsets))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
@@ -92,7 +92,7 @@ plot(pROC::roc(vaccine ~ aggregate),
 
 
 par(mfrow = c(4, 6), mar = rep(2, 4))
-par(mfrow = c(2, 2), mar = rep(4, 4))
+#par(mfrow = c(2, 2), mar = rep(4, 4))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   post <- posteriors[, i]
@@ -125,7 +125,7 @@ forplot <- do.call("rbind", forplot)
 require(ggplot2)
 print(ggplot(forplot) +
         geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine == 1)) +
-        facet_wrap(~ subset, scales = 'free', ncol = 2) +
+        facet_wrap(~ subset, scales = 'free', ncol = 6) +
         geom_abline(slope = 1, intercept = 0) +
         theme_bw() + scale_colour_gradientn(colours=rainbow(4)))
 
