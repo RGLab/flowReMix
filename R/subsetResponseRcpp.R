@@ -52,6 +52,15 @@ estimateIntercept <- function(propMat) {
 }
 
 initializeModel <- function(dat, formula) {
+  if(all(dat$treatment == 1)) {
+    props <- dat$y / dat$N
+    mu <- mean(props)
+    var <- var(props)
+    alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
+    beta <- alpha * (1 / mu - 1)
+    probs <- pbeta(props, alpha, beta)
+    dat$treatment <- rbinom(nrow(dat), 1, probs)
+  }
   fit <- glm(formula, family = "binomial", weights = weights, data = dat)
   coef <- coef(fit)
   prop <- dat$y / dat$N
@@ -361,7 +370,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         glmFits <- lapply(dataByPopulation, function(popdata) {
           X <- model.matrix(glmformula, data = popdata)[, - 1]
           y <- cbind(popdata$N - popdata$y, popdata$y)
-          fit <- glmnet::cv.glmnet(X, y, weights = weights, family = "binomial")
+          fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial")
         })
         } else {
         for(j in 1:nSubsets) {
