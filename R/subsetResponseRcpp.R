@@ -52,6 +52,10 @@ estimateIntercept <- function(propMat) {
 }
 
 initializeModel <- function(dat, formula) {
+  if(is.null(dat)) {
+    warning("Some cell-subsets are empty!")
+    return("empty!")
+  }
   if(all(dat$treatment == 1)) {
     props <- dat$y / dat$N
     mu <- mean(props)
@@ -61,10 +65,12 @@ initializeModel <- function(dat, formula) {
     probs <- pbeta(props, alpha, beta)
     dat$treatment <- rbinom(nrow(dat), 1, probs)
   }
-  fit <- glm(formula, family = "binomial", weights = weights, data = dat)
-  coef <- coef(fit)
+  X <- model.frame(formula, data = dat)
+  X <- model.matrix(formula, X)[, -1]
+  fit <- glmnet::cv.glmnet(X, y =  cbind(dat$y, dat$N - dat$y), family = "binomial", weights = dat$weights)
+  coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
   prop <- dat$y / dat$N
-  estProp <- predict(fit, type = "response")
+  estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
   propMat <- cbind(prop, estProp)
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
   randomEffects <- randomEffects[order(unique(dat$id))]
@@ -278,6 +284,14 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   # Initializing covariates and random effects------------------
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
   initialization <- lapply(dataByPopulation, initializeModel, formula = initFormula)
+  isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
+  if(any(isEmpty)) {
+    empty <- names(initialization)[isEmpty]
+    newlevels <- levels(sub.population)[!(levels(sub.population) %in% empty)]
+    sub.population <- factor(as.character(sub.population), levels = newlevels)
+    initialization <- initialization[!isEmpty]
+    dat$sub.population <- sub.population
+  }
   coefficientList <- lapply(initialization, function(x) x$coef)
   glmFits <- lapply(initialization, function(x) x$fit)
   nSubjects <- length(unique(dat$id))
@@ -368,7 +382,9 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
         }
       } else if(smallCounts) {
         glmFits <- lapply(dataByPopulation, function(popdata) {
-          X <- model.matrix(glmformula, data = popdata)[, - 1]
+          X <- NULL
+          try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
+          if(is.null(X)) return(NULL)
           y <- cbind(popdata$N - popdata$y, popdata$y)
           fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial")
         })
