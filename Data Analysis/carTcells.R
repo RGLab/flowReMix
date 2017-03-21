@@ -80,18 +80,18 @@ cart$population <- factor(cart$population)
 cart$treatment <- rep(1, nrow(cart))
 cart <- subset(cart, dayfactor == "0")
 cart$subset <- as.factor(as.character(paste(cart$tcellpop, cart$population)))
+control <- flowReMix_control(nsamp = 15, dataReplicates = 3, centerCovariance = FALSE,
+                             updateLag = 5)
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + icu + disease,
                              cell_type = subset,
                              subject_id =  id, data = cart,
                              cluster_variable = treatment,
-                             randomAssignProb = 0.0, weights = NULL,
-                             updateLag = 15, nsamp = 20, maxIter = 20, initMHcoef = 0.5,
+                             weights = NULL,
                              covarianceMethod = "sparse",
                              isingMethod = "sparse",
                              regressionMethod = "sparse",
-                             centerCovariance = FALSE,
-                             dataReplicates = 5,
-                             maxDispersion = 10^3))
+                             iterations = 10,
+                             control = control))
 
 #save(fit, file = "data analysis/results/carT results.Robj")
 require(pROC)

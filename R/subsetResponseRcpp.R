@@ -1,3 +1,19 @@
+flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
+                              initMHcoef = 0.4, dataReplicates = NULL, maxDispersion = 10^3,
+                              keepEach = 5, centerCovariance = TRUE, intSampSize = 100) {
+  object <- list(updateLag = updateLag,
+                 randomAssignProb = randomAssignProb,
+                 nsamp = nsamp,
+                 initMHcoef = initMHcoef,
+                 dataReplicates = dataReplicates,
+                 maxDispersion = maxDispersion,
+                 keepEach = keepEach,
+                 centerCovariance = centerCovariance,
+                 intSampSize = intSampSize)
+  class(object) <- "flowReMix_control"
+  return(object)
+}
+
 randomizeAssignments <- function(x, prob = 0.5) {
   if(runif(1) < prob) {
     coordinate <- sample.int(length(x), 1)
@@ -5,14 +21,6 @@ randomizeAssignments <- function(x, prob = 0.5) {
   }
 
   return(x)
-}
-
-sqrtMat <- function(X) {
-  if(length(X) > 1) {
-    return(expm::sqrtm(X))
-  } else {
-    return(matrix(sqrt(X)))
-  }
 }
 
 binomDensity <- function(v, prop, N, eta) {
@@ -84,20 +92,30 @@ flowReMix <- function(formula,
                       cluster_variable,
                       cluster_assignment = NULL,
                       weights = NULL,
-                      centerCovariance = TRUE,
                       covarianceMethod = c("sparse", "dense", "diagonal"),
                       isingMethod = c("sparse", "dense", "none"),
                       regressionMethod = c("binom", "betabinom", "sparse"),
-                      randomAssignProb = 0.0,
-                      updateLag = 3,
-                      nsamp = 100,
-                      initMHcoef = 0.5,
-                      maxIter = 8, verbose = TRUE,
-                      dataReplicates = 1,
-                      maxDispersion = 10^4) {
+                      iterations = 10, verbose = TRUE,
+                      control = NULL) {
+  # Getting control variables -------------------
+  if(is.null(control)) {
+    control <- flowReMix_control()
+  } else if(class(control) != "flowReMix_control") {
+    stop("`control' object must be of `flowReMix_control' class!")
+  }
+  updateLag <- control$updateLag
+  randomAssignProb <- control$randomAssignProb
+  nsamp <- control$nsamp
+  dataReplicates <- control$dataReplicates
+  maxDispersion <- control$maxDispersion
+  centerCovariance <- control$centerCovariance
+  intSampSize <- control$intSampSize
+  initMHcoef <- control$initMHcoef
+  keepEach <- control$keepEach
+
   # Checking if inputs are valid --------------------------
+  maxIter <- iterations
   rate <- 1
-  dataReplicates <- max(floor(dataReplicates), 1)
   updateLag <- max(ceiling(updateLag), 1)
   if(updateLag < 2) {
     warning("We recommend using an updateLag of at least 3 to let the algorithm warm up.")
@@ -221,9 +239,13 @@ flowReMix <- function(formula,
   # Sub-population must be a factor
   if(!is.factor(sub.population)) stop("Sub-population must be a factor!")
 
-  # Creating working dataset
+  # Creating working dataset ------------------------------
   y <- model.frame(formula, data)
   y <- model.response(y)
+  if(!is.matrix(y) | ncol(y) != 2) {
+    stop("Response must be a two columns matrix, the first column of which is the
+         count of the cell subset and the second is the `parent count - cell count'.")
+  }
   N <- rowSums(y)
   y <- y[, 1]
   dat$y <- y
@@ -236,7 +258,13 @@ flowReMix <- function(formula,
   dat$treatmentvar <- treatmentvar
   dat <- dat[, -1]
 
-  # replicating data set ---------------------
+  # Determining number of data replicates ----------------------
+  if(is.null(dataReplicates)) {
+    nSubjects <- length(unique(dat$id))
+    dataReplicates <- max(ceiling(300 / nSubjects), 2)
+  }
+
+  # replicating data set ---------------------------------------
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
@@ -434,8 +462,6 @@ flowReMix <- function(formula,
       y <- subjectData$y
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
-      keepEach <- 5
-      intSampSize <- 100
 
       # Gibbs sampler for cluster assignments
       unifVec <- runif(nsamp * nSubsets)

@@ -9,4 +9,11 @@ Description: Fitting mixtures of generalized linear models with random effects a
 License: What license is it under?
 LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
-Imports: Rcpp
+Imports: Rcpp,
+    glmnet,
+    gamlss,
+    IsingFit,
+    data.table,
+    PDSCE,
+    logistf
+Suggests: ggplot2
