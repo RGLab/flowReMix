@@ -748,4 +748,51 @@ File: babel.def 2014/03/24 3.9k Babel common definitions
 \babel@savecnt=\count154
 \U@D=\dimen190
 
-(/us
+(/usr/local/texlive/2014/texmf-dist/tex/generic/babel/luababel.def
+luatex-hyphen: using data file: /usr/local/texlive/2014/texmf-var/tex/generic/co
+nfig/language.dat.lua)
+LaTeX Info: Redefining \textlatin on input line 1428.
+)
+\l@canadian = a dialect from \language\l@american 
+\l@australian = a dialect from \language\l@british 
+\l@newzealand = a dialect from \language\l@british 
+))
+(/usr/local/texlive/2014/texmf-dist/tex/latex/base/inputenc.sty
+Package: inputenc 2014/04/30 v1.2b Input encoding file
+\inpenc@prehook=\toks44
+\inpenc@posthook=\toks45
+
+
+/usr/local/texlive/2014/texmf-dist/tex/latex/base/inputenc.sty:165: Package inp
+utenc Error: inputenc is not designed for xetex or luatex.
+(inputenc)                only UTF-8 supported.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.165 \endinput
+             
+? 
+/usr/local/texlive/2014/texmf-dist/tex/latex/base/inputenc.sty:165: Emergency st
+op.
+ ...                                              
+                                                  
+l.165 \endinput
+             
+For xelatex or lualatex save the document in UTF-8 encoding
+and do not use inputenc, or use the [utf8] option.
+
+
+
+Here is how much of LuaTeX's memory you used:
+ 16665 strings out of 494695
+ 100000,460012 words of node,token memory allocated 288 words of node memory still in use:
+   2 hlist, 1 rule, 46 glue_spec, 4 if_stack, 1 write, 1 dir, 1 pdf_colorstack n
+odes
+   avail lists: 2:11,3:1,4:2,6:2,7:1,9:2
+ 19616 multiletter control sequences out of 65536+600000
+ 16 fonts using 641263 bytes
+ 56i,0n,55p,393b,277s stack positions out of 5000i,500n,10000p,200000b,100000s
+/usr/local/texlive/2014/texmf-dist/tex/latex/base/inputenc.sty:165:  ==> Fatal e
+rror occurred, no output PDF file produced!

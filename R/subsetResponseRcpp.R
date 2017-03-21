@@ -56,14 +56,14 @@ initializeModel <- function(dat, formula) {
     warning("Some cell-subsets are empty!")
     return("empty!")
   }
-  if(all(dat$treatment == 1)) {
+  if(all(dat$treatmentvar == 1)) {
     props <- dat$y / dat$N
     mu <- mean(props)
     var <- var(props)
     alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
     beta <- alpha * (1 / mu - 1)
     probs <- pbeta(props, alpha, beta)
-    dat$treatment <- rbinom(nrow(dat), 1, probs)
+    dat$treatmentvar <- rbinom(nrow(dat), 1, probs)
   }
   X <- model.frame(formula, data = dat)
   X <- model.matrix(formula, X)[, -1]
@@ -77,23 +77,24 @@ initializeModel <- function(dat, formula) {
   return(list(fit = fit, coef = coef, randomEffects = randomEffects))
 }
 
-subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
-                                  N = NULL, id,
-                                  data = parent.frame(),
-                                  treatment,
-                                  preAssignment = NULL,
-                                  weights = NULL,
-                                  centerCovariance = TRUE,
-                                  covarianceMethod = c("sparse", "dense", "diagonal"),
-                                  isingMethod = c("sparse", "dense", "none"),
-                                  regressionMethod = c("binom", "betabinom", "sparse"),
-                                  randomAssignProb = 0.0,
-                                  updateLag = 3,
-                                  nsamp = 100,
-                                  initMHcoef = 0.5,
-                                  maxIter = 8, verbose = TRUE,
-                                  dataReplicates = 1,
-                                  maxDispersion = 10^4) {
+flowReMix <- function(formula,
+                      cell_type = NULL,
+                      subject_id,
+                      data = parent.frame(),
+                      cluster_variable,
+                      cluster_assignment = NULL,
+                      weights = NULL,
+                      centerCovariance = TRUE,
+                      covarianceMethod = c("sparse", "dense", "diagonal"),
+                      isingMethod = c("sparse", "dense", "none"),
+                      regressionMethod = c("binom", "betabinom", "sparse"),
+                      randomAssignProb = 0.0,
+                      updateLag = 3,
+                      nsamp = 100,
+                      initMHcoef = 0.5,
+                      maxIter = 8, verbose = TRUE,
+                      dataReplicates = 1,
+                      maxDispersion = 10^4) {
   # Checking if inputs are valid --------------------------
   rate <- 1
   dataReplicates <- max(floor(dataReplicates), 1)
@@ -114,7 +115,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   }
 
   call <- as.list(match.call())
-  if(is.null(call$treatment)) {
+  if(is.null(call$cluster_variable)) {
     stop("Treatment variable must be specified!")
   }
 
@@ -148,31 +149,21 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
   # Getting id, waves, weights and treatment variable
   if(typeof(data) == "environment"){
-    id <- id
-    if(is.null(call$id)) stop("id must be specified!")
+    id <- subject_id
+    if(is.null(call$subject_id)) stop("id must be specified!")
     weights <- weights
     if(is.null(call$weights)) weights <- rep(1, n)
-    waves <- waves
-    if(is.null(call$waves)) {
-      warning("No waves variables specified, assuming dataset ordered according to waves!")
-      uniqueID <- unique(id)
-      idIndex <- lapply(uniqueID,function(x) which(id==x))
-      waves <- numeric(length(id))
-      for(i in 1:length(idIndex)) {
-        waves[idIndex[[i]]] <- 1:length(idIndex[[i]])
-      }
-    }
-    treatment <- treatment
+    treatmentvar <- cluster_variable
   }
   else{
-    if(length(call$id) == 1){
-      subj.col <- which(colnames(data) == call$id)
+    if(length(call$subject_id) == 1){
+      subj.col <- which(colnames(data) == call$subject_id)
       if(length(subj.col) > 0){
-        id <- data[,subj.col]
+        id <- data[, subj.col]
       }else{
-        id <- eval(call$id, envir = parent.frame())
+        id <- eval(call$subject_id, envir = parent.frame())
       }
-    }else if(is.null(call$id)){
+    }else if(is.null(call$subject_id)){
       id <- 1:n
     }
 
@@ -187,14 +178,14 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       weights <- rep.int(1, n)
     }
 
-    if(length(call$treatment) == 1){
-      treatment.col <- which(colnames(data) == call$treatment)
+    if(length(call$cluster_variable) == 1){
+      treatment.col <- which(colnames(data) == call$cluster_variable)
       if(length(treatment.col) > 0){
-        treatment <- data[,treatment.col]
+        treatmentvar <- data[,treatment.col]
       }else{
-        treatment <- eval(call$treatment, envir=parent.frame())
+        treatmentvar <- eval(call$cluster_variable, envir=parent.frame())
       }
-    }else if(is.null(call$treatment)){
+    }else if(is.null(call$cluster_variable)){
       stop("Treatment variable must be specified!")
     }
   }
@@ -207,40 +198,21 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     off <- offset
   }
 
-  # getting N
-  if(typeof(data) == "environment"){
-    N <- N
-  }
-  else {
-    if(length(call$N) == 1){
-      N.col <- which(colnames(data) == call$N)
-      if(length(N.col) > 0) {
-        N <- data[,N.col]
-      }
-      else {
-        N <- eval(call$N, envir=parent.frame())
-      }
-    }
-    else if(is.null(call$N)){
-      stop("N must be specified!")
-    }
-  }
-
   # getting Subpopulation
   if(typeof(data) == "environment"){
-    sub.population <- sub.population
+    sub.population <- cell_type
   }
   else {
-    if(length(call$sub.population) == 1){
-      s.col <- which(colnames(data) == call$sub.population)
+    if(length(call$cell_type) == 1){
+      s.col <- which(colnames(data) == call$cell_type)
       if(length(s.col) > 0) {
         sub.population <- data[, s.col]
       }
       else {
-        sub.population <- eval(call$sub.population, envir=parent.frame())
+        sub.population <- eval(call$cell_type, envir=parent.frame())
       }
     }
-    else if(is.null(call$sub.population)){
+    else if(is.null(call$cell_type)){
       sub.population <- rep(1, n)
       sub.population <- factor(sub.population)
     }
@@ -252,14 +224,17 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   # Creating working dataset
   y <- model.frame(formula, data)
   y <- model.response(y)
+  N <- rowSums(y)
+  y <- y[, 1]
   dat$y <- y
+  dat$N <- N
   dat$id <- id
   dat$weights <- weights
-  dat$N <- N
   dat$prop <- y / N
   dat$off <- off
   dat$sub.population <- sub.population
-  dat$treatment <- treatment
+  dat$treatmentvar <- treatmentvar
+  dat <- dat[, -1]
 
   # replicating data set ---------------------
   if(dataReplicates > 1) {
@@ -276,7 +251,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
 
   # Editing formulas ------------------------------
   covariates <- deparse(formula[[3]])
-  covariates <- gsub(as.character(call$treatment), "treatment", covariates)
+  covariates <- gsub(as.character(call$cluster_variable), "treatmentvar", covariates)
   formula <- update.formula(formula, as.formula(paste(". ~", covariates)))
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
   initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
@@ -310,10 +285,11 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   isingfit <- NULL
 
   # Setting up preAssignment ----------------------
-  if(is.null(preAssignment)) {
+  if(is.null(cluster_assignment)) {
     preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
     preAssignment$assign <- rep(-1, nrow(preAssignment))
   } else {
+    preAssignment <- cluster_assignment
     if(ncol(preAssignment) != 3) stop("preAssignment must have 3 columns: id, subset, assignment")
     if(any(!(preAssignment[, 3] %in% c(-1, 0, 1)))) stop("The third column of preAssignment must take values -1, 0 or 1.")
     preAssignment <- data.frame(preAssignment)
@@ -329,7 +305,7 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
   preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
 
   # More preparations ---------------------------
-  dat$tempTreatment <- dat$treatment
+  dat$tempTreatment <- dat$treatmentvar
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
@@ -406,21 +382,21 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
     # Updating Prediction
     for(j in 1:length(dataByPopulation)) {
       coefs <- coefficientList[[j]]
-      if(is.factor(dataByPopulation[[j]]$treatment)) {
-        dataByPopulation[[j]]$treatment <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
+      if(is.factor(dataByPopulation[[j]]$treatmentvar)) {
+        dataByPopulation[[j]]$treatmentvar <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
       } else {
-        dataByPopulation[[j]]$treatment <- 0
+        dataByPopulation[[j]]$treatmentvar <- 0
       }
 
       modelMat <- NULL
-      try(modelMat <- model.matrix(formula, data = dataByPopulation[[j]]))
+      try(modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]]))
       if(!all(colnames(modelMat) %in% names(coefs))) {
         modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
       }
       newNullEta <- as.numeric(modelMat %*% coefs)
 
-      dataByPopulation[[j]]$treatment <- dataByPopulation[[j]]$tempTreatment
-      modelMat <- model.matrix(formula, data = dataByPopulation[[j]])
+      dataByPopulation[[j]]$treatmentvar <- dataByPopulation[[j]]$tempTreatment
+      modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]])
       if(!all(colnames(modelMat) %in% names(coefs))) {
         modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
       }
@@ -510,9 +486,9 @@ subsetResponseMixtureRcpp <- function(formula, sub.population = NULL,
       for(j in 1:nSubsets) {
         # Setting treatment according to cluster assignment
         if(clusterAssignments[i, j] == 1) {
-          subjectData$treatment[popInd == j] <- subjectData$tempTreatment[popInd == j]
+          subjectData$treatmentvar[popInd == j] <- subjectData$tempTreatment[popInd == j]
         } else {
-          subjectData$treatment[popInd == j] <- 0
+          subjectData$treatmentvar[popInd == j] <- 0
         }
       }
       databyid[[i]] <- subjectData
