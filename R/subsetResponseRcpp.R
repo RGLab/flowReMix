@@ -1,18 +1,5 @@
-flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
-                              initMHcoef = 0.4, dataReplicates = NULL, maxDispersion = 10^3,
-                              keepEach = 5, centerCovariance = TRUE, intSampSize = 100) {
-  object <- list(updateLag = updateLag,
-                 randomAssignProb = randomAssignProb,
-                 nsamp = nsamp,
-                 initMHcoef = initMHcoef,
-                 dataReplicates = dataReplicates,
-                 maxDispersion = maxDispersion,
-                 keepEach = keepEach,
-                 centerCovariance = centerCovariance,
-                 intSampSize = intSampSize)
-  class(object) <- "flowReMix_control"
-  return(object)
-}
+#' @useDynLib flowReMix
+#' @importFrom Rcpp sourceCpp
 
 randomizeAssignments <- function(x, prob = 0.5) {
   if(runif(1) < prob) {
@@ -73,40 +60,196 @@ initializeModel <- function(dat, formula) {
     probs <- pbeta(props, alpha, beta)
     dat$treatmentvar <- rbinom(nrow(dat), 1, probs)
   }
-  X <- model.frame(formula, data = dat)
-  X <- model.matrix(formula, X)[, -1]
-  fit <- glmnet::cv.glmnet(X, y =  cbind(dat$y, dat$N - dat$y), family = "binomial", weights = dat$weights)
-  coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
+  initdat <- model.frame(formula, data = dat)
+  X <- model.matrix(formula, initdat)[, -1, drop = FALSE]
+  y <- model.response(initdat)
+  if(ncol(X) > 1) {
+    fit <- glmnet::cv.glmnet(X, y =  y, family = "binomial", weights = dat$weights)
+    coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
+    estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
+  } else {
+    fit <- glm(formula, data = dat, family = "binomial", weights = weights)
+    coef <- coef(fit)
+    estProp <- predict(fit, type = "response")
+  }
   prop <- dat$y / dat$N
-  estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
   propMat <- cbind(prop, estProp)
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
   randomEffects <- randomEffects[order(unique(dat$id))]
   return(list(fit = fit, coef = coef, randomEffects = randomEffects))
 }
 
+#' Fitting a Mixture of Mixed Effect Models for Binomial Data
+#'
+#' @description \code{flowReMix} fits a mixture of mixed effect models
+#'   to binomial or over-dispersed binomial data. The package was specifically
+#'   designed for analyzing flow-cytometry cell-count data but may be suitable
+#'   for other purposes as well.
+#'
+#' @param formula an object of class \code{\link[stats]{formula}}. The response
+#'   should be a matrix of two column matrix with first column containing the
+#'   counts of the cell subsets of interest and the second column the difference
+#'   between the reference count and the cell count.
+#'
+#' @param cell_type a factor vector identifying which cell type each row in the
+#'   data set refers to.
+#'
+#' @param subject_id a vector identifying the subjects.
+#'
+#' @param data a data frame containing the variables in the model. It is
+#'   advisable to include the \code{subject_id}, \code{cell_type} and
+#'   \code{cluster_variable} variables in the data frame.
+#'
+#' @param cluster_variable a variable with respect to which clustering will be
+#'   done. See description for more detail.
+#'
+#' @param cluster_assignment an optional matrix of known cluster assignments.
+#'   Must include all subject/cell_type combinations. See description for more
+#'   detail.
+#'
+#' @param weights an option vector of weights.
+#'
+#' @param covariance the method to be used for estimating the covariance
+#'   structure of the random effects. \code{\link[PDSCE]{pdsoft.cv}} will be
+#'   used by default.
+#'
+#' @param ising_model a method for estimating the Ising model.
+#'   \code{\link[IsingFit]{IsingFit}} will be used by default.
+#'
+#' @param regression_method the regression method to be used. Default option is
+#'   the \code{\link[stats]{glm}} function with family = "binomial".
+#'
+#' @param iterations the number of stochastic-EM itreations to perform.
+#'
+#' @param verbose whether to print information regrading the fitting process as
+#'   the optimization algorithm runs.
+#'
+#' @param control an optional object of \code{\link{flowReMix_control}} class.
+#'
+#'
+#' @details flowReMix fits a mixture of mixed effects regression models for
+#'   binomial data. Accordingly, the response supplied in the \code{formula}
+#'   must contain be a two column matrix the first column of which is the number
+#'   of successes and the second column is the number of failiures. In the
+#'   context of flow-cytomery count the left column would be the cell counts and
+#'   the right columns the parent counts minus the cell count. The right side of
+#'   the formula should include any number of fixed effects. For details on how
+#'   the function processes the formula object see, for example, the
+#'   documentation for the \code{\link[stats]{glm}} function.
+#'
+#'   The model fit by the function is a hierchical one, assuming the existence
+#'   of subjects and one or more cell-types for each subject. the
+#'   \code{subject_id} variable identifies different rows in the dataset as
+#'   corresponding to measurements taken from specific subjects. The model
+#'   assumes the existence of a random intercept for each \code{cell_type}.
+#'
+#'   The \code{cluster_variable} identifies which variable out of the covariates
+#'   corresponds to the variable with respect to which clustering should be
+#'   performed. The model assumes that the effect of cluster variable (and
+#'   corresponding interactions) are either always zero or non-zero. For
+#'   flow-cytomery experiments the \code{cluster_variable} will typically be an
+#'   indicator for whether the stimulation introduced into the blood sample was
+#'   an antigen or a control. A response status (zero or non-zero) is estimated
+#'   for each subject/cell-type combination. The dependence between the
+#'   cell-subsets is modeled via an Ising model.
+#'
+#'   \code{cluster_assignment} is an optional variable which allows the user to
+#'   pre-specificy some known cluster assignments. For example, in vaccine
+#'   studies we could expect all subjects who received a placebo treatment to be
+#'   non-responders across all cell-subsets. This variable should be three
+#'   column matrix, the first column of which should contain all unique values
+#'   of \code{subject_id}, the second should column should contain all unique
+#'   values of \code{cell_type} and in total the matrix should include all
+#'   \code{subject_id} and \code{cell_type} combinations. The third column is an
+#'   integer which takes the value 0 if the cell-type/subject combination is
+#'   non-response, 1 if it is response and -1 if the response status is unknown
+#'   and must be estimated.
+#'
+#'   The fitting algorithm uses one of three methods for estimating the
+#'   covariance structure of the random effects. A diagonal covariance structure
+#'   will be estimated if \code{covariance = "diagonal"}. A dense covariance
+#'   structure will be estimated with no penalization will be estimated if
+#'   \code{covariance = "dense"}. This may produce a singual covariance
+#'   structure if the number of subjects is smaller than the number of
+#'   cell-types. A sparse covariance matrix is estimated via the
+#'   \code{\link[PDSCE]{pdsoft.cv}} function by default.
+#'
+#'   The ising model describing the dependence between the response/non-resposne
+#'   status of the different cell-types can be estimated via three methods. If
+#'   \code{ising_model} is set to \code{"none"} then an independence model is
+#'   assumed. If the \code{ising_model} is set to \code{"dense"} then the ising
+#'   model is estimated via a set of firth regressions
+#'   (\code{\link[logistf]{logistf}}), one for each node in the graph. The
+#'   default option is \code{"sparse"}, where the
+#'   \code{\link[IsingFit]{IsingFit}} method is used.
+#'
+#'   \code{regression_method} specifies which function should be used for
+#'   estimating the reqression coefficients conditionally on the values of the
+#'   random effects and cluster assignments. If the default option
+#'   \code{"binom"} is chosen then a binomial model is fit using the
+#'   \code{\link[stats]{glm}} function. Otherwise, if \code{"betabinom"} option
+#'   is selected then a beta-binomial regression model is estimated with the
+#'   \code{\link[gamlss]{gamlss}} function. We recommend using the
+#'   \code{"sparse"} method which uses the \code{\link[glmnet]{cv.glmnet}}
+#'   procedure if the number of subjects is small and the number of predictors
+#'   is large.
+#'
+#' @return \code{flowReMix} returns an object of class \code{flowReMix} which
+#'   contains the following variables:
+#'
+#'   * \code{coefficients} a list, each component of which is a vector of
+#'   regession coefficients corresponding to a single cell type.
+#'
+#'   * \code{posteriors} a matrix containing the posterior probabilities for
+#'   response computed for each subject/cell-type combination.
+#'
+#'   * \code{levelProbs} a vector of the marginal estimated probabilities of
+#'   response estiamted for each cell subset.
+#'
+#'   * \code{randomEffects} the estimated random effects for each
+#'   subject/cell-type.
+#'
+#'   * \code{covariance} the estimated covariance structure for the random
+#'   effects.
+#'
+#'   * \code{isingCov} the estimated `covariance` structure of the ising model.
+#'
+#'   * \code{isingfit} if \code{ising_model = "sparse"} then the object returned
+#'   by the \code{\link[IsingFit]{IsingFit}} function. \code{NULL} otherwise.
+#'
+#'   * \code{dispersion} the over-dispersion estimated for each cell-subset. If
+#'   regression method is not "betabinomial" then this will be a vector of large
+#'   constants.
+#'
+#'   * \code{assignmentList} a list of matrices containing the posterior cluster
+#'   assignemnt sampled for each subject at the last iteration of the stochastic
+#'   EM algorithm.
+#'
+#'
+#' @md
+#' @export
 flowReMix <- function(formula,
-                      cell_type = NULL,
                       subject_id,
-                      data = parent.frame(),
+                      cell_type = NULL,
                       cluster_variable,
+                      data = parent.frame(),
                       cluster_assignment = NULL,
                       weights = NULL,
-                      covarianceMethod = c("sparse", "dense", "diagonal"),
-                      isingMethod = c("sparse", "dense", "none"),
-                      regressionMethod = c("binom", "betabinom", "sparse"),
+                      covariance = c("sparse", "dense", "diagonal"),
+                      ising_model = c("sparse", "dense", "none"),
+                      regression_method = c("binom", "betabinom", "sparse"),
                       iterations = 10, verbose = TRUE,
                       control = NULL) {
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()
   } else if(class(control) != "flowReMix_control") {
-    stop("`control' object must be of `flowReMix_control' class!")
+    stop("`control' variable must be of `flowReMix_control' class!")
   }
   updateLag <- control$updateLag
   randomAssignProb <- control$randomAssignProb
   nsamp <- control$nsamp
-  dataReplicates <- control$dataReplicates
+  dataReplicates <- control$nPosteriors
   maxDispersion <- control$maxDispersion
   centerCovariance <- control$centerCovariance
   intSampSize <- control$intSampSize
@@ -114,6 +257,9 @@ flowReMix <- function(formula,
   keepEach <- control$keepEach
 
   # Checking if inputs are valid --------------------------
+  regressionMethod <- regression_method
+  isingMethod <- ising_model
+  covarianceMethod <- covariance
   maxIter <- iterations
   rate <- 1
   updateLag <- max(ceiling(updateLag), 1)
@@ -127,9 +273,9 @@ flowReMix <- function(formula,
   }
 
   nsamp <- ceiling(nsamp)
-  if(nsamp < 5) {
-    nsamp <- 5
-    warning("Number of samples per MH iteration must be 5 or larger!")
+  if(nsamp < keepEach) {
+    nsamp <- keepEach
+    warning("Number of samples per MH iteration must be equal to or larger than `keepEach` variable!")
   }
 
   call <- as.list(match.call())
@@ -139,11 +285,11 @@ flowReMix <- function(formula,
 
   if(length(isingMethod) > 1) isingModel<- isingModel[1]
   if(!(isingMethod %in% c("sparse", "dense", "none"))) {
-    stop("isingMethod must be one of sparse, dense or none")
+    stop("ising_model must be one of sparse, dense or none")
   }
 
   if(length(regressionMethod) > 1) regressionMethod <- regressionMethod[1]
-  if(!(regressionMethod %in% c(c("binom", "betabinom", "sparse")))) stop("regressionMethod must be one of binom, betabinom or sparse")
+  if(!(regressionMethod %in% c(c("binom", "betabinom", "sparse")))) stop("regression_method must be one of binom, betabinom or sparse")
   if(regressionMethod == "binom") {
     smallCounts <- FALSE
     betaDispersion <- FALSE
@@ -156,8 +302,8 @@ flowReMix <- function(formula,
   }
 
   if(length(covarianceMethod) > 1) covarianceMethod <- covarianceMethod[1]
-  if(!(isingMethod %in% c("sparse", "dense", "none"))) {
-    stop("covarianceMethod must be one of sparse, dense or diagonal")
+  if(!(covarianceMethod %in% c("sparse", "dense", "diagonal"))) {
+    stop("`covariance' must be one of sparse, dense or diagonal!")
   }
 
   #### Getting all relevant variables from call --------------------
@@ -347,8 +493,7 @@ flowReMix <- function(formula,
     MHcoef <- rep(initMHcoef[1], nSubsets)
   }
 
-  probSamples <- 100
-  clusterDensities <- matrix(nrow = 2, ncol = probSamples)
+  clusterDensities <- matrix(nrow = 2, ncol = intSampSize)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
   if(betaDispersion) {
     M <- rep(10^4, nSubsets)
@@ -609,12 +754,12 @@ flowReMix <- function(formula,
     }
   }
 
-  # Processing posteriors
+  # Processing posteriors -------------------
   posteriors <- data.frame(posteriors)
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
   if(dataReplicates <= 1) {
     posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
-    names(posteriors) <- c(as.character(call$id), names(dataByPopulation))
+    names(posteriors) <- c(as.character(call$subject_id), names(dataByPopulation))
   } else {
     realIDs <- gsub("\\%%%.*", "", uniqueIDs)
     post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
@@ -622,10 +767,17 @@ flowReMix <- function(formula,
     posteriors <- data.frame(do.call("rbind", post))
     names(posteriors) <- names(dataByPopulation)
     posteriors <- cbind(id = postid, 1 - posteriors)
-    names(posteriors)[1] <- as.character(call$id)
+    names(posteriors)[1] <- as.character(call$subject_id)
   }
 
-  # Preparing output
+  # Processing random effects -----------
+  estimatedRandomEffects <- data.frame(estimatedRandomEffects)
+  names(estimatedRandomEffects) <- names(coefficientList)
+  estimatesRandomEffects$id <- uniqueIDs
+  estimatedRandomEffects[, c(1, ncol(estimatedRandomEffects))] <- estimatedRandomEffects[, c(ncol(estimatedRandomEffects), 1)]
+
+
+  # Preparing flowReMix object --------------------
   result <- list()
   result$posteriors <- posteriors
   result$levelProbs <- levelProbs
@@ -636,6 +788,7 @@ flowReMix <- function(formula,
   result$isingfit <- isingfit
   result$dispersion <- M
   result$assignmentList <- exportAssignment
+  class(result) <- "flowReMix"
   return(result)
 }
 

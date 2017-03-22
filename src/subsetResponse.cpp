@@ -134,7 +134,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         continue ;
       }
 
-      // Rcpp::Rcout<<preAssignment[j]<<" " ;
       subsetNullEta = nullEta[popInd == (j + 1)] ;
       subsetAltEta = altEta[popInd == (j + 1)] ;
 
@@ -142,7 +141,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       if(subsetNullEta.length() == 0) {
         continue ;
       }
-
 
       sigmaHat = sqrt(covariance(j, j)) ;
       subsetProp = prop[popInd == (j + 1)]  ;
@@ -160,7 +158,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         etaResid = empEta - eta ;
         muHat = mean(etaResid) ;
         vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
-        //vsample = normVec * sigmaHat * MHcoef + muHat ;
         sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef[j], TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
@@ -192,9 +189,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
     }
   }
 
-
-
-  // Rcpp::Rcout<<"\n";
   return assignmentMatrix;
 }
 
@@ -224,7 +218,6 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
   for(int i = 0; i < eta.length(); i++) {
     prob = expit(eta[i] + proposal) ;
-    // Rcpp::Rcout<<count[i] << " "<< N[i] << " " << density << "\n";
     if(betaDispersion) {
       density += betaBinomDens(count[i], N[i], prob, M) ;
     } else {
@@ -283,9 +276,6 @@ NumericMatrix randomEffectCoordinateMH(NumericVector y, NumericVector N,
                                   dispersion[j], betaDispersion) ;
       olddens = binomDensityForMH(subsetCount, subsetN, subsetEta, current,
                                   dispersion[j], betaDispersion) ;
-
-      // Rcpp::Rcout << current << "current porposal" << proposal << "\n" ;
-      // Rcpp::Rcout << olddens << "olddens newdens" << newdens << "\n" ;
 
       newdens = newdens + R::dnorm(proposal, condmean, sqrt(condvar[j]), TRUE) ;
       olddens = olddens + R::dnorm(current, condmean, sqrt(condvar[j]), TRUE) ;

@@ -1,6 +1,3 @@
-#' @useDynLib flowReMix
-#' @importFrom Rcpp sourceCpp
-
 # A function for computation of weights for mixture-GLMER model
 computeGmmWeights <- function(dat, randomsd, nsamp = 20, levelProbs) {
   if(all(dat$treatmentLevel == 0)) return(rep(1, nrow(dat)))
@@ -45,7 +42,6 @@ computeGmmWeights <- function(dat, randomsd, nsamp = 20, levelProbs) {
 #'
 #'
 #' @name glmmMixture
-#' @export
 glmmMixture <- function(formula, N = NULL, id,
                                  data = parent.frame(),
                                  treatment,

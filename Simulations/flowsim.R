@@ -8,7 +8,7 @@ isingmat <- fit$isingCov
 randomcov <- fit$covariance
 overdispersion <- fit$dispersion
 
-n <- 262
+n <- 50
 graph <- isingmat
 diag(graph) <- 0
 thresholds <- diag(isingmat)
@@ -47,24 +47,24 @@ for(i in 1:n) {
 }
 simdata <- do.call("rbind", subjectlist)
 simdata$batch <- factor(batch)
+simdata$subset <- factor(simdata$subset)
 
-system.time(simfit <- subsetResponseMixtureRcpp(count ~  treatment,
-                                             sub.population = factor(simdata$subset),
-                                             N = N, id =  ptid, treatment = treatment,
+control <- flowReMix_control(nsamp = 20, dataReplicates = 4,
+                             centerCovariance = FALSE, updateLag = 5)
+
+system.time(simfit <- flowReMix(cbind(count, N - count) ~  treatment,
+                                             cell_type = subset,
+                                             subject_id =  ptid,
+                                             cluster_variable = treatment,
                                              data = simdata,
-                                             randomAssignProb = 0.0,
-                                             updateLag = 10, nsamp = 40,
-                                             maxIter = 15,
-                                             isingMethod = "sparse",
-                                             covarianceMethod = "dense",
-                                             regressionMethod = "betabinom",
-                                             initMHcoef = 3,
-                                             centerCovariance = FALSE,
-                                             dataReplicates = 5))
-save(simfit, file = "results/simfit dispersed 2")
+                                             iterations = 3,
+                                             ising_model = "sparse",
+                                             covariance = "dense",
+                                             regression_method = "betabinom",
+                                             control = control))
+#save(simfit, file = "results/simfit dispersed 2")
 #save(simfit, file = "results/simfit binomial.Robj")
 #load(file = "simulations/results/simfit dispersed")
-
 
 require(pROC)
 posteriors <- simfit$posteriors

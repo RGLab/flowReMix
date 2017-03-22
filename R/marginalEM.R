@@ -139,10 +139,8 @@ augment.dataset <- function(subjectData, treatment.levels, treatmentColIndex) {
 #' @name logit
 #' @aliases expit
 #' @rdname logitexpit
-#' @export
 logit <- function(x) log(x / (1 - x))
 
-#' @export
 #' @rdname logitexpit
 expit <- function(x) 1/(1 + exp(-x))
 
