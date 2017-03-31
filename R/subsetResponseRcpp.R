@@ -46,7 +46,7 @@ estimateIntercept <- function(propMat) {
   return(mean(logit - estLogit))
 }
 
-initializeModel <- function(dat, formula) {
+initializeModel <- function(dat, formula, method) {
   if(is.null(dat)) {
     warning("Some cell-subsets are empty!")
     return("empty!")
@@ -63,8 +63,8 @@ initializeModel <- function(dat, formula) {
   initdat <- model.frame(formula, data = dat)
   X <- model.matrix(formula, initdat)[, -1, drop = FALSE]
   y <- model.response(initdat)
-  if(ncol(X) > 1) {
-    fit <- glmnet::cv.glmnet(X, y =  y, family = "binomial", weights = dat$weights)
+  if(ncol(X) > 1 & method == "sparse") {
+    fit <- glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights)
     coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
     estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
   } else {
@@ -247,14 +247,23 @@ flowReMix <- function(formula,
     stop("`control' variable must be of `flowReMix_control' class!")
   }
   updateLag <- control$updateLag
-  randomAssignProb <- control$randomAssignProb
+  randomAssignProb <- max(min(control$randomAssignProb, 0.5), 0)
   nsamp <- control$nsamp
   dataReplicates <- control$nPosteriors
   maxDispersion <- control$maxDispersion
+  minDispersion <- control$minDispersion
   centerCovariance <- control$centerCovariance
   intSampSize <- control$intSampSize
   initMHcoef <- control$initMHcoef
   keepEach <- control$keepEach
+  initMethod <- control$initMethod
+  if(is.null(initMethod)) {
+    if(regression_method == "sparse") {
+      initMethod <- "sparse"
+    } else {
+      initMethod <- "binom"
+    }
+  }
 
   # Checking if inputs are valid --------------------------
   regressionMethod <- regression_method
@@ -432,7 +441,7 @@ flowReMix <- function(formula,
 
   # Initializing covariates and random effects------------------
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
-  initialization <- lapply(dataByPopulation, initializeModel, formula = initFormula)
+  initialization <- lapply(dataByPopulation, initializeModel, formula = initFormula, method = initMethod)
   isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
@@ -496,9 +505,9 @@ flowReMix <- function(formula,
   clusterDensities <- matrix(nrow = 2, ncol = intSampSize)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
   if(betaDispersion) {
-    M <- rep(10^4, nSubsets)
+    M <- rep(minDispersion, nSubsets)
   } else {
-    M <- rep(10^8, nSubsets)
+    M <- rep(minDispersion, nSubsets)
   }
 
   flagEquation <- rep(0, nSubsets)
@@ -510,6 +519,8 @@ flowReMix <- function(formula,
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
     if(iter > 1) {
+      minDispersion <- pmax(minDispersion / 10, maxDispersion)
+      randomAssignProb <- randomAssignProb / 2
       if(betaDispersion) {
         for(j in 1:nSubsets) {
           popdata <- dataByPopulation[[j]]
@@ -519,14 +530,14 @@ flowReMix <- function(formula,
             startFrom <- NULL
           }
           tempfit <- NULL
-          try(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
-          family = gamlss.dist::BB, data = popdata, start.from = startFrom))
+          try(capture.output(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
+          family = gamlss.dist::BB, data = popdata, start.from = startFrom)))
           if(is.null(tempfit)) {
             try(glmFits[[j]] <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
           } else {
             glmFits[[j]] <- tempfit
             rho <- exp(tempfit$sigma.coefficients)
-            M[j] <- max((1 - rho) / rho, maxDispersion)
+            M[j] <- max((1 - rho) / rho, minDispersion)
           }
         }
       } else if(smallCounts) {
@@ -535,7 +546,8 @@ flowReMix <- function(formula,
           try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
           y <- cbind(popdata$N - popdata$y, popdata$y)
-          fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial")
+          fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
+                                   offset = popdata$randomOffset)
         })
         } else {
         for(j in 1:nSubsets) {
@@ -555,6 +567,7 @@ flowReMix <- function(formula,
     # Updating Prediction
     for(j in 1:length(dataByPopulation)) {
       coefs <- coefficientList[[j]]
+      coefs <- coefs[!is.na(coefs)]
       if(is.factor(dataByPopulation[[j]]$treatmentvar)) {
         dataByPopulation[[j]]$treatmentvar <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
       } else {
@@ -618,7 +631,8 @@ flowReMix <- function(formula,
                                          as.integer(popInd),
                                          unifVec, normVec,
                                          M, betaDispersion,
-                                         as.integer(preAssignment[[i]]$assign))
+                                         as.integer(preAssignment[[i]]$assign),
+                                         randomAssignProb)
 
       # Updating global posteriors
       iterPosteriors <- colMeans(assignmentMat)
@@ -692,8 +706,12 @@ flowReMix <- function(formula,
     }
     assignmentList <- do.call("rbind",assignmentList)
     unscrambled <- assignmentList
-    if(randomAssignProb > 0 & randomAssignProb <= 1) {
-      assignmentList <- t(apply(assignmentList, 1, randomizeAssignments, prob = randomAssignProb))
+    for(j in 1:ncol(assignmentList)) {
+      if(mean(assignmentList[, j]) < 0.01) {
+        assignmentList[, j] <- rbinom(nrow(assignmentList), 1, 0.01)
+      } else if(mean(assignmentList[, j]) > 0.99) {
+        assignmentList[, j] <- rbinom(nrow(assignmentList), 1, .99)
+      }
     }
     assignmentList <- data.frame(assignmentList)
     names(assignmentList) <- names(dataByPopulation)
@@ -747,10 +765,8 @@ flowReMix <- function(formula,
 
     if(verbose) {
       print(c(iter, levelP = levelProbs))
-      print(c(iter, coef = as.numeric(round(sapply(coefficientList, function(x) x[2]), 2))))
-      print(c(M = M))
-      print(round(c(MH = MHcoef), 3))
-      print(round(ratevec, 3))
+      if(regression_method == "betabinom") print(c(M = M))
+      print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
     }
   }
 
@@ -773,9 +789,7 @@ flowReMix <- function(formula,
   # Processing random effects -----------
   estimatedRandomEffects <- data.frame(estimatedRandomEffects)
   names(estimatedRandomEffects) <- names(coefficientList)
-  estimatesRandomEffects$id <- uniqueIDs
-  estimatedRandomEffects[, c(1, ncol(estimatedRandomEffects))] <- estimatedRandomEffects[, c(ncol(estimatedRandomEffects), 1)]
-
+  estimatedRandomEffects <- cbind(id = uniqueIDs, estimatedRandomEffects)
 
   # Preparing flowReMix object --------------------
   result <- list()

@@ -13,8 +13,8 @@ setNumericVectorToZero <- function(x) {
     invisible(.Call('flowReMix_setNumericVectorToZero', PACKAGE = 'flowReMix', x))
 }
 
-subsetAssignGibbs <- function(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment) {
-    .Call('flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment)
+subsetAssignGibbs <- function(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb) {
+    .Call('flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb)
 }
 
 randomEffectCoordinateMH <- function(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach) {

@@ -6,7 +6,8 @@
 \usage{
 flowReMix_control(updateLag = 5, randomAssignProb = 0, nsamp = 20,
   initMHcoef = 0.4, nPosteriors = NULL, maxDispersion = 10^3,
-  keepEach = 5, centerCovariance = TRUE, intSampSize = 100)
+  minDispersion = 10^8, keepEach = 5, centerCovariance = TRUE,
+  intSampSize = 100, initMethod = NULL)
 }
 \arguments{
 \item{updateLag}{number of iterations before the algorithm is assumed to
@@ -40,6 +41,11 @@ computing the covariance estimate or not.}
 
 \item{intSampSize}{number of importance samples to take when performing
 univariate numerical integration in the Gibbs sampler.}
+
+\item{initMethod}{the method used to initialize the regression coefficients.
+Options are either "sparse" for \code{\link[glmnet]{cv.glmnet}} or "binom"
+for \code{\link[stats]{glm}}. If left as \code{NULL} then it will be determined
+according to the regression_method specified for the \code{flowReMix} call.}
 }
 \value{
 An object of type \code{flowReMix_control}.

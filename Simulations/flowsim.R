@@ -49,7 +49,7 @@ simdata <- do.call("rbind", subjectlist)
 simdata$batch <- factor(batch)
 simdata$subset <- factor(simdata$subset)
 
-control <- flowReMix_control(nsamp = 20, dataReplicates = 4,
+control <- flowReMix_control(nsamp = 20, nPosteriors  = 4,
                              centerCovariance = FALSE, updateLag = 5)
 
 system.time(simfit <- flowReMix(cbind(count, N - count) ~  treatment,
@@ -57,7 +57,7 @@ system.time(simfit <- flowReMix(cbind(count, N - count) ~  treatment,
                                              subject_id =  ptid,
                                              cluster_variable = treatment,
                                              data = simdata,
-                                             iterations = 3,
+                                             iterations = 10,
                                              ising_model = "sparse",
                                              covariance = "dense",
                                              regression_method = "betabinom",
