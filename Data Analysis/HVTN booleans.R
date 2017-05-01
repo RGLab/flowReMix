@@ -1,3 +1,20 @@
+getExpression <- function(str) {
+  first <- substr(str, 1, 7)
+  second <- substr(str, 8, nchar(str))
+  second <- strsplit(second, "")[[1]]
+  seperators <- c(0, which(second %in% c("-", "+")))
+  expressed <- list()
+  for(i in 2:length(seperators)) {
+    if(second[seperators[i]] == "+") {
+      expressed[[i]] <- paste(second[(seperators[(i - 1)] + 1) : seperators[i]], collapse = '')
+    }
+  }
+
+  expressed <- paste(unlist(expressed), collapse = '')
+  expressed <- paste(first, expressed, sep = '')
+  return(expressed)
+}
+
 # Loading Data --------------------------------
 # hvtn <- read.csv(file = "data/merged_505_stats.csv")
 # names(hvtn) <- tolower(names(hvtn))
@@ -16,7 +33,7 @@ nchars <- nchar(as.character(unique(hvtn$population)))
 #marginals <- unique(hvtn$population)[nchars < 26]
 marginals <- unique(hvtn$population)[nchars == 26]
 marginals <- subset(hvtn, population %in% marginals)
-marginals <- subset(marginals, stim %in% c("negctrl", "CMV", "VRC ENV A",
+marginals <- subset(marginals, stim %in% c("negctrl", "VRC ENV A",
                                            "VRC ENV B", "VRC ENV C",
                                            "VRC GAG B", "VRC NEF B",
                                            "VRC POL 1 B", "VRC POL 2 B"))
@@ -50,19 +67,26 @@ gag$stimGroup <- "gag"
 pol <-subset(marginals, stim %in% c("negctrl", "VRC POL 1 B", "VRC POL 2 B"))
 pol$subset <- factor(paste("pol", pol$population, sep = "/"))
 pol$stimGroup <- "pol"
-cmv <- subset(marginals, stim %in% c("negctrl", "CMV"))
-cmv$subset <- factor(paste("cmv", cmv$population, sep = "/"))
-cmv$stimGroup <- "cmv"
 env <- subset(marginals, stim %in% c("negctrl", "VRC ENV C", "VRC ENV B", "VRC ENV A"))
 env$subset <- factor(paste("env", env$population, sep = "/"))
 env$stimGroup <- "env"
 nef <- subset(marginals, stim %in% c("negctrl", "VRC NEF B"))
 nef$subset <- factor(paste("nef", nef$population, sep = "/"))
 nef$stimGroup <- "nef"
-subsetDat <- rbind(gag, pol, cmv, env, nef)
+subsetDat <- rbind(gag, pol, env, nef)
 subsetDat$stim <- as.character(subsetDat$stim)
 subsetDat$stim[subsetDat$stim == "negctrl"] <- 0
 subsetDat$stim <- factor(subsetDat$stim)
+
+# Converting subset names ------------------
+subsets <- as.character(unique(subsetDat$subset))
+expressed <- sapply(subsets, getExpression)
+map <- cbind(subsets, expressed)
+subsetDat$subset <- as.character(subsetDat$subset)
+for(i in 1:nrow(map)) {
+  subsetDat$subset[which(subsetDat$subset == map[i, 1])] <- map[i, 2]
+}
+subsetDat$subset <- factor(subsetDat$subset)
 
 # Getting outcomes -------------------------------
 treatmentdat <- read.csv(file = "data/rx_v2.csv")
@@ -70,11 +94,17 @@ names(treatmentdat) <- tolower(names(treatmentdat))
 treatmentdat$ptid <- factor(gsub("-", "", (treatmentdat$ptid)))
 treatmentdat <- subset(treatmentdat, ptid %in% unique(subsetDat$ptid))
 
+# Finding problematic subsets?
+keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$prop > 0) > 0.01)
+keep <- names(keep[sapply(keep, function(x) x)])
+subsetDat <- subset(subsetDat, subset %in% keep)
+subsetDat$subset <- factor(as.character(subsetDat$subset))
+
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 15, nsamp = 250, initMHcoef = 1,
-                             nPosteriors = 2, centerCovariance = TRUE,
-                             maxDispersion = 10^3 / 2, minDispersion = 10^8,
+control <- flowReMix_control(updateLag = 13, nsamp = 100, initMHcoef = 1,
+                             nPosteriors = 3, centerCovariance = TRUE,
+                             maxDispersion = 10^3 / 2, minDispersion = 10^6,
                              randomAssignProb = 0.2, intSampSize = 50,
                              initMethod = "binom")
 
@@ -91,11 +121,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  iterations = 20,
                  verbose = TRUE, control = control)
 
-#save(fit, file = "Data Analysis/results/HVTN betabinom 2.Robj")
-#load(file = "Data Analysis/results/HVTN binom stim response.Robj")
-#load(file = "Data Analysis/results/HVTN binom w batch sparse 2.Robj")
-#load(file = "Data Analysis/results/HVTN binom 1.Robj")
-#load(file = "Data Analysis/results/HVTN betabinom 1.Robj")
+#load(file = "Data Analysis/results/HVTN bool betabinom 5.Robj")
 
 
 # ROC plots -----------------------------
@@ -105,6 +131,8 @@ posteriors <- fit$posteriors
 posteriors <- merge(posteriors, outcome,
                     by.x = "ptid", by.y = "ptid",
                     all.x = TRUE)
+isCMV <- substring(names(fit$posteriors), 1, 3) == "cmv"
+posteriors <- posteriors[, !isCMV]
 ctrlCol <- ncol(posteriors)
 par(mfrow = c(4, 5), mar = rep(3, 4))
 aucs <- numeric(ctrlCol - 2)
@@ -121,11 +149,11 @@ for(i in 2:(ctrlCol - 1)) {
 }
 
 pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
-pvals <- 2 * pmin(pvals,  1 - pvals)
 qvals <- p.adjust(pvals, method = "BY")
 subsets <- names(posteriors)[-c(1, ctrlCol)]
 result <- data.frame(subsets, aucs, pvals, qvals)
 result[order(result$aucs, decreasing = TRUE), ]
+
 
 # Scatter plots -----------------------
 require(reshape2)
@@ -154,13 +182,20 @@ names(assignments) <- substr(names(assignments), 1, 9)
 assignments <- lapply(unique(names(assignments)), function(x) {
   do.call("rbind", assignments[names(assignments) == x])
 })
-reps <- 20
+subsets <- names(fit$coefficients)
+isCMV <- substring(subsets, 1, 3) == "cmv"
+assignments <- lapply(assignments, function(x) x[, !isCMV])
+subsets <- subsets[!isCMV]
+expressed <- sapply(subsets, getExpression)
+map <- cbind(subsets, expressed)
+
+reps <- 100
 modelList <- list()
 nsubsets <- ncol(assignments[[1]])
 countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
 for(i in 1:reps) {
   mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
-  colnames(mat) <- names(fit$coefficients)
+  colnames(mat) <- expressed
   keep <- apply(mat, 2, function(x) any(x != x[1]))
   mat <- mat[, keep]
   model <- IsingFit::IsingFit(mat, AND = TRUE, plot = TRUE)
@@ -172,22 +207,23 @@ for(i in 1:reps) {
 
 props <- countCovar / reps
 table(props)
-threshold <- 0.5
+threshold <- 1
 which(props > threshold, arr.ind = TRUE)
 props[abs(props) <= threshold] <- 0
 sum(props != 0) / 2
-#save(props, file = "Data Analysis/results/HVTN betabinom 2 graph.Robj")
-
+#save(props, file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
+load(file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
 
 # Plotting graph ---------------------
 require(GGally)
 library(network)
 library(sna)
 network <- props
-keep <- apply(network, 1, function(x) any(abs(x) >= threshold)) | (aucs >= 0.7)
+keep <- apply(network, 1, function(x) any(abs(x) >= threshold)) | result$qvals < 0.05
+#keep <-  (result$qvals <= 0.05)
 network <- network[keep, keep]
 net <- network(props)
-subsets <- names(fit$coefficients)
+subsets <- expressed
 nodes <- ggnet2(network, label = subsets[keep])$data
 edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
 p <- nrow(network)
@@ -218,8 +254,8 @@ ggplot() +
                                  alpha = abs(Dependence)),
                size = 1) +
   #scale_fill_gradient2(low = "white", high = "red", limits = c(0.7, 1)) +
-  scale_fill_gradientn(colours = rainbow(4))+
-  geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
+  #scale_fill_gradientn(colours = rainbow(4))+
+  geom_point(data = nodes, aes(x = x, y = y, fill = sig), shape = 21,
              size = 8, col = "grey") +
   scale_shape(solid = FALSE) +
   geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
@@ -232,6 +268,90 @@ ggplot() +
 
 nodes[order(nodes$auc),]
 
+
+# Posteriors box plots ------------------------------------
+require(dplyr)
+require(reshape2)
+outcome <- treatmentdat[, c(13, 15)]
+posteriors <- fit$posteriors
+posteriors <- merge(posteriors, outcome,
+                    by.x = "ptid", by.y = "ptid",
+                    all.x = TRUE)
+posteriors <- melt(posteriors, id.vars = c("ptid", "control"))
+names(posteriors)[3:4] <- c("subset", "posterior")
+posteriors$stimgroup <- substring(posteriors$subset, 1, 3)
+posteriors$vaccine <- factor(!posteriors$control)
+posteriors$celltype <- substring(posteriors$subset, 5)
+posteriors <- subset(posteriors, stimgroup != "cmv")
+
+ggplot(posteriors, aes(x = factor(!control), y = 1- posterior)) +
+  geom_boxplot() + geom_jitter(size = 0.05, alpha = 0.2) +
+  xlab("vaccine") + theme_bw()
+
+ggplot(posteriors, aes(x = factor(!control), y = 1- posterior)) +
+  geom_boxplot() + geom_jitter(size = 0.05, alpha = 0.2) +
+  xlab("vaccine") + theme_bw() + facet_wrap(~ stimgroup)
+
+ggplot(posteriors, aes(x = factor(!control), y = 1- posterior)) +
+  geom_boxplot() + geom_jitter(size = 0.05, alpha = 0.2) +
+  xlab("vaccine") + theme_bw() + facet_wrap(~ celltype)
+
+ggplot(posteriors, aes(x = stimgroup, y = 1- posterior,
+                       col = vaccine)) +
+  geom_boxplot() +
+  xlab("vaccine") + theme_bw() + facet_wrap(~ celltype)
+
+
+# Posterior probabilities for nresponses ----------------
+assignments <- fit$assignmentList
+names(assignments) <- substr(names(assignments), 1, 9)
+assignments <- lapply(unique(names(assignments)), function(x) {
+  do.call("rbind", assignments[names(assignments) == x])
+})
+subsets <- names(fit$coefficients)
+resultList <- list()
+for(i in 1:length(assignments)) {
+  cat(i, " ")
+  samp <- assignments[[i]]
+  #colnames(samp) <- substring(subsets, 1, 6) # for stim groups
+  #colnames(samp) <- substring(subsets, 5) # for cell-type groups
+  colnames(samp) <- rep("all", ncol(samp)) # for just one plot
+  groups <- unique(colnames(samp))
+  subjDatList <- list()
+  for(j in 1:length(groups)) {
+    group <- groups[j]
+    subsamp <- samp[, groups == group]
+    groupSize <- ncol(subsamp)
+    props <- numeric(groupSize + 1)
+    for(k in 0:groupSize) {
+      props[k] <- mean(apply(subsamp, 1, function(x) sum(x) > k))
+    }
+    subjDatList[[j]] <- data.frame(ptid = fit$posteriors$ptid[i], group = group,
+                                   presponses = 0:groupSize/groupSize,
+                                   postProb = props)
+  }
+  resultList[[i]] <- do.call("rbind", subjDatList)
+}
+responsedat <- do.call("rbind", resultList)
+forplot <- merge(responsedat, outcome, by.x = "ptid", by.y = "ptid",
+                 all.x = TRUE)
+forplot$vaccine <- !forplot$control
+forplot$VACCINE <- forplot$vaccine
+
+summarized <- summarize(group_by(forplot, group, presponses, vaccine, VACCINE),
+                        postProb = mean(postProb))
+
+ggplot(forplot) + geom_line(aes(x = presponses, y = postProb, group = ptid,
+                                col = factor(vaccine)),
+                            alpha = 0.42) +
+  geom_line(data = summarized, aes(x = presponses, y = postProb,
+                                   linetype = factor(VACCINE))) +
+  facet_wrap(~ group) +
+  xlab("At Least % Responsive Subsets") +
+  ylab("Posterior Probabilities") +
+  scale_x_reverse()
+
+
 # Grouping by stim ---------------------------
 assignments <- fit$assignmentList
 names(assignments) <- substr(names(assignments), 1, 9)
@@ -241,8 +361,8 @@ assignments <- lapply(unique(names(assignments)), function(x) {
 sapply(assignments, function(samp) mean(apply(samp, 1, function(x) sum(x == 0) < 40)))
 subsets <- names(fit$coefficients)
 summarizeBySubset <- function(samp, subsets, threshold = 0) {
-  #colnames(samp) <- substring(subsets, 5) # for cell-type groups
-  colnames(samp) <- substring(subsets, 1, 6) # for stim groups
+  colnames(samp) <- substring(subsets, 5) # for cell-type groups
+  #colnames(samp) <- substring(subsets, 1, 6) # for stim groups
   result <- sapply(unique(colnames(samp)), function(x) {
     index <- colnames(samp) == x
     t(apply(samp, 1, function(y) sum(y[index]) > threshold))
@@ -304,8 +424,6 @@ for(i in 1:reps) {
 }
 
 props <- countCovar / reps
-#save(props, file = "Data Analysis/results/HVTN binom w batch sparse 2 graph.Robj")
-
 table(props)
 threshold <- 0.1
 which(props > threshold, arr.ind = TRUE)

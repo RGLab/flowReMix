@@ -479,7 +479,7 @@ for(i in 1:length(unique(tempdat$ptid))) {
   jackFitList[[i]] <- jackfit
 }
 #save(jackFitList, file = "Data Analysis/results/malaria everything cytokines jackknife 2.Robj")
-#load(file = "Data Analysis/results/malaria everything cytokines jackknife.Robj")
+#load(file = "Data Analysis/results/malaria everything cytokines jackknife 2.Robj")
 
 nsubsets <- length(jackFitList[[1]]$coefficients)
 zvals <- numeric(nsubsets)
@@ -550,5 +550,167 @@ for(i in 1:nrow(table)) {
 print(xtable::xtable(table), sanitize.text.function = function(x) x)
 
 
+# Enrichment Analysis ----------
+coefMat <- t(sapply(jackFitList, function(x) unlist(x$coefficients)))
+covmat <- apply(coefMat, 2, function(x) x - mean(x))
+covmat <- t(covmat) %*% covmat * (nrow(covmat) - 1) / nrow(covmat)
+
+subsets <- names(jackFitList[[1]]$coefficients)
+coefCombinations <- list(trt =  c(0, 6, 0 ,0 ,0 ,0 ,0 ,1 ,1 ,1 ,1 ,1),
+                         dpos = c(0, 0, 0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,-1),
+                         exh =  c(0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0),
+                         d28 =  c(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0),
+                         d56 =  c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+                         d168 = c(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0))
+
+coefCombinations <- list(trt =  c(0, 6, 0 ,0 ,0 ,0 ,0 ,1 ,1 ,1 ,1 ,1),
+                         d28 =  c(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0),
+                         d56 =  c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+                         d168 =  c(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0))
+
+subsets <- names(jackFitList[[1]]$coefficients)
+cellGroups <- list(cd4th1 = c("4+/IL2+", "4+/IFNg+", "4+/TNFa+"),
+                   cd4CXCR5th1 = c("4+/CXCR5+/IL2+", "4+/CXCR5+/IFNg+", "4+/CXCR5+/TNFa+"),
+                   dim56th1 = c("56+dim/TNFa+", "56+dim/IFNg+"),
+                   hi56th1 = c("56+hi/TNFa+", "56+hi/IFNg+"),
+                   cd8th1 = c("8+/IL2+", "8+/IFNg+", "8+/TNFa+"),
+                   cd8CXCRth1 = c("8+/CXCR5+/IL2+", "8+/CXCR5+/IFNg+", "8+/CXCR5+/TNFa+"),
+                   nkTth1 = c("NK T cells/IL2+", "NK T cells/IFNg+", "NK T cells/TNFa+"),
+                   pd1th1 = c("PD-1+/IL2+", "PD-1+/IFNg+", "PD-1+/TNFa+"),
+                   # cd154 = c("4+/154+", "4+/CXCR5+/154+", "8+/154+",
+                   #           "8+/CXCR5+/154+", "NK T cells/154+", "PD-1+/154+"))
+                   #pd1cd154 = c("PD-1+/154+"), pd1tnfa = c("PD-1+/TNFa+"),
+                   th2 = c("8+/IL4+", "4+/IL4+", "4+/CXCR5+/IL4+", "NK T cells/IL4+"),
+                   #cd4col = subsets[c(1, 2, 3, 12:18)],
+                   #cd4cxcrcol = subsets[c(4:11)],
+                   #cd8col = subsets[c(27:29, 36:42)],
+                   #cd8cxcrcol = subsets[c(29:35)],
+                   #dim56col = subsets[19:22],
+                   #hi56col = subsets[23:26],
+                   #nktcol = subsets[43:49])
+                   gzb = subsets[c(44, 36, 23, 19, 12)])
+
+enrichments <- data.frame(matrix(nrow = length(cellGroups) * length(coefCombinations), ncol = 5))
+names(enrichments) <- c("cells", "contrast", "pval", "mean", "sd")
+coefs <- colMeans(coefMat)
+row <- 1
+reps <- length(jackFitList)
+for(j in 1:length(cellGroups)) {
+  cellgroup <- cellGroups[[j]]
+  for(i in 1:length(coefCombinations)) {
+    contrast <- coefCombinations[[i]]
+    contrastVec <- list()
+    for(k in 1:length(jackFitList[[1]]$coefficients)) {
+      if(subsets[k] %in% cellgroup) {
+        contrastVec[[k]] <- contrast
+      } else {
+        contrastVec[[k]] <- rep(0, length(contrast))
+      }
+    }
+    contrastVec <- unlist(contrastVec)
+    contrastVec <- contrastVec / sum(contrastVec)
+    mean <- as.numeric(coefMat %*% contrastVec)
+    sd <- mean - mean(mean)
+    sd <- sqrt(11 / 12 * sum(sd^2))
+    mean <- mean(mean)
+    tstat <- mean / sd
+    pval <- pt(tstat, df =  11, lower.tail = FALSE)
+    enrichments[row, 1] <- names(cellGroups)[j]
+    enrichments[row, 2] <- names(coefCombinations)[i]
+    enrichments[row, 3] <- pval
+    enrichments[row, 4] <- mean
+    enrichments[row, 5] <- sd
+    row <- row + 1
+  }
+}
+
+# Aggregate Test Plot
+enrichments$contrast <- factor(enrichments$contrast, levels = c("trt", "d28", "d56", "d168"))
+quantile <- qt(0.975, df = 11)
+ggplot(enrichments) +
+  geom_point(aes(x = contrast, y = mean)) +
+  geom_segment(aes(x = contrast, xend = contrast,
+                   y = mean - sd * quantile,
+                   yend = mean + sd * quantile),
+               linetype = 2) +
+  theme_bw() +
+  facet_wrap(~ cells, scales = "free_y") +
+  geom_hline(yintercept = 0)
+
+
+
+# Selective Inference for Selected Enrichments
+cbind(sort(pvals), sort(qvals))
+qthreshold <- 0.2
+pthreshold <- qthreshold * sum(qvals < qthreshold) / length(qvals)
+slot <- 1
+conditionalList <- list()
+nhypothesis <- sum(enrichments[, 3] < pthreshold)
+ptest <- 0.1
+for(i in 1:nrow(enrichments)) {
+  if(enrichments[i, 3] > pthreshold) {
+    next
+  }
+  contrast <- coefCombinations[[which(names(coefCombinations) == enrichments[i, 2])]]
+  contrast <- contrast / sum(abs(contrast))
+  cells <- cellGroups[[which(names(cellGroups) == enrichments[i, 1])]]
+  realizations <- matrix(nrow = length(jackFitList), ncol = length(cells))
+  for(j in 1:length(jackFitList)) {
+    coefList <- jackFitList[[j]]$coefficients
+    col <- 1
+    for(k in 1:length(coefList)) {
+      if(names(coefList)[k] %in% cells) {
+        realizations[j, col] <- coefList[[k]] %*% contrast
+        col <- col + 1
+      }
+    }
+  }
+
+  y <- colMeans(realizations)
+  sigma <- apply(realizations, 2, function(x) x - mean(x))
+  sigma <- t(sigma) %*% sigma * (length(jackFitList) - 1) / length(jackFitList)
+  contrast <- sign(y) / length(y)
+  contVar <- as.numeric(t(contrast) %*%  sigma %*% contrast)
+  threshold <- qt(1 - pthreshold, df = length(jackFitList) - 1) * sqrt(contVar)
+  conditionalMLE <- linearConstraintMLE(y, sigma, contrast, threshold, alpha = ptest / nhypothesis,
+                                        df = 9,
+                                        FWcorrection = TRUE)
+  conditionalList[[slot]] <- conditionalMLE
+  conditionalList[[slot]]$sigma <- sigma
+  conditionalList[[slot]]$threshold <- threshold
+  conditionalList[[slot]]$contrast <- contrast
+  names(conditionalList)[slot] <- paste(enrichments[i, 1:2], collapse = " ")
+  print(conditionalList[[slot]])
+  slot <- slot + 1
+}
+
+# Plotting enrichments
+forplot <- list()
+for(i in 1:length(conditionalList)) {
+  cond <- conditionalList[[i]]
+  enrichment <- names(conditionalList)[i]
+  subset <- strsplit(enrichment, " ")[[1]][[1]]
+  cell <- rep(cellGroups[[which(names(cellGroups) == subset)]], 2)
+  cell <- strsplit(cell, "/")
+  cell <- sapply(cell, function(x) x[length(x)])
+  method <- c(rep("naive", length(cell) / 2), rep("conditional", length(cell) / 2))
+  estimate <- c(cond$naive, cond$mle)
+  lCI <- c(cond$naiveCI[, 1], cond$CI[, 1])
+  uCI <- c(cond$naiveCI[, 2], cond$CI[, 2])
+  forplot[[i]] <- data.frame(enrichment, cell, method, estimate, lCI, uCI)
+}
+
+forplot <- do.call("rbind", forplot)
+forplot$method <- factor(forplot$method, levels = c('naive', "conditional"))
+library(ggplot2)
+forplot$lCI <- pmax(forplot$lCI, -2.5)
+forplot$uCI <- pmin(forplot$uCI, 2.5)
+ggplot(forplot) +
+  geom_point(aes(x = cell, y = estimate, shape = method)) +
+  geom_segment(aes(x = cell, xend = cell, y = lCI, yend = uCI,
+                   col = method, linetype = method)) +
+  theme_bw() +
+  facet_wrap(~ enrichment, scales = "free") +
+  geom_hline(yintercept = 0)
 
 

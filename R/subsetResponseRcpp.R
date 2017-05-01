@@ -59,6 +59,10 @@ initializeModel <- function(dat, formula, method) {
     beta <- alpha * (1 / mu - 1)
     probs <- pbeta(props, alpha, beta)
     dat$treatmentvar <- rbinom(nrow(dat), 1, probs)
+    mtrt <- mean(dat$treatmentvar)
+    if(mtrt < 0.1 | mtrt > 0.9 | is.na(mtrt)) {
+      dat$treatmentvar <- rbinom(nrow(dat), 1, 0.5)
+    }
   }
   initdat <- model.frame(formula, data = dat)
   X <- model.matrix(formula, initdat)[, -1, drop = FALSE]
@@ -460,6 +464,7 @@ flowReMix <- function(formula,
     return(x)
     })
   estimatedRandomEffects <- do.call("cbind", estimatedRandomEffects)
+  estimatedRandomEffects[is.nan(estimatedRandomEffects)] <- 0
 
   # Initializing covariance from diagonal covariance
   levelProbs <- rep(0.5, nSubsets)
@@ -546,8 +551,12 @@ flowReMix <- function(formula,
           try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
           y <- cbind(popdata$N - popdata$y, popdata$y)
-          fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
-                                   offset = popdata$randomOffset)
+          fit <- NULL
+          try(fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
+                                   offset = popdata$randomOffset))
+          if(is.null(fit)) {
+            print("hello!")
+          }
         })
         } else {
         for(j in 1:nSubsets) {
