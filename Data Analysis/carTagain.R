@@ -15,47 +15,48 @@ memory <- c("CCR7+", "RA-CCR7-", "RA-CCR7+", "RA+CCR7-",
             "CD28+", "CD45RA+", "CD45RO-", "CD95+")
 
 # Processing Data -------------------
-cart <- readRDS("data/CART_stats_data3.rds", refhook = NULL)
+cart <- readRDS("data/carTstats.RDS", refhook = NULL)
 names(cart) <- tolower(names(cart))
 unique(cart$parent)
-names(cart)[7] <- "date"
+names(cart)[6] <- "ptid"
+names(cart)[8] <- "date"
 names(cart)[11] <- "isolation"
 names(cart)[13] <- "dateTreated"
 names(cart)[14] <- "plannedDose"
 names(cart)[17] <- "crs"
-names(cart)[22] <- "bestResponse"
+names(cart)[18] <- "peakabsCD8"
+names(cart)[19] <- "peakabsCD4"
+names(cart)[20] <- "peakpercentCD8"
+names(cart)[21] <- "peakpercentCD4"
+names(cart)[22] <- "best"
 cart <- subset(cart, !is.na(population))
-by(cart, cart$id, function(x) unique(x$bestResponse))
+timepoints <- by(cart, cart$ptid, function(x) unique(x$timepoint))
+times <- unique(cart$timepoint)
 
-cart <- cart[order(cart$id, cart$timepoint, cart$parent, cart$population), ]
+cart <- cart[order(cart$ptid, cart$timepoint, cart$parent, cart$population), ]
 cart[, c(5, 1, 4, 6, 22)]
+cart$outcome <- "negative"
+cart$outcome[cart$best %in% c("CR", "PR")] <- "positive"
+cart$outcome[is.na(cart$best) | cart$best == "NA"] <- NA
 
 # Collapse the IP timepoint
 ip <- subset(cart, timepoint %in% c("CD4 IP", "CD8 IP"))
 cart <- subset(cart, !(timepoint %in% c("CD4 IP", "CD8 IP")))
-trimmed <- do.call("rbind", by(ip, ip$id, function(x) x[1, ]))
+trimmed <- do.call("rbind", by(ip, ip$ptid, function(x) x[1, ]))
 trimmed <- trimmed[, -c(1, 4, 2)]
-trimmed$timepoint <- "IP"
-ip <- summarize(group_by(ip, id, parent, population),
+trimmed$timepoint <- "d0"
+ip <- summarize(group_by(ip, ptid, parent, population),
                   count = sum(count))
 ip <- merge(ip, trimmed, all.x = TRUE)
-cart <- rbind(cart, ip)
-
-# Computing parentcount
-parentcount <- summarize(group_by(cart, id, parent, timepoint),
-                         parentcount = sum(count))
-data.frame(parentcount)
-cart <- merge(cart, parentcount, all.x = TRUE)
-cart <- cart[order(cart$id, cart$timepoint, cart$parent, cart$population), ]
-data.frame(cart$id, cart$population, cart$parentcount)
+cart <- rbind(cart[, -1], ip)
 
 # Transforming timepoints to categories
 cart$timenum <- 0
-notip <- cart$timepoint != "IP"
+notip <- (cart$timepoint != "IP") | is.na(cart$timepoint)
 times <- cart$timepoint[notip]
 times <- as.numeric(substring(times, 2))
 cart$timenum[notip] <- times
-by(cart, cart$id, function(x) unique(x$timenum))
+by(cart, cart$ptid, function(x) unique(x$timenum))
 cart$timenum[cart$timenum > 0 & cart$timenum <= 19] <- 1
 cart$timenum[cart$timenum > 19 & cart$timenum <= 35] <- 2
 cart$timenum[cart$timenum > 35] <- 3

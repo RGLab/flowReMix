@@ -286,6 +286,11 @@ ggplot() +
         panel.grid.minor=element_blank(),plot.background=element_blank())
 
 # Posterior probabilities for nresponses ----------------
+graph <- fit$isingCov
+thresholds <- diag(graph)
+diag(graph) <- 0
+assignment <- IsingSampler::IsingSampler(500, graph, thresholds)
+
 assignments <- fit$assignmentList
 names(assignments) <- substr(names(assignments), 1, 5)
 assignments <- lapply(unique(names(assignments)), function(x) {
@@ -311,6 +316,11 @@ for(i in 1:length(assignments)) {
   colnames(samp) <- rep("all", ncol(samp)) # for just one plot
   groups <- unique(colnames(samp))
   subjDatList <- list()
+  if(i == length(assignments)) {
+    ptid <- "prior"
+  } else {
+    ptid <- fit$posteriors$ptid[i]
+  }
   for(j in 1:length(groups)) {
     group <- groups[j]
     subsamp <- samp[, groups == group]
@@ -320,7 +330,7 @@ for(i in 1:length(assignments)) {
     scores <- as.numeric(subsamp %*% w)
     #values <- sort(c(0, unique(scores), 1))
     props <- sapply(values, function(x) mean(scores >= x))
-    subjDatList[[j]] <- data.frame(ptid = fit$posteriors$ptid[i], group = group,
+    subjDatList[[j]] <- data.frame(ptid = ptid, group = group,
                                    presponses = values,
                                    postProb = props)
   }
@@ -339,15 +349,14 @@ summarized <- summarize(group_by(forplot, group, presponses, VACCINE,
                                  INFECT),
                         postProb = mean(postProb))
 
-ggplot(forplot) + geom_line(aes(x = presponses, y = postProb, group = ptid,
+ggplot(forplot) + geom_line(aes(x = presponses, y = 1 - postProb, group = ptid,
                                 col = factor(infect)),
                             alpha = 0.42) +
-  geom_line(data = summarized, aes(x = presponses, y = postProb,
-                                   linetype = factor(INFECT))) +
+  geom_line(data = summarized, aes(x = presponses, y = 1 - postProb,
+                                   linetype = factor(INFECT)), size = 1) +
   facet_wrap(~ group) +
   xlab("At Least % Responsive Subsets") +
-  ylab("Posterior Probabilities") +
-  scale_x_reverse() + theme_bw()
+  ylab("Posterior Probabilities") + theme_bw()
 
 integrateCDF <- function(x) {
   x <- x[, 3:4]
@@ -355,7 +364,7 @@ integrateCDF <- function(x) {
   for(i in 2:nrow(x)) {
     base <- (x[i, 1] - x[i - 1, 1])
     result <- result + base * (x[i, 2])
-    result <- result + base * (x[i - 1, 2] - x[i, 2]) / 2
+    #result <- result + base * (x[i - 1, 2] - x[i, 2]) / 2
   }
 
   return(result)
@@ -363,6 +372,9 @@ integrateCDF <- function(x) {
 intCDF <- by(forplot, forplot$ptid, integrateCDF)
 intCDF <- as.numeric(intCDF)
 roc(vaccine ~ intCDF)$auc
+rocfit <- roc(vaccine ~ intCDF)
+par(mfrow = c(1, 1))
+plot(rocfit, main = "ROC for Functionality Score - AUC = 0.9743")
 infectAUC <- roc(subinfect ~ intCDF[vaccine == 1])$auc
 infectAUC
 n1 <- sum(subinfect == "INFECTED")

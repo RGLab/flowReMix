@@ -101,8 +101,9 @@ treatmentdat$ptid <- factor(gsub("-", "", (treatmentdat$ptid)))
 treatmentdat <- subset(treatmentdat, ptid %in% unique(subsetDat$ptid))
 
 # Finding problematic subsets?
-keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$prop > 0) > 0.01)
+keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$count > 1) > 0.02)
 keep <- names(keep[sapply(keep, function(x) x)])
+#result$subsets[result$qvals < 0.1] %in% keep
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
@@ -126,8 +127,9 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  regression_method = "betabinom",
                  iterations = 20,
                  verbose = TRUE, control = control)
+save(fit, file = "Data Analysis/results/HVTN bool betabinom 6 dropmore.Robj")
 
-#load(file = "Data Analysis/results/HVTN bool betabinom 5.Robj")
+#load(file = "Data Analysis/results/HVTN bool betabinom 6 dropmore.Robj")
 
 
 # ROC plots -----------------------------
@@ -155,7 +157,7 @@ for(i in 2:(ctrlCol - 1)) {
 }
 
 pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
-qvals <- p.adjust(pvals, method = "BY")
+qvals <- p.adjust(pvals, method = "bonferroni")
 vaccineSelect <- qvals <= 0.05
 subsets <- names(posteriors)[-c(1, ctrlCol)]
 result <- data.frame(subsets, aucs, pvals, qvals)
@@ -178,12 +180,10 @@ for(i in 2:(ctrlCol -1)) {
   aucs[i - 1] <- auc
 }
 infectPvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)#[vaccineSelect]
-infectQvals <- p.adjust(infectPvals, method = "BY")
+infectQvals <- p.adjust(infectPvals, method = "bonferroni")
 subsets <- names(posteriors)[-c(1, ctrlCol)]#[vaccineSelect]
 infectresult <- data.frame(subsets, aucs, infectPvals, infectQvals)
 infectresult[order(infectresult$aucs, decreasing = TRUE), ]
-
-
 
 # Scatter plots -----------------------
 require(reshape2)
@@ -198,9 +198,11 @@ forplot <- merge(subsetDat, posteriors, all.x = TRUE,
                  by.x = c("ptid", "subset"),
                  by.y = c("ptid", "subset"))
 
-ggplot(subset(forplot, stim != "0" & parent == "4+")) +
-  geom_point(aes(x = log(negprop), y = log(prop), col = 1 - posterior), size = 0.25) +
-  facet_grid(stim ~ population, scales = "free") +
+temp <- subset(forplot, population == "8+/107a-154+IFNg+IL2-TNFa+")
+temp <- subset(forplot, population == "8+/107a-154+IFNg+IL2+TNFa+")
+ggplot(temp) +
+  geom_point(aes(x = log(negprop + 1), y = log(prop + 1), col = 1 - posterior), size = 0.25) +
+  facet_grid(stimGroup ~ population, scales = "free", nrow =) +
   theme_bw() +
   geom_abline(intercept = 0, slope = 1) +
   scale_colour_gradientn(colours = rainbow(4))
@@ -243,14 +245,14 @@ props[abs(props) <= threshold] <- 0
 sum(props != 0) / 2
 #save(props, file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
 load(file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
+subsets <- names(fit$coefficients)
 
 # Plotting graph ---------------------
 require(GGally)
 library(network)
 library(sna)
-threshold <- 0.5
+threshold <- 0.8
 network <- props
-subsets <- expressed
 colnames(props) <- subsets
 rownames(props) <- subsets
 keep <- apply(network, 1, function(x) any(abs(x) > threshold)) & result$qvals < 0.05
@@ -345,14 +347,17 @@ names(assignments) <- substr(names(assignments), 1, 9)
 assignments <- lapply(unique(names(assignments)), function(x) {
   do.call("rbind", assignments[names(assignments) == x])
 })
+post <- data.frame(t(sapply(assignments, colMeans)))
+post <- cbind(1:nrow(post), post)
 subsets <- names(fit$coefficients)
 
 nfunctions <- sapply(subsets, function(x) length(strsplit(x, "+", fixed = TRUE)[[1]]) - 1)
 weightList <- list()
-weightList$poly <-  weights <- nfunctions / choose(5, nfunctions)
-weightList$func <- rep(1, length(nfunctions))
+weightList$poly <- weights <- nfunctions / choose(5, nfunctions)
+#weightList$func <- rep(1, length(nfunctions))
 
 resultList <- list()
+type <- "poly"
 for(w in 1:length(weightList)) {
   weights <- weightList[[w]]
   weightname <- names(weightList)[w]
@@ -374,26 +379,59 @@ for(w in 1:length(weightList)) {
       samp <- do.call("rbind", assignments[infect[, 3] == "infected"])
     }
     #colnames(samp) <- substring(subsets, 1, 3) # for stim groups
-    colnames(samp) <- substring(subsets, 1, 6) # for stim + 8 or 4 groups
+    #colnames(samp) <- substring(subsets, 1, 6) # for stim + 8 or 4 groups
     #colnames(samp) <- substring(subsets, 5, 6) # + 8 or 4 groups
-    #colnames(samp) <- substring(subsets, 5) # for cell-type groups
+    colnames(samp) <- substring(subsets, 5) # for cell-type groups
     #colnames(samp) <- rep("all", ncol(samp)) # for just one plot
     groups <- unique(colnames(samp))
     subjDatList <- list()
-    for(j in 1:length(groups)) {
-      group <- groups[j]
-      subsamp <- samp[, colnames(samp) == group]
-      subw <- weights[colnames(samp) == group]
-      subw <- subw / sum(subw)
-      groupSize <- ncol(subsamp)
-      props <- numeric(groupSize + 1)
-      values <- subsamp %*% subw
-      uniqueValues <- c(0, sort(unique(values)), 1)
-      props <- sapply(uniqueValues, function(x) mean(values >= x))
-      subjDatList[[j]] <- data.frame(ptid = ptid, group = group,
-                                     index = weightname,
-                                     presponses = uniqueValues,
-                                     postProb = props)
+    if(type != "breadth") {
+      for(j in 1:length(groups)) {
+        group <- groups[j]
+        subsamp <- samp[, colnames(samp) == group]
+        subw <- weights[colnames(samp) == group]
+        subw <- subw / sum(subw)
+        groupSize <- ncol(subsamp)
+        if(length(subw) == 1) {
+          values <- subsamp * subw
+        } else {
+          values <- subsamp %*% subw
+        }
+        uniqueValues <- c(0, sort(unique(values)), 1)
+        props <- sapply(uniqueValues, function(x) mean(values >= x))
+
+        subjDatList[[j]] <- data.frame(ptid = ptid, group = group,
+                                       index = weightname,
+                                       presponses = uniqueValues,
+                                       postProb = props)
+      }
+    } else {
+      templist <- list()
+      for(j in 1:length(groups)) {
+        group <- groups[j]
+        subsamp <- samp[, colnames(samp) == group]
+        groupSize <- ncol(subsamp)
+        weights <- seq(from = 5, to = 1,length.out = groupSize)#(groupSize:1)^0.75
+        weights <- weights / sum(weights)
+        weights <- cumsum(weights)
+        map <- cbind(0:groupSize, c(0, weights))
+        values <- map[apply(subsamp, 1, sum), 2]
+        templist[[j]] <- values
+      }
+
+      templist <- do.call("cbind", templist)
+      parents <- substr(groups, 5, 6)
+      parentGroups <- c("4+", "8+")
+      for(j in 1:length(parentGroups)) {
+        parent <- parentGroups[j]
+        values <- rowMeans(templist[, parents == parent])
+        uniqueVals <- sort(unique(c(values, 0, 1)), decreasing = TRUE)
+        props <- sapply(uniqueVals, function(x) mean(values >= x))
+        subjDatList[[j]] <- data.frame(ptid = ptid, group = parent,
+                                       index = "breadth",
+                                       presponses = uniqueVals,
+                                       postProb = props)
+      }
     }
     resultList[[w]][[i]] <- do.call("rbind", subjDatList)
   }
@@ -404,19 +442,23 @@ responsedat <- do.call("rbind", do.call("rbind", resultList))
 forplot <- merge(responsedat, infect, by.x = "ptid", by.y = "ptid",
                  all.x = TRUE)
 summarized <- subset(forplot, ptid %in% c("infected", "non-infected", "placebo"))
-forplot$vaccine <- forplot$control == 0
 forplot <- subset(forplot, !(ptid %in% c("infected", "non-infected", "placebo")))
 forplot <- forplot[order(forplot$ptid, forplot$group, forplot$presponses), ]
 
-ggplot(forplot) + geom_step(aes(x = presponses, y = postProb, group = ptid,
+forplot$parent <- substr(forplot$group, 5, 6)
+forplot$protein <- substr(forplot$group, 1, 3)
+summarized$parent <- substr(summarized$group, 5, 6)
+summarized$protein <- substr(summarized$group, 1, 3)
+temp <- subset(forplot, index == "poly")
+sumtemp <- subset(summarized, index == "poly")
+ggplot(temp) + geom_step(aes(x = presponses, y = 1 - postProb, group = ptid,
                                 col = factor(hiv)),
                             alpha = 0.42) +
-  geom_step(data = summarized, aes(x = presponses, y = postProb,
-                                   linetype = ptid)) +
-  facet_grid(index ~ group) +
+  geom_step(data = sumtemp, aes(x = presponses, y = 1 - postProb,
+                                   linetype = ptid), size = 0.7) +
+  facet_wrap( ~ group) + theme_bw() +
   xlab("At Least % Responsive Subsets") +
-  ylab("Posterior Probabilities") +
-  scale_x_reverse()
+  ylab("Posterior Probabilities") #+
 
 integrateCDF <- function(x) {
   x <- x[, 3:4]
@@ -439,14 +481,14 @@ intCDF <- do.call("rbind", by(intCDF, list(intCDF$group, intCDF$index),
                                 return(x)
                               }))
 
-par(mfrow = c(2, 2), mar = rep(3, 4))
+par(mfrow = c(1, 2), mar = rep(3, 3))
 temp <- subset(intCDF, hiv != "placebo")
 aucs <- by(temp, list(temp$group, temp$index), function(x) {
-  rocfit <- roc(x$hiv ~ x$measure)
+  print(unique(x$group))
+  rocfit <- roc(x$hiv == "infected" ~ x$measure)
   auc <- round(rocfit$auc, 3)
   main <- paste(unique(x$group), unique(x$index), "AUC:", auc)
   plot(rocfit, main = main)
-  print(summary(glm(x$hiv == "infected" ~ x$measure, family = "binomial")))
   return(auc)
 })
 n0 <- sum(infect$hiv == "infected")
@@ -461,6 +503,132 @@ ggplot(subset(intCDF, index != "!!"),
   theme_bw() + ylim(-2.5, 2.5)
 
 
+# Breadth X Functionality Tensor -----------------
+library(viridis)
+library(ggthemes)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+infect$hiv <- "non-infected"
+infect$hiv[infect$status == 1] <- "infected"
+infect$hiv[outcome[, 2] == 1] <- "placebo"
+
+post <- fit$posteriors
+post <- melt(post, id = "ptid")
+names(post)[2:3] <- c("combination", "posterior")
+post$subset <- substring(post$combination, 5)
+post$stim <- substring(post$combination, 1, 3)
+post <- merge(post, infect, all.x = TRUE)
+post$hiv <- factor(post$hiv, levels = c("non-infected", "infected", "placebo"))
+summ <- summarize(group_by(post, combination, subset, stim, hiv),
+                  mposterior = 1 - mean(posterior))
+sig <- result$qvals < 0.05
+sig <- data.frame(combination = result$subsets, sig = sig)
+summ <- merge(summ, sig, all.x = TRUE)
+summ$sig[!summ$sig] <- NA
+summ$vaccine <- "vaccine"
+summ$vaccine[summ$hiv == "placebo"] <- "placebo"
+summ$vaccine <- factor(summ$vaccine, level = c("vaccine", "placebo"))
+
+onlysig <- subset(summ, sig)
+ggplot(summ, aes(x = stim, y = subset, fill = mposterior)) +
+  geom_tile(color = "white", size = 0.1) +
+  geom_tile(data = onlysig, color = "red", size = 0.5) +
+  scale_fill_viridis(name="posterior") +
+  facet_wrap(~ vaccine) +
+  theme_tufte(base_family="Helvetica") +
+  theme(axis.text.y = element_text(size = 5.5))
+
+sig <- infectresult$infectQvals < 0.1
+sig <- data.frame(combination = infectresult$subsets, sig = sig)
+summ <- summ[, -which(colnames(summ) == "sig")]
+summ <- merge(summ, sig, all.x = TRUE)
+summ$sig[!summ$sig] <- NA
+temp <- subset(summ, hiv != "placebo")
+temp$hiv <- factor(temp$hiv, levels = c("non-infected", "infected"))
+onlysig <- subset(temp, sig)
+ggplot(temp, aes(x = stim, y = subset, fill = mposterior)) +
+  geom_tile(color = "white", size = .1) +
+  geom_tile(data = onlysig, aes(x = stim, y = subset),
+            col = "red", size = 0.5) +
+  scale_fill_viridis(name="posterior") +
+  facet_wrap(~ hiv) +
+  theme_tufte(base_family="Helvetica") +
+  theme(axis.text.y = element_text(size = 5.5))
+
+# Scatter plots for problematic subsets ------------
+require(reshape2)
+outcome <- treatmentdat[, c(13, 15)]
+posteriors <- fit$posteriors
+posteriors <- melt(posteriors, id.vars = c("ptid"))
+names(posteriors)[2:3] <- c("subset", "posterior")
+posteriors <- merge(posteriors, outcome,
+                    by.x = "ptid", by.y = "ptid",
+                    all.x = TRUE)
+forplot <- merge(subsetDat, posteriors, all.x = TRUE,
+                 by.x = c("ptid", "subset"),
+                 by.y = c("ptid", "subset"))
+
+pop <- "8+/107a-154+IFNg+IL2-TNFa+"
+pop <- "8+/107a-154+IFNg+IL2+TNFa+"
+pop <- "4+/107a+154+IFNg-IL2+TNFa-"
+pop <- "4+/107a+154-IFNg-IL2-TNFa+"
+pop <- "8+/107a-154+IFNg+IL2-TNFa-"
+pop <- "8+/107a-154+IFNg+IL2+TNFa-"
+pop <- "8+/107a-154+IFNg+IL2-TNFa-"
+pop <- "8+/107a-154+IFNg-IL2-TNFa-"
+pop <- "8+/107a+154-IFNg-IL2+TNFa+"
+pop <- "8+/107a+154-IFNg-IL2+TNFa+"
+pop <- "8+/107a+154-IFNg-IL2+TNFa-"
+pop <- "8+/107a+154-IFNg+IL2+TNFa-"
+temp <- subset(forplot, population == pop)
+ggplot(temp) +
+  geom_point(aes(x = log(negprop + 1 / parentcount), y = log(prop + 1 / parentcount),
+                 col = 1 - posterior), size = 0.25) +
+  facet_wrap( ~ stimGroup, scales = "free", nrow = 2) +
+  theme_bw() +
+  geom_abline(intercept = 0, slope = 1) +
+  scale_colour_gradientn(colours = rainbow(4)) +
+  ggtitle(pop)
+sort(temp$prop, decreasing = TRUE)
+
+
+
+# Weighting posterior by variances -----
+post <- fit$posteriors
+post[, 2:ncol(post)] <- 1 - post[2:ncol(post)]
+post <- melt(post, id = "ptid")
+names(post) <- c("ptid", "subset", "posterior")
+post$parent <- substr(post$subset, 5, 6)
+post$stim <- substr(post$subset, 1, 3)
+post$group <- substr(post$subset, 1, 6)
+
+post$group <- 1
+weights <- apply(fit$posteriors[, -1], 2, var)
+nfunctions <- sapply(subsets, function(x) length(strsplit(x, "+", fixed = TRUE)[[1]]) - 1)
+weights <- weights * nfunctions / choose(5, nfunctions)
+weights <- weights / sum(weights)
+weights <- data.frame(subset = colnames(fit$posteriors)[-1],
+                      weights = weights)
+post <- merge(post, weights, all.x = TRUE)
+score <- summarize(group_by(post, ptid, group),
+                   score = weighted.mean(posterior, weights))
+score <- merge(score, infect, all.x = TRUE)
+
+ggplot(score) + geom_boxplot(aes(x = hiv, y = score, col = hiv)) +
+  facet_wrap(~ group) + theme_bw()
+par(mfrow = c(1, 1))
+by(score, score$group, function(x) {
+  rocfit <- roc(x$hiv != "placebo" ~ x$score)
+  plot(rocfit, main = paste(unique(x$group), round(rocfit$auc, 3)))
+})
+
+par(mfrow = c(1, 1))
+temp <- subset(score, hiv != "placebo")
+by(temp, temp$group, function(x) {
+  rocfit <- roc(x$hiv ~ x$score)
+  plot(rocfit, main = paste(unique(x$group), round(rocfit$auc, 3)))
+})
 
 
 # Grouping by stim ---------------------------

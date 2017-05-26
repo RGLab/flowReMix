@@ -108,7 +108,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector unifVec, NumericVector normVec,
                                 NumericVector dispersion, bool betaDispersion,
                                 IntegerVector preAssignment,
-                                double randomAssignProb) {
+                                double randomAssignProb,
+                                NumericVector mprobs) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -170,7 +171,9 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       integratedDensities = computeIntegratedDensities(clusterDensities) ;
       if(m >= 1) {
         assignment[j] = 1 ;
-        priorProb = expit(sum(isingCoefs(j, _) * assignment)) ;
+        int nRespond = sum(assignment) ;
+        double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
+        priorProb = expit(sum(isingCoefs(j, _) * assignment) + multiadjust) ;
       } else {
         priorProb = 0.5 ;
       }

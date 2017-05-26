@@ -25,9 +25,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(c(1, 2, 3, 5, 4, 6, 7))
-selected_populations = c(c(1, 2, 5, 3, 6, 7))
-#selected_populations = c(c(1, 2, 5))
+selected_populations = c(1:14)
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -35,70 +33,56 @@ data$treatment <- as.numeric(data$stim == "env")
 data$ptid <- as.numeric(data$ptid)
 data$ptid[data$vaccine == "VACCINE"] <- data$ptid[data$vaccine == "VACCINE"] * 10^4
 data$prop <- data$count / data$parentcount
-data$population <- as.factor(data$populataion)
+data$population <- as.factor(data$population)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 data$treatment2 <- data$treatment
 
-preAssignment <- by(data, INDICES = data$ptid, preAssign)
-preAssignment <- do.call("rbind", preAssignment)
+control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
+                             nPosteriors = 2, centerCovariance = TRUE,
+                             maxDispersion = 10^3 / 2, minDispersion = 10^6,
+                             randomAssignProb = 0.2, intSampSize = 50,
+                             initMethod = "binom")
 
-vaccine <- as.numeric(by(data, data$ptid, function(x) x$vaccine[1] == "VACCINE"))
-system.time(fit <- subsetResponseMixtureRcpp(count ~  treatment,
-                                         sub.population = factor(data$population),
-                                         N = parentcount, id =  ptid,
-                                         treatment = treatment2,
-                                         data = data,
-                                         preAssignment = NULL,
-                                         randomAssignProb = 0.0,
-                                         weights = NULL,
-                                         updateLag = 8, nsamp = 30, maxIter = 16,
-                                         isingMethod = "sparse",
-                                         covarianceMethod = "dense",
-                                         regressionMethod = "betabinom",
-                                         centerCovariance = FALSE,
-                                         initMHcoef = 3,
-                                         dataReplicates = 2,
-                                         maxDispersion = 10^3))
-#save(fit, file = "dispersed model 2.Robj")
-#save(fit, file = "results/binom model.Robj")
-#save(fit, file = "results/dispersed model 2 wAssignment.Robj")
-#load("results/dispersed model 2 wAssignment.Robj")
-#save(fit, file = "dispersed model 3.Robj")
-#load(file = "dispersed model 4.Robj")
-#load(file = "data analysis/results/marginal independence model od.Robj")
-#save(fit, file = "marginal independence model od w covariance.Robj")
-#save(fit, file = "data analysis/results/marginal model od w ising4.Robj")
+fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+                 subject_id = ptid,
+                 cell_type = population,
+                 cluster_variable = treatment,
+                 data = data,
+                 covariance = "sparse",
+                 ising_model = "sparse",
+                 regression_method = "betabinom",
+                 iterations = 15,
+                 verbose = TRUE, control = control)
+#save(fit, file = "Data Analysis/results/RV144 marginals dispersed model new 2.Robj")
 
+## ROC ------------------
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
+ids <- factor(unique(data$ptid), levels = fit$posteriors$ptid)
 posteriors <- fit$posteriors
-posteriors$ptid <- as.numeric(as.character(posteriors$ptid))
-posteriors <- posteriors[order(posteriors$ptid), -1]
-par(mfrow = c(2, 3), mar = rep(3, 4))
-for(i in 1:length(selected_populations)) {
+vaccine <- vaccine[order(ids)]
+par(mfrow = c(4, 4), mar = rep(3, 4))
+aucs <- numeric(ncol(posteriors) - 1)
+for(i in 2:ncol(posteriors)) {
   rocfit <- roc(vaccine ~ posteriors[, i])
-  print(plot(rocfit, main = paste(leaves[selected_populations[i]], "- AUC", round(rocfit$auc, 3))))
+  print(plot(rocfit, main = paste(colnames(posteriors)[i], "- AUC", round(rocfit$auc, 3))))
+  aucs[i - 1] <- rocfit$auc
 }
+n0 <- sum(vaccine == 0)
+n1 <- sum(vaccine == 1)
+pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
+qvals <- p.adjust(pvals, method = "BY")
 
-par(mfrow = c(2, 3), mar = rep(3, 4))
-for(i in 1:length(selected_populations)) {
-  post <- posteriors[, i]
-  treatment <- vaccine[order(post)]
-  uniquePost <- sort(unique(post))
-  nominalFDR <- sapply(uniquePost, function(x) mean(post[post <= x]))
-  empFDR <- sapply(uniquePost, function(x) 1 - mean(vaccine[post <= x]))
-  power <- sapply(uniquePost, function(x) sum(vaccine[post <= x]) / sum(vaccine))
-  print(plot(nominalFDR, empFDR, type = "l", xlim = c(0, 1), ylim = c(0, 1), col = "red", main = leaves[selected_populations[i]]))
-  lines(nominalFDR, power, col = "blue", lty = 2)
-  abline(a = 0, b = 1)
-  legend('topright', col = c("red", "blue"), lty = 1:2,
-         legend = c("FDR", "power"))
-}
+# Scatter plots --------------------------
 
 forplot <- list()
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
+ids <- factor(unique(data$ptid), levels = fit$posteriors$ptid)
+posteriors <- fit$posteriors
+posteriors$ptid <- as.numeric(as.character(fit$posteriors$ptid))
+posteriors <- posteriors[order(posteriors$ptid), ]
 for(i in 1:length(selected_populations)) {
-  post <- posteriors[, i]
+  post <- posteriors[, i + 1]
   negprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "negctrl"]
   envprop <- log(data$count / data$parentcount)[data$population == leaves[selected_populations[i]] & data$stim == "env"]
   forplot[[i]] <- data.frame(subset = leaves[selected_populations[i]],
@@ -115,5 +99,25 @@ ggplot(forplot) +
   geom_abline(slope = 1, intercept = 0) +
   theme_bw() + scale_colour_gradientn(colours=rainbow(4))
 
+# Infection status ---------------
+data("rv144_correlates_data")
+vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
+correlates <- rv144_correlates_data
+correlates <- correlates[order(correlates$PTID), ]
+infection <- correlates$infect.y
+posteriors <- fit$posteriors
+posteriors$ptid <- as.numeric(as.character(fit$posteriors$ptid))
+posteriors <- posteriors[order(posteriors$ptid), ]
+par(mfrow = c(4, 4), mar = rep(3, 4))
+aucs <- numeric(ncol(posteriors) - 1)
+par(mfrow = c(4, 4), mar = rep(3, 4))
+for(i in 2:ncol(posteriors)) {
+  rocfit <- roc(infection[vaccine] ~ posteriors[vaccine, i])
+  print(plot(rocfit, main = paste(colnames(posteriors)[i], "- AUC", round(rocfit$auc, 3))))
+  aucs[i - 1] <- rocfit$auc
+}
 
+n0 <- sum(infect == "infected")
+n1 <- sum(infect == "non-infected")
+pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
 

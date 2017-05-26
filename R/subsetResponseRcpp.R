@@ -458,6 +458,13 @@ flowReMix <- function(formula,
   glmFits <- lapply(initialization, function(x) x$fit)
   nSubjects <- length(unique(dat$id))
   nSubsets <- length(glmFits)
+
+  if(isingMethod == "raIsing") {
+    modelprobs <- (1 + nSubsets)^-1 / choose(nSubsets, 0:nSubsets)
+  } else {
+    modelprobs <- rep(1, nSubsets + 1)
+  }
+
   estimatedRandomEffects <- lapply(initialization, function(x) x$randomEffects)
   estimatedRandomEffects <- lapply(estimatedRandomEffects, function(x) {
     if(length(x) < nSubjects) x <- c(x, sample(x, nSubjects - length(x), replace = TRUE))
@@ -641,7 +648,7 @@ flowReMix <- function(formula,
                                          unifVec, normVec,
                                          M, betaDispersion,
                                          as.integer(preAssignment[[i]]$assign),
-                                         randomAssignProb)
+                                         randomAssignProb, modelprobs)
 
       # Updating global posteriors
       iterPosteriors <- colMeans(assignmentMat)
@@ -725,18 +732,10 @@ flowReMix <- function(formula,
     assignmentList <- data.frame(assignmentList)
     names(assignmentList) <- names(dataByPopulation)
 
-    if(isingMethod == "sparse" & nSubsets > 2) {
-      tempfit <- NULL
-      try(tempfit <- IsingFit::IsingFit(assignmentList, AND = FALSE,
-                                     progressbar = FALSE, plot = FALSE))
-      if(!is.null(tempfit)) {
-        isingfit <- tempfit
-        isingtemp <- isingfit$weiadj
-        diag(isingtemp) <- isingfit$thresholds
-        isingtemp[isingtemp == Inf] <- 0
-        isingtemp[isingtemp == -Inf] <- 0
-        isingCoefs <- isingCoefs + (isingtemp - isingCoefs) / max(1, iter - updateLag)
-      }
+    if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
+      isingfit <- raIsing(assignmentList, AND = FALSE,
+                             modelprobs = modelprobs,
+                             minprob = 1 / nSubjects)
     } else if(isingMethod == "dense") {
       for(j in 1:nSubsets) {
         firth <- logistf::logistf(assignmentList[, j] ~ assignmentList[, -j],

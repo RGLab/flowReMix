@@ -52,8 +52,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // subsetAssignGibbs
-NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, NumericVector MHcoef, IntegerVector popInd, NumericVector unifVec, NumericVector normVec, NumericVector dispersion, bool betaDispersion, IntegerVector preAssignment, double randomAssignProb);
-RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP intSampSizeSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP, SEXP unifVecSEXP, SEXP normVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP preAssignmentSEXP, SEXP randomAssignProbSEXP) {
+NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, NumericVector MHcoef, IntegerVector popInd, NumericVector unifVec, NumericVector normVec, NumericVector dispersion, bool betaDispersion, IntegerVector preAssignment, double randomAssignProb, NumericVector mprobs);
+RcppExport SEXP flowReMix_subsetAssignGibbs(SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP intSampSizeSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP, SEXP unifVecSEXP, SEXP normVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP preAssignmentSEXP, SEXP randomAssignProbSEXP, SEXP mprobsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -76,7 +76,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type betaDispersion(betaDispersionSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type preAssignment(preAssignmentSEXP);
     Rcpp::traits::input_parameter< double >::type randomAssignProb(randomAssignProbSEXP);
-    rcpp_result_gen = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb));
+    Rcpp::traits::input_parameter< NumericVector >::type mprobs(mprobsSEXP);
+    rcpp_result_gen = Rcpp::wrap(subsetAssignGibbs(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs));
     return rcpp_result_gen;
 END_RCPP
 }
