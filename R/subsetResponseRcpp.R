@@ -297,8 +297,8 @@ flowReMix <- function(formula,
   }
 
   if(length(isingMethod) > 1) isingModel<- isingModel[1]
-  if(!(isingMethod %in% c("sparse", "dense", "none"))) {
-    stop("ising_model must be one of sparse, dense or none")
+  if(!(isingMethod %in% c("raIsing", "sparse", "dense", "none"))) {
+    stop("ising_model must be one of raIsing, sparse, dense or none")
   }
 
   if(length(regressionMethod) > 1) regressionMethod <- regressionMethod[1]

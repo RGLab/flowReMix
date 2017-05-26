@@ -49,7 +49,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  cluster_variable = treatment,
                  data = data,
                  covariance = "sparse",
-                 ising_model = "sparse",
+                 ising_model = "raIsing",
                  regression_method = "betabinom",
                  iterations = 15,
                  verbose = TRUE, control = control)
