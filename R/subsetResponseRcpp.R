@@ -533,11 +533,14 @@ flowReMix <- function(formula,
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
+
+    # Updating Regression Equation -------------------
     if(iter > 1) {
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
+      # Beta - Binomial Case
       if(betaDispersion) {
-        for(j in 1:nSubsets) {
+        glmFits <- foreach(j = 1:nSubsets) %dopar% {
           popdata <- dataByPopulation[[j]]
           if(class(glmFits[[j]])[[1]] == "gamlss") {
             startFrom <- glmFits[[j]]
@@ -546,12 +549,18 @@ flowReMix <- function(formula,
           }
           tempfit <- NULL
           try(capture.output(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
-          family = gamlss.dist::BB, data = popdata, start.from = startFrom)))
+                                                       family = gamlss.dist::BB, data = popdata,
+                                                       start.from = startFrom)))
           if(is.null(tempfit)) {
-            try(glmFits[[j]] <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
+            try(fit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
           } else {
-            glmFits[[j]] <- tempfit
-            rho <- exp(tempfit$sigma.coefficients)
+            fit <- tempfit
+          }
+          return(fit)
+        }
+        for(j in 1:nSubsets) {
+          if(class(glmFits[[j]])[[1]] == "gamlss") {
+            rho <- exp(glmFits[[j]]$sigma.coefficients)
             M[j] <- max((1 - rho) / rho, minDispersion)
           }
         }

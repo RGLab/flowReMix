@@ -38,7 +38,7 @@ data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 data$treatment2 <- data$treatment
 
 control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
-                             nPosteriors = 2, centerCovariance = TRUE,
+                             nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3 / 2, minDispersion = 10^6,
                              randomAssignProb = 0.2, intSampSize = 50,
                              initMethod = "binom")
