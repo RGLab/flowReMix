@@ -565,24 +565,30 @@ flowReMix <- function(formula,
           }
         }
       } else if(smallCounts) {
-        glmFits <- lapply(dataByPopulation, function(popdata) {
-          X <- NULL
+        tempFits <- foreach(j = 1:nSubsets) %dopar% {
+          popdata <- dataByPopulation[[j]]
           try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
           y <- cbind(popdata$N - popdata$y, popdata$y)
           fit <- NULL
           try(fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
-                                   offset = popdata$randomOffset))
-          if(is.null(fit)) {
-            print("hello!")
-          }
-        })
-        } else {
+                                       offset = popdata$randomOffset))
+          return(fit)
+        }
         for(j in 1:nSubsets) {
+          if(!is.null(tempFits[[j]])) {
+            glmFits[[j]] <- tempFits[[j]]
+          }
+        }
+      } else {
+        tempFits <- foreach(j = 1:nSubsets) %dopar% {
           tempfit <- NULL
           try(tempfit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
-          if(!is.null(tempfit)) {
-            glmFits[[j]] <- tempfit
+          return(tempfit)
+        }
+        for(j in 1:nSubsets) {
+          if(!is.null(tempFits[[j]])) {
+            glmFits[[j]] <- tempFits[[j]]
           }
         }
       }

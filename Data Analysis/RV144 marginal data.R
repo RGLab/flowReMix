@@ -50,7 +50,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  data = data,
                  covariance = "sparse",
                  ising_model = "raIsing",
-                 regression_method = "betabinom",
+                 regression_method = "sparse",
                  iterations = 15,
                  verbose = TRUE, control = control)
 #save(fit, file = "Data Analysis/results/RV144 marginals dispersed model new 2.Robj")
