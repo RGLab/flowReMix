@@ -647,15 +647,14 @@ flowReMix <- function(formula,
     MHattempts <- rep(0, nSubsets)
     MHsuccess <- rep(0, nSubsets)
     # S-step
-    for(i in 1:nSubjects) {
+    # Gibbs Sampling -------------------
+    assignmentList <- foreach(i = 1:nSubjects) %dopar% {
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       N <- subjectData$N
       y <- subjectData$y
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
-
-      # Gibbs sampler for cluster assignments
       unifVec <- runif(nsamp * nSubsets)
       normVec <- rnorm(intSampSize)
       assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
@@ -667,20 +666,33 @@ flowReMix <- function(formula,
                                          M, betaDispersion,
                                          as.integer(preAssignment[[i]]$assign),
                                          randomAssignProb, modelprobs)
+      return(assignmentMat)
+    }
 
-      # Updating global posteriors
+    for(i in 1:nSubjects) {
+      assignmentMat <- assignmentList[[i]]
       iterPosteriors <- colMeans(assignmentMat)
       posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
-      assignmentList[[i]] <- assignmentMat
+    }
 
-      # MH sampler for random effects
+    # MH sampler for random effects ----------------
+    MHresult <- foreach(i = 1:nSubjects) %dopar% {
+      subjectData <- databyid[[i]]
+      popInd <- subjectData$subpopInd
+      N <- subjectData$N
+      y <- subjectData$y
+      prop <- y/N
+
       unifVec <- runif(nsamp * nSubsets)
       eta <- subjectData$nullEta
       responderSubset <- popInd %in% which(clusterAssignments[i, ] == 1)
       eta[responderSubset] <- subjectData$altEta[responderSubset]
       assignment <- as.vector(clusterAssignments[i, ])
       randomEst <- as.numeric(estimatedRandomEffects[i, ])
+
+      MHattempts <- rep(0, nSubsets)
+      MHsuccess <- rep(0, nSubsets)
       randomMat <- randomEffectCoordinateMH(y, N,
                                             as.integer(i), nsamp, nSubsets,
                                             MHcoef,
@@ -693,9 +705,16 @@ flowReMix <- function(formula,
                                             unifVec,
                                             M, betaDispersion,
                                             keepEach)
-      randomEst <- randomMat[nrow(randomMat), ]
-      randomList[[i]] <- randomMat
+      return(list(rand = randomMat, rate = MHsuccess / MHattempts))
+    }
+    MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
+    randomList <- lapply(MHresult, function(x) x$rand)
 
+    for(i in 1:nSubjects) {
+      subjectData <- databyid[[i]]
+      popInd <- subjectData$subpopInd
+      randomMat <- randomList[[i]]
+      randomEst <- randomMat[nrow(randomMat), ]
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
       estimatedRandomEffects[i, ] <- (1 - iterweight) * currentRandomEst + iterweight * (colMeans(randomMat) - currentRandomEst)
@@ -713,7 +732,7 @@ flowReMix <- function(formula,
       databyid[[i]] <- subjectData
     }
 
-    # Updating Covariance
+    # Updating Covariance -------------------------
     randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
@@ -733,7 +752,7 @@ flowReMix <- function(formula,
       }
     }
 
-    # Updating ising
+    # Updating Ising -----------------------
     if(iter == maxIter) {
       exportAssignment <- assignmentList
       names(exportAssignment) <- names(databyid)
@@ -780,10 +799,10 @@ flowReMix <- function(formula,
     }
     levelProbs <- colMeans(posteriors)
 
-    # Updating MH coefficient
+    # Updating MH coefficient ----------------
     ratevec <- numeric(nSubsets)
     for(j in 1:nSubsets) {
-      MHrate <- MHsuccess[j] / MHattempts[j]
+      MHrate <- MHrates[j]
       ratevec[j] <- MHrate
       if(MHrate > .285) {
         MHcoef[j] <- MHcoef[j] * 1.5
