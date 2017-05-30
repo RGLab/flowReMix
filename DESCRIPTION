@@ -18,4 +18,5 @@ Imports: Rcpp,
     logistf,
     snowfall
 Suggests: ggplot2
+Depends: foreach
 RoxygenNote: 6.0.1

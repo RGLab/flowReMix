@@ -25,7 +25,7 @@ par(mfrow = c(1, 1), mar = rep(4, 4))
 data <- rv144
 data <- subset(data, !(ptid %in% omit))
 leaves <- unique(data$population)
-selected_populations = c(1:14)
+selected_populations = c(1:7)
 data <- subset(data, population %in% leaves[selected_populations])
 data$population <- factor(data$population)
 data <- subset(data, stim != "sebctrl")
@@ -61,7 +61,7 @@ vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1
 ids <- factor(unique(data$ptid), levels = fit$posteriors$ptid)
 posteriors <- fit$posteriors
 vaccine <- vaccine[order(ids)]
-par(mfrow = c(4, 4), mar = rep(3, 4))
+par(mfrow = c(3, 3), mar = rep(3, 4))
 aucs <- numeric(ncol(posteriors) - 1)
 for(i in 2:ncol(posteriors)) {
   rocfit <- roc(vaccine ~ posteriors[, i])
@@ -74,7 +74,6 @@ pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
 qvals <- p.adjust(pvals, method = "BY")
 
 # Scatter plots --------------------------
-
 forplot <- list()
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
 ids <- factor(unique(data$ptid), levels = fit$posteriors$ptid)
@@ -110,7 +109,7 @@ posteriors$ptid <- as.numeric(as.character(fit$posteriors$ptid))
 posteriors <- posteriors[order(posteriors$ptid), ]
 par(mfrow = c(4, 4), mar = rep(3, 4))
 aucs <- numeric(ncol(posteriors) - 1)
-par(mfrow = c(4, 4), mar = rep(3, 4))
+par(mfrow = c(3, 3), mar = rep(3, 4))
 for(i in 2:ncol(posteriors)) {
   rocfit <- roc(infection[vaccine] ~ posteriors[vaccine, i])
   print(plot(rocfit, main = paste(colnames(posteriors)[i], "- AUC", round(rocfit$auc, 3))))
@@ -120,4 +119,23 @@ for(i in 2:ncol(posteriors)) {
 n0 <- sum(infect == "infected")
 n1 <- sum(infect == "non-infected")
 pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
+
+
+# Testing isotonic regression -----------
+assignments <- fit$assignmentList
+names(assignments) <- sapply(names(assignments), function(x) strsplit(x, "%%%")[[1]][[1]])
+assignments <- lapply(unique(names(assignments)), function(x) {
+  do.call("rbind", assignments[names(assignments) == x])
+})
+
+samp <- do.call("rbind", assignments)
+samp <- rowSums(samp)
+mle <- table(samp)
+mle <- mle / sum(mle)
+pone <- sort(mle, decreasing = TRUE)
+pone <- pone / sum(pone)
+plot(diff(log(pone)))
+
+
+
 

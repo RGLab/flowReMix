@@ -18,6 +18,7 @@ binomDensity <- function(v, prop, N, eta) {
 logit <- function(p) log(p / (1 - p))
 
 updateCoefs <- function(coef, fit, iter, updateLag, rate, flag) {
+  iterweight <- 1 / max(iter - updateLag + 1, 1)
   if(flag > 0 & flag <= 2) {
     coef <- c(coef[1], rep(0, length(coef) - 1))
     return(coef)
@@ -29,7 +30,7 @@ updateCoefs <- function(coef, fit, iter, updateLag, rate, flag) {
     update <- as.numeric(coef(fit))
   }
   notna <- !is.na(update)
-  coef[notna] <- coef[notna] + (update[notna] - coef[notna])/max(iter - updateLag, 1)^rate
+  coef[notna] <- (1 - iterweight) * coef[notna] + iterweight * update[notna]
   return(coef)
 }
 
@@ -526,6 +527,8 @@ flowReMix <- function(formula,
 
   # Starting analysis -------------------------------
   for(iter in 1:maxIter) {
+    iterweight <- 1 / max(iter - updateLag + 1, 1)
+
     # Refitting Model with current random effects/assignments
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
@@ -578,7 +581,7 @@ flowReMix <- function(formula,
                                 iter, updateLag, rate, flagEquation,
                                 SIMPLIFY = FALSE)
     }
-    M <- oldM + (M - oldM) / max(1, iter - updateLag)
+    M <- (1 - iterweight) * oldM + iterweight * M
 
     # Updating Prediction
     for(j in 1:length(dataByPopulation)) {
@@ -611,8 +614,8 @@ flowReMix <- function(formula,
         nullEta <- 0
         altEta <- 0
       }
-      dataByPopulation[[j]]$nullEta <- nullEta + (newNullEta - nullEta)/max(iter - updateLag, 1)^rate
-      dataByPopulation[[j]]$altEta <- altEta + (newAltEta - altEta)/max(iter - updateLag, 1)^rate
+      dataByPopulation[[j]]$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
+      dataByPopulation[[j]]$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
     }
 
     databyid <- do.call("rbind", dataByPopulation)
@@ -652,7 +655,7 @@ flowReMix <- function(formula,
 
       # Updating global posteriors
       iterPosteriors <- colMeans(assignmentMat)
-      posteriors[i, ] <- posteriors[i, ] + (iterPosteriors - posteriors[i, ])/max(iter - updateLag, 1)
+      posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
       assignmentList[[i]] <- assignmentMat
 
@@ -680,7 +683,7 @@ flowReMix <- function(formula,
 
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
-      estimatedRandomEffects[i, ] <- currentRandomEst + (colMeans(randomMat) - currentRandomEst) / max(iter - updateLag, 1)
+      estimatedRandomEffects[i, ] <- (1 - iterweight) * currentRandomEst + iterweight * (colMeans(randomMat) - currentRandomEst)
 
       # preparing data for glm
       subjectData$randomOffset[1:length(popInd)] <- as.numeric(randomEst[popInd])
@@ -733,9 +736,17 @@ flowReMix <- function(formula,
     names(assignmentList) <- names(dataByPopulation)
 
     if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
+      if(isingMethod == "raIsing") {
+        # UPDATING PRIOR MODEL SIZE PROBABILITIES
+        tempprobs <- estimateMonotoneProbs(assignmentList, method = "arrange")
+        modelprobs <- (1 - iterweight) * modelprobs + iterweight * tempprobs
+        #modelprobs <- 0.5 ^ (3 * 0:nSubsets)
+        modelprobs <- modelprobs / sum(modelprobs)
+      }
       isingfit <- raIsing(assignmentList, AND = FALSE,
                              modelprobs = modelprobs,
                              minprob = 1 / nSubjects)
+      isingCoefs <- isingfit
     } else if(isingMethod == "dense") {
       for(j in 1:nSubsets) {
         firth <- logistf::logistf(assignmentList[, j] ~ assignmentList[, -j],
@@ -744,7 +755,7 @@ flowReMix <- function(formula,
         intercept <- firth[1]
         firth[-j] <- firth[-1]
         firth[j] <- intercept
-        isingCoefs[j, ] <- isingCoefs[j, ] + (firth - isingCoefs[j, ]) /  max(1, iter - updateLag)
+        isingCoefs[j, ] <- (1 - iterweight) * isingCoefs[j, ] + iterweight * firth
       }
     } else {
       levelProbabilities <- colMeans(assignmentList)
@@ -775,6 +786,8 @@ flowReMix <- function(formula,
       print(c(iter, levelP = levelProbs))
       if(regression_method == "betabinom") print(c(M = M))
       print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
+      print(modelprobs)
+      print(diff(log(modelprobs)))
     }
   }
 
