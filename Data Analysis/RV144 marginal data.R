@@ -41,10 +41,8 @@ control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3 / 2, minDispersion = 10^6,
                              randomAssignProb = 0.2, intSampSize = 50,
-                             initMethod = "binom")
+                             initMethod = "binom", ncores = 3)
 
-stopImplicitCluster()
-registerDoParallel(1)
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + age + gender,
                  subject_id = ptid,
                  cell_type = population,
@@ -52,8 +50,8 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + age
                  data = data,
                  covariance = "sparse",
                  ising_model = "raIsing",
-                 regression_method = "binom",
-                 iterations = 5,
+                 regression_method = "betabinom",
+                 iterations = 5, parallel = TRUE,
                  verbose = TRUE, control = control))
 #save(fit, file = "Data Analysis/results/RV144 marginals dispersed model new 2.Robj")
 

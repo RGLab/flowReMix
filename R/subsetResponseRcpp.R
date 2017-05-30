@@ -243,7 +243,7 @@ flowReMix <- function(formula,
                       covariance = c("sparse", "dense", "diagonal"),
                       ising_model = c("sparse", "dense", "none"),
                       regression_method = c("binom", "betabinom", "sparse"),
-                      iterations = 10, verbose = TRUE,
+                      iterations = 10, parallel = TRUE, verbose = TRUE,
                       control = NULL) {
   # Getting control variables -------------------
   if(is.null(control)) {
@@ -262,6 +262,25 @@ flowReMix <- function(formula,
   initMHcoef <- control$initMHcoef
   keepEach <- control$keepEach
   initMethod <- control$initMethod
+  ncores <- control$ncores
+
+  if(parallel) {
+    if(is.null(ncores)) {
+      doParallel::registerDoParallel()
+    } else {
+      doParallel::registerDoParallel(ncores)
+    }
+  } else {
+    foreach::registerDoSEQ()
+  }
+
+  ncores <- foreach::getDoParWorkers()
+  if(ncores == 1) {
+    message("Estimating model via sequential computation")
+  } else {
+    message(paste("Computing in parallel on", ncores, "cores"))
+  }
+
   if(is.null(initMethod)) {
     if(regression_method == "sparse") {
       initMethod <- "sparse"
@@ -446,7 +465,10 @@ flowReMix <- function(formula,
 
   # Initializing covariates and random effects------------------
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
-  initialization <- lapply(dataByPopulation, initializeModel, formula = initFormula, method = initMethod)
+  initialization <- foreach(j = 1:length(dataByPopulation)) %dopar% {
+    initializeModel(dataByPopulation[[j]], initFormula, initMethod)
+  }
+
   isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
@@ -858,6 +880,10 @@ flowReMix <- function(formula,
   result$dispersion <- M
   result$assignmentList <- exportAssignment
   class(result) <- "flowReMix"
+
+  if(parallel) {
+    stopImplicitCluster()
+  }
   return(result)
 }
 
