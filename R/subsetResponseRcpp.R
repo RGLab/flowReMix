@@ -668,9 +668,8 @@ flowReMix <- function(formula,
     assignListLength <- 0
     MHattempts <- rep(0, nSubsets)
     MHsuccess <- rep(0, nSubsets)
-    # S-step
-    # Gibbs Sampling -------------------
-    assignmentList <- foreach(i = 1:nSubjects) %dopar% {
+    # S-step ------------------------------
+    MHresult <- foreach(i = 1:nSubjects) %dopar% {
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       N <- subjectData$N
@@ -688,29 +687,12 @@ flowReMix <- function(formula,
                                          M, betaDispersion,
                                          as.integer(preAssignment[[i]]$assign),
                                          randomAssignProb, modelprobs)
-      return(assignmentMat)
-    }
-
-    for(i in 1:nSubjects) {
-      assignmentMat <- assignmentList[[i]]
-      iterPosteriors <- colMeans(assignmentMat)
-      posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
-      clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
-    }
-
-    # MH sampler for random effects ----------------
-    MHresult <- foreach(i = 1:nSubjects) %dopar% {
-      subjectData <- databyid[[i]]
-      popInd <- subjectData$subpopInd
-      N <- subjectData$N
-      y <- subjectData$y
-      prop <- y/N
 
       unifVec <- runif(nsamp * nSubsets)
       eta <- subjectData$nullEta
-      responderSubset <- popInd %in% which(clusterAssignments[i, ] == 1)
+      assignment <- as.vector(assignmentMat[nrow(assignmentMat), ])
+      responderSubset <- popInd %in% which(assignment == 1)
       eta[responderSubset] <- subjectData$altEta[responderSubset]
-      assignment <- as.vector(clusterAssignments[i, ])
       randomEst <- as.numeric(estimatedRandomEffects[i, ])
 
       MHattempts <- rep(0, nSubsets)
@@ -727,12 +709,20 @@ flowReMix <- function(formula,
                                             unifVec,
                                             M, betaDispersion,
                                             keepEach)
-      return(list(rand = randomMat, rate = MHsuccess / MHattempts))
+      return(list(assign = assignmentMat, rand = randomMat,
+                  rate = MHsuccess / MHattempts))
     }
+
+    assignmentList <- lapply(MHresult, function(x) x$assign)
     MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
     randomList <- lapply(MHresult, function(x) x$rand)
 
     for(i in 1:nSubjects) {
+      assignmentMat <- assignmentList[[i]]
+      iterPosteriors <- colMeans(assignmentMat)
+      posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
+      clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
+
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       randomMat <- randomList[[i]]

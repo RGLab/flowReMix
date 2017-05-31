@@ -41,7 +41,7 @@ control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3 / 2, minDispersion = 10^6,
                              randomAssignProb = 0.2, intSampSize = 50,
-                             initMethod = "binom", ncores = 3)
+                             initMethod = "binom", ncores = NULL)
 
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + age + gender,
                  subject_id = ptid,
