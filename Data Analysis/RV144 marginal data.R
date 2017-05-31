@@ -51,7 +51,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + age
                  covariance = "sparse",
                  ising_model = "raIsing",
                  regression_method = "betabinom",
-                 iterations = 5, parallel = TRUE,
+                 iterations = 5, parallel = FALSE,
                  verbose = TRUE, control = control))
 #save(fit, file = "Data Analysis/results/RV144 marginals dispersed model new 2.Robj")
 
