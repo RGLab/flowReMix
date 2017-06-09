@@ -16,7 +16,7 @@ findGren  <-  function(p) {
   if(length(hpairs) == 2){
     hpairs <-	matrix(hpairs, 1, 2)
   } else 	{
-    hpairs <-	hpairs[order(hpairs[,1]),]
+    hpairs <-	hpairs[order(hpairs[, 1]), ]
   }
 
   s.num <- pts[hpairs[, 1], 2] - pts[hpairs[, 2], 2]
@@ -24,7 +24,7 @@ findGren  <-  function(p) {
   slopes <- s.num / s.denom
   h.hat <- numeric()
   for(i in 1:length(slopes)){
-    h.hat	<- c(h.hat, rep(slopes[i], hpairs[i, 1 ] - hpairs[i, 2]))
+    h.hat	<- c(h.hat, rep(slopes[i], hpairs[i, 1] - hpairs[i, 2]))
   }
 
   return(h.hat)
