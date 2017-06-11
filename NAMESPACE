@@ -2,7 +2,7 @@
 
 export(computeGraphAUC)
 export(flowReMix)
-export(flowReMixP)
 export(flowReMix_control)
+export(vecBetaBinomDens)
 importFrom(Rcpp,sourceCpp)
 useDynLib(flowReMix)

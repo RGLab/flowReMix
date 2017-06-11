@@ -9,6 +9,10 @@ zero <- function(accept) {
     .Call('flowReMix_zero', PACKAGE = 'flowReMix', accept)
 }
 
+vecBetaBinomDens <- function(count, N, prob, M) {
+    .Call('flowReMix_vecBetaBinomDens', PACKAGE = 'flowReMix', count, N, prob, M)
+}
+
 setNumericVectorToZero <- function(x) {
     invisible(.Call('flowReMix_setNumericVectorToZero', PACKAGE = 'flowReMix', x))
 }

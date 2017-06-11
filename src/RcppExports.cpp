@@ -41,6 +41,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// vecBetaBinomDens
+NumericVector vecBetaBinomDens(NumericVector count, NumericVector N, NumericVector prob, double M);
+RcppExport SEXP flowReMix_vecBetaBinomDens(SEXP countSEXP, SEXP NSEXP, SEXP probSEXP, SEXP MSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type count(countSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type N(NSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type prob(probSEXP);
+    Rcpp::traits::input_parameter< double >::type M(MSEXP);
+    rcpp_result_gen = Rcpp::wrap(vecBetaBinomDens(count, N, prob, M));
+    return rcpp_result_gen;
+END_RCPP
+}
 // setNumericVectorToZero
 void setNumericVectorToZero(NumericVector x);
 RcppExport SEXP flowReMix_setNumericVectorToZero(SEXP xSEXP) {

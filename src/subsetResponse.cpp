@@ -48,6 +48,18 @@ double betaBinomDens(int count, int N, double prob, double M) {
   return logdens ;
 }
 
+// [[Rcpp::export]]
+NumericVector vecBetaBinomDens(NumericVector count, NumericVector N,
+                               NumericVector prob, double M) {
+  NumericVector logdens(count.length()) ;
+  for(int i = 0 ; i < count.length() ; i++) {
+    logdens[i] = betaBinomDens(count[i], N[i], prob[i], M) ;
+  }
+
+  return logdens ;
+}
+
+
 NumericVector computeBinomDensity(NumericVector subsetCount,
                                   NumericVector subsetN,
                                   NumericMatrix randomEta,
