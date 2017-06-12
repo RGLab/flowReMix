@@ -60,15 +60,15 @@ infection <- correlates$infect.y
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 13, nsamp = 100, initMHcoef = 1,
-                             nPosteriors = 3, centerCovariance = TRUE,
+control <- flowReMix_control(updateLag = 5, nsamp = 100, initMHcoef = 1,
+                             nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^6,
                              randomAssignProb = 0.2, intSampSize = 50,
                              initMethod = "binom")
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = treatment,
@@ -76,9 +76,10 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "betabinom",
-                 iterations = 20,
-                 cluster_assignment = preAssignment,
-                 verbose = TRUE, control = control)
+                 iterations = 10,
+                 cluster_assignment = NULL,
+                 parallel = TRUE,
+                 verbose = TRUE, control = control))
 #load(file = "data analysis/results/boolean dispersed fit7.Robj")
 
 # ROC for vaccinations -----------------------------
@@ -187,7 +188,7 @@ forplot <- do.call("rbind", forplot)
 forplot <- merge(forplot, infectDat, all.x = TRUE, by.x = "ptid", by.y = "ptid")
 require(ggplot2)
 ggplot(forplot) +
-        geom_point(aes(x = negprop, y = envprop, col = infect, shape = vaccine == 1)) +
+        geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine == 1)) +
         facet_wrap(~ subset, scales = 'free', ncol = 6) +
         geom_abline(slope = 1, intercept = 0) +
         theme_bw() + scale_colour_gradientn(colours=rainbow(4))
@@ -200,6 +201,21 @@ ggplot(forplot) +
 # pdf("figures/cell subset table B.pdf", height = 8, width = 6)
 # grid.table(table, rows = NULL)
 # dev.off()
+
+# Testing Screening Procedure -------------------
+nSubsets <- length(fit$coefficients)
+nSubjects <- length(fit$assignmentList)
+likratios <- numeric(nSubsets)
+for(j in 1:nSubsets) {
+  counts <- sapply(fit$assignmentList, function(x) sum(x[, j]))
+  N <- sapply(fit$assignmentList, function(x) length(x[, j]))
+  probs <- counts / N
+  nullprob <- mean(probs)
+  likratios[j] <- 2 * (sum(dbinom(counts, N, probs, log = TRUE)) - sum(dbinom(counts, N, nullprob, log = TRUE)))
+}
+pvals <- pchisq(likratios, df = nSubjects - 1, lower.tail = FALSE)
+which(p.adjust(pvals > 0.05, method = "bonferroni"))
+
 
 
 # Stability selection for graphical model ------------------------

@@ -11,8 +11,6 @@ LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
 Imports: Rcpp,
     glmnet,
-    gamlss,
-    IsingFit,
     data.table,
     PDSCE,
     logistf,

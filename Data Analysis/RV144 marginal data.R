@@ -49,9 +49,9 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + age
                  cluster_variable = treatment,
                  data = data,
                  covariance = "sparse",
-                 ising_model = "raIsing",
+                 ising_model = "sparse",
                  regression_method = "betabinom",
-                 iterations = 5, parallel = TRUE,
+                 iterations = 15, parallel = TRUE,
                  verbose = TRUE, control = control))
 #save(fit, file = "Data Analysis/results/RV144 marginals dispersed model new 2.Robj")
 
@@ -120,6 +120,18 @@ n0 <- sum(infect == "infected")
 n1 <- sum(infect == "non-infected")
 pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
 
+# Testing Screening Procedure -------------------
+nSubsets <- length(fit$coefficients)
+nSubjects <- length(fit$assignmentList)
+likratios <- numeric(nSubsets)
+for(j in 1:nSubsets) {
+  counts <- sapply(fit$assignmentList, function(x) sum(x[, j]))
+  N <- sapply(fit$assignmentList, function(x) length(x[, j]))
+  probs <- counts / N
+  nullprob <- mean(probs)
+  likratios[j] <- 2 * (sum(dbinom(counts, N, probs, log = TRUE)) - sum(dbinom(counts, N, nullprob, log = TRUE)))
+}
+pchisq(likratios, df = nSubjects - 1, lower.tail = FALSE)
 
 # Testing isotonic regression -----------
 assignments <- fit$assignmentList
