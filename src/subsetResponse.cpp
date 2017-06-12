@@ -36,15 +36,19 @@ NumericMatrix computeRandomEta(NumericVector eta, NumericVector vsample) {
 double betaBinomDens(int count, int N, double prob, double M) {
   double a = M * prob ;
   double b = M * (1 - prob) ;
-  double logdens = std::lgamma(N  + 1) ;
-  logdens += std::lgamma(count + a) ;
-  logdens += std::lgamma(N - count + b) ;
-  logdens += std::lgamma(a + b) ;
-  logdens -= std::lgamma(count + 1) ;
-  logdens -= std::lgamma(N - count + 1) ;
-  logdens -= std:: lgamma(N + a + b) ;
-  logdens -= std::lgamma(a) ;
-  logdens -= std::lgamma(b) ;
+  // double logdens = std::lgamma(N  + 1) ;
+  // logdens += std::lgamma(count + a) ;
+  // logdens += std::lgamma(N - count + b) ;
+  // logdens += std::lgamma(a + b) ;
+  // logdens -= std::lgamma(count + 1) ;
+  // logdens -= std::lgamma(N - count + 1) ;
+  // logdens -= std:: lgamma(N + a + b) ;
+  // logdens -= std::lgamma(a) ;
+  // logdens -= std::lgamma(b) ;
+
+  double logdens = R::lchoose(N, count) ;
+  logdens += R::lbeta(count + a, N - count + b) ;
+  logdens -= R::lbeta(a, b) ;
   return logdens ;
 }
 

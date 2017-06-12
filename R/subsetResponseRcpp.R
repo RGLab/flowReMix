@@ -564,15 +564,8 @@ flowReMix <- function(formula,
       if(betaDispersion) {
         glmFits <- foreach(j = 1:nSubsets) %dopar% {
           popdata <- dataByPopulation[[j]]
-          if(class(glmFits[[j]])[[1]] == "gamlss") {
-            startFrom <- glmFits[[j]]
-          } else {
-            startFrom <- NULL
-          }
           tempfit <- NULL
-          try(capture.output(tempfit <- gamlss::gamlss(formula = glmformula, weights = weights,
-                                                       family = gamlss.dist::BB, data = popdata,
-                                                       start.from = startFrom)))
+          try(tempfit <- BBreg(popdata, glmformula, weights))
           if(is.null(tempfit)) {
             try(fit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
           } else {
@@ -581,9 +574,8 @@ flowReMix <- function(formula,
           return(fit)
         }
         for(j in 1:nSubsets) {
-          if(class(glmFits[[j]])[[1]] == "gamlss") {
-            rho <- exp(glmFits[[j]]$sigma.coefficients)
-            M[j] <- max((1 - rho) / rho, minDispersion)
+          if(class(glmFits[[j]])[1] == "bbreg") {
+            M[j] <- max(glmFits[[j]]$M, minDispersion)
           }
         }
       } else if(smallCounts) {
@@ -872,7 +864,7 @@ flowReMix <- function(formula,
   class(result) <- "flowReMix"
 
   if(parallel) {
-    stopImplicitCluster()
+    doParallel::stopImplicitCluster()
   }
   return(result)
 }
