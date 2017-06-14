@@ -43,10 +43,11 @@
                                randomAssignProb = 0.000001, intSampSize = 50,
                                initMethod = "binom", ncores = NULL)
 
-  system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+  data$stim <- factor(data$stim, levels = c("negctrl", "env"))
+  system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                    subject_id = ptid,
                    cell_type = population,
-                   cluster_variable = treatment,
+                   cluster_variable = stim,
                    data = data,
                    covariance = "sparse",
                    ising_model = "sparse",

@@ -751,7 +751,11 @@ flowReMix <- function(formula,
         if(clusterAssignments[i, j] == 1) {
           subjectData$treatmentvar[popInd == j] <- subjectData$tempTreatment[popInd == j]
         } else {
-          subjectData$treatmentvar[popInd == j] <- 0
+          if(is.factor(subjectData$treatmentvar)) {
+            subjectData$treatmentvar[popInd == j] <- baseline
+          } else {
+            subjectData$treatmentvar[popInd == j] <- 0
+          }
         }
       }
       databyid[[i]] <- subjectData
