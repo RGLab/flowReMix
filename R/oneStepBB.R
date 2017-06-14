@@ -83,7 +83,9 @@ evalBB <- function(param, y, N, X, offset, weights) {
   return(-sum(vecBetaBinomDens(y, N, mu, M) * weights))
 }
 
-predict.bbreg <- function(object) {
-
+dispersionMLE <- function(y, N, mu) {
+  rho <- optimize(f = function(rho) sum(vecBetaBinomDens(y, N, mu, (1 - rho) / rho)),
+                  interval = c(0, 1), maximum = TRUE, tol = 10^-6)$maximum
+  M <- (1 - rho) / rho
+  return(M)
 }
-

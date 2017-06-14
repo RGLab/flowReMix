@@ -263,6 +263,7 @@ flowReMix <- function(formula,
   keepEach <- control$keepEach
   initMethod <- control$initMethod
   ncores <- control$ncores
+  isingInit <- control$isingInit
 
   if(parallel) {
     if(is.null(ncores)) {
@@ -331,7 +332,7 @@ flowReMix <- function(formula,
     betaDispersion <- TRUE
   } else {
     smallCounts <- TRUE
-    betaDispersion <- FALSE
+    betaDispersion <- TRUE
   }
 
   if(length(covarianceMethod) > 1) covarianceMethod <- covarianceMethod[1]
@@ -539,6 +540,7 @@ flowReMix <- function(formula,
 
   clusterDensities <- matrix(nrow = 2, ncol = intSampSize)
   isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
+  diag(isingCoefs) <- isingInit
   if(betaDispersion) {
     M <- rep(minDispersion, nSubsets)
   } else {
@@ -561,8 +563,11 @@ flowReMix <- function(formula,
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
       # Beta - Binomial Case
-      if(betaDispersion) {
+      if(betaDispersion & !smallCounts) {
         glmFits <- foreach(j = 1:nSubsets) %dopar% {
+          if(sum(clusterAssignments[, j]) < 3) {
+            return(glmFits[[j]])
+          }
           popdata <- dataByPopulation[[j]]
           tempfit <- NULL
           try(tempfit <- BBreg(popdata, glmformula, weights))
@@ -580,6 +585,9 @@ flowReMix <- function(formula,
         }
       } else if(smallCounts) {
         tempFits <- foreach(j = 1:nSubsets) %dopar% {
+          if(sum(clusterAssignments[, j]) < 3) {
+            return(glmFits[[j]])
+          }
           popdata <- dataByPopulation[[j]]
           try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
@@ -587,15 +595,27 @@ flowReMix <- function(formula,
           fit <- NULL
           try(fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
                                        offset = popdata$randomOffset))
+          if(!is.null(fit)) {
+            eta <- predict(fit, newx = X, offset = popdata$randomOffset, s = "lambda.min")
+            mu <- 1 / (1 + exp(-eta))
+            N <- popdata$N
+            y <- popdata$y
+            M <- dispersionMLE(y, N, mu)
+            fit$M <- M
+          }
           return(fit)
         }
         for(j in 1:nSubsets) {
           if(!is.null(tempFits[[j]])) {
             glmFits[[j]] <- tempFits[[j]]
+            M[j] <- tempFits[[j]]$M
           }
         }
       } else {
         tempFits <- foreach(j = 1:nSubsets) %dopar% {
+          if(sum(clusterAssignments[, j]) < 3) {
+            return(glmFits[[j]])
+          }
           tempfit <- NULL
           try(tempfit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
           return(tempfit)
@@ -617,7 +637,8 @@ flowReMix <- function(formula,
       coefs <- coefficientList[[j]]
       coefs <- coefs[!is.na(coefs)]
       if(is.factor(dataByPopulation[[j]]$treatmentvar)) {
-        dataByPopulation[[j]]$treatmentvar <- factor(0, levels = levels(dataByPopulation[[j]]$tempTreatment))
+        baseline <- levels(dataByPopulation[[j]]$tempTreatment)[1]
+        dataByPopulation[[j]]$treatmentvar <- factor(baseline, levels = levels(dataByPopulation[[j]]$tempTreatment))
       } else {
         dataByPopulation[[j]]$treatmentvar <- 0
       }
@@ -763,13 +784,6 @@ flowReMix <- function(formula,
     }
     assignmentList <- do.call("rbind",assignmentList)
     unscrambled <- assignmentList
-    for(j in 1:ncol(assignmentList)) {
-      if(mean(assignmentList[, j]) < 0.01) {
-        assignmentList[, j] <- rbinom(nrow(assignmentList), 1, 0.01)
-      } else if(mean(assignmentList[, j]) > 0.99) {
-        assignmentList[, j] <- rbinom(nrow(assignmentList), 1, .99)
-      }
-    }
     assignmentList <- data.frame(assignmentList)
     names(assignmentList) <- names(dataByPopulation)
 
@@ -781,7 +795,7 @@ flowReMix <- function(formula,
         #modelprobs <- 0.5 ^ (3 * 0:nSubsets)
         modelprobs <- modelprobs / sum(modelprobs)
       }
-      isingfit <- raIsing(assignmentList, AND = FALSE,
+      isingfit <- raIsing(assignmentList, AND = TRUE,
                              modelprobs = modelprobs,
                              minprob = 1 / nSubjects)
       isingCoefs <- isingfit
@@ -822,7 +836,7 @@ flowReMix <- function(formula,
 
     if(verbose) {
       print(c(iter, levelP = levelProbs))
-      if(regression_method == "betabinom") print(c(M = M))
+      if(betaDispersion) print(c(M = M))
       print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
       print(modelprobs)
       print(diff(log(modelprobs)))

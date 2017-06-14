@@ -185,7 +185,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       }
 
       integratedDensities = computeIntegratedDensities(clusterDensities) ;
-      if(m >= 1) {
+      if(m >= 0) {
         assignment[j] = 1 ;
         int nRespond = sum(assignment) ;
         double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
@@ -239,7 +239,7 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
   for(int i = 0; i < eta.length(); i++) {
     prob = expit(eta[i] + proposal) ;
-    if(betaDispersion) {
+    if(betaDispersion & (M < 100000)) {
       density += betaBinomDens(count[i], N[i], prob, M) ;
     } else {
       density += R::dbinom(count[i], N[i], prob, TRUE) ;

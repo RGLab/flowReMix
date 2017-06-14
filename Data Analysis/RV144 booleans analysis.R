@@ -49,25 +49,27 @@ names(booldata) <- tolower(names(booldata))
 # Getting vaccine information --------------------
 data("rv144")
 rv144 <- rv144[order(rv144$ptid), ]
-vaccine <- as.numeric(by(rv144, rv144$ptid, function(x) x$vaccine[1] == "VACCINE"))
-vaccine <- vaccine[unique(rv144$ptid) %in% unique(booldata$ptid)]
+vaccine <- (by(rv144, rv144$ptid, function(x) x$vaccine[1] == "VACCINE"))
+vaccine <- data.frame(ptid = names(vaccine), vaccine = as.numeric(vaccine))
+vaccinemat <- vaccine[vaccine$ptid %in% booldata$ptid, ]
 
 # Getting infection status
 data("rv144_correlates_data")
 correlates <- rv144_correlates_data
-correlates <- correlates[order(correlates$PTID), ]
+correlates <- correlates[order(as.character(correlates$PTID)), ]
 infection <- correlates$infect.y
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 100, initMHcoef = 1,
+control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 1,
                              nPosteriors = 1, centerCovariance = TRUE,
-                             maxDispersion = 10^3, minDispersion = 10^6,
-                             randomAssignProb = 0.2, intSampSize = 50,
+                             maxDispersion = 10^3, minDispersion = 10^7,
+                             randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "binom")
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+data$trt <- data$treatment
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  subject_id = ptid,
                  cell_type = subset,
@@ -76,10 +78,11 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "betabinom",
-                 iterations = 10,
-                 cluster_assignment = NULL,
-                 parallel = TRUE,
+                 iterations = 12,
+                 cluster_assignment = preAssignment,
+                 parallel = FALSE,
                  verbose = TRUE, control = control))
+#save(fit, file = "data analysis/results/boolean upfit3 w pre.Robj")
 #load(file = "data analysis/results/boolean dispersed fit7.Robj")
 
 # ROC for vaccinations -----------------------------
@@ -89,7 +92,12 @@ subsetIndex <- 1:length(subsets)
 subsets <- unique(booldata$subset)[subsetIndex]
 
 require(pROC)
-posteriors <- fit$posteriors[, -1, drop = FALSE]
+posteriors <- fit$posteriors
+posteriors <- posteriors[order(fit$posteriors$ptid), ]
+vaccine <- vaccinemat
+vaccine[, 1] <- factor(as.character(vaccine[, 1]), levels = levels(fit$posteriors$ptid))
+vaccine <- vaccine[order(vaccine[, 1]), ]
+vaccine <- vaccine[, 2]
 par(mfrow = c(4, 6), mar = rep(1, 4))
 #par(mfrow = c(2, 2), mar = rep(1, 4))
 auc <- numeric(length(subsets))
@@ -97,8 +105,8 @@ for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   try(rocfit <- roc(!vaccine ~ posteriors[, i]))
   auc[i] <- rocfit$auc
-  try(print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
-             cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)))
+  # try(print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
+  #            cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)))
 }
 
 n1 <- sum(vaccine)
@@ -123,8 +131,8 @@ for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   try(rocfit <- roc(subinfect ~ posteriors[, i]))
   auc[i] <- rocfit$auc
-  try(print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
-                 cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)))
+  # try(print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
+  #                cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)))
 }
 
 n1 <- sum(subinfect == "INFECTED")
@@ -170,6 +178,7 @@ for(j in 1:length(subsets)) {
 # Scatter plots -----------------
 forplot <- list()
 booldata <- booldata[order(as.character(booldata$ptid)), ]
+fit$posteriors <- fit$posteriors[order(as.character(fit$posteriors$ptid)), ]
 posteriors <- fit$posteriors[, -1, drop = FALSE]
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
@@ -203,19 +212,28 @@ ggplot(forplot) +
 # dev.off()
 
 # Testing Screening Procedure -------------------
+assignments <- fit$assignmentList
+names(assignments) <- substr(names(assignments), 1, 5)
+assignments <- lapply(unique(names(assignments)), function(x) {
+  do.call("rbind", assignments[names(assignments) == x])
+})
+subsets <- names(fit$coefficients)
+
 nSubsets <- length(fit$coefficients)
 nSubjects <- length(fit$assignmentList)
-likratios <- numeric(nSubsets)
+screenPvals <- numeric(nSubsets)
+M <- numeric(nSubsets)
 for(j in 1:nSubsets) {
-  counts <- sapply(fit$assignmentList, function(x) sum(x[, j]))
-  N <- sapply(fit$assignmentList, function(x) length(x[, j]))
-  probs <- counts / N
-  nullprob <- mean(probs)
-  likratios[j] <- 2 * (sum(dbinom(counts, N, probs, log = TRUE)) - sum(dbinom(counts, N, nullprob, log = TRUE)))
+  counts <- sapply(assignments, function(x) sum(x[, j]))
+  N <- sapply(assignments, function(x) length(x[, j]))
+  counts <- pmax(pmin(N - 1, counts), 1)
+  stest <- mcScreenTest(counts, N, 2000)
+  screenPvals[j] <- stest$pval
+  print(c(j, stest$M, screenPvals[j]))
 }
-pvals <- pchisq(likratios, df = nSubjects - 1, lower.tail = FALSE)
-which(p.adjust(pvals > 0.05, method = "bonferroni"))
-
+pvals <- pchisq(likratios, nSubjects - 1, lower.tail = FALSE)
+cbind(rocResults, screenPvals)
+which(p.adjust(pvals, method = "bonferroni")  > 0.01)
 
 
 # Stability selection for graphical model ------------------------
