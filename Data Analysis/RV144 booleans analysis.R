@@ -61,7 +61,7 @@ infection <- correlates$infect.y
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 1,
+control <- flowReMix_control(updateLag = 10, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -69,7 +69,6 @@ control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 1,
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-data$trt <- data$treatment
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  subject_id = ptid,
                  cell_type = subset,
@@ -78,12 +77,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "betabinom",
-                 iterations = 12,
+                 iterations = 20,
                  cluster_assignment = preAssignment,
                  parallel = FALSE,
                  verbose = TRUE, control = control))
-#save(fit, file = "data analysis/results/boolean upfit3 w pre.Robj")
-#load(file = "data analysis/results/boolean dispersed fit7.Robj")
+save(fit, file = "data analysis/results/boolean upfit4 w pre.Robj")
+#load(file = "data analysis/results/boolean upfit3.Robj")
 
 # ROC for vaccinations -----------------------------
 subsets <- unique(booldata$subset)
@@ -201,7 +200,6 @@ ggplot(forplot) +
         facet_wrap(~ subset, scales = 'free', ncol = 6) +
         geom_abline(slope = 1, intercept = 0) +
         theme_bw() + scale_colour_gradientn(colours=rainbow(4))
-
 
 # library(gridExtra)
 # table <- data.frame(index = 1:length(subsets), subset = subsets,
