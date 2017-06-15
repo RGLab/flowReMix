@@ -83,10 +83,10 @@ NumericVector computeBinomDensity(NumericVector subsetCount,
       prob = expit(prob) ;
       count = subsetCount[j] ;
       N = subsetN[j] ;
-      if(betaDispersion) {
+      if(betaDispersion & M < 150000) {
         density += betaBinomDens(count, N ,prob, M) ;
       } else {
-        density += R::dbinom(count, N, prob, TRUE) / subsetSize ;
+        density += R::dbinom(count, N, prob, 1) / subsetSize ;
       }
     }
     binomDensity[i] = density ;
@@ -239,7 +239,7 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
   for(int i = 0; i < eta.length(); i++) {
     prob = expit(eta[i] + proposal) ;
-    if(betaDispersion & (M < 100000)) {
+    if(betaDispersion & (M < 200000)) {
       density += betaBinomDens(count[i], N[i], prob, M) ;
     } else {
       density += R::dbinom(count[i], N[i], prob, TRUE) ;

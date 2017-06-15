@@ -61,11 +61,11 @@ infection <- correlates$infect.y
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 10, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             initMethod = "binom")
+                             initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -76,13 +76,18 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  data = booldata,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "betabinom",
-                 iterations = 20,
+                 regression_method = "robust",
+                 iterations = 12,
                  cluster_assignment = preAssignment,
-                 parallel = FALSE,
+                 parallel = TRUE,
                  verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/boolean upfit4 w pre.Robj")
-#load(file = "data analysis/results/boolean upfit3.Robj")
+#save(fit, file = "data analysis/results/boolean robust2 wPre.Robj")
+load(file = "data analysis/results/boolean robust2.Robj")
+# load(file = "data analysis/results/boolean robust2 wPre.Robj")
+# load(file = "data analysis/results/boolean upfit4 w pre.Robj")
+# load(file = "data analysis/results/boolean upfit3.Robj")
+
+
 
 # ROC for vaccinations -----------------------------
 subsets <- unique(booldata$subset)
@@ -103,7 +108,7 @@ auc <- numeric(length(subsets))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   try(rocfit <- roc(!vaccine ~ posteriors[, i]))
-  auc[i] <- rocfit$auc
+  auc[j] <- rocfit$auc
   # try(print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
   #            cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)))
 }
@@ -157,6 +162,8 @@ plot(pROC::roc(vaccine ~ aggregate),
      cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)
 
 
+posteriors <- fit$posteriors
+posteriors <- posteriors[order(fit$posteriors$ptid), ]
 par(mfrow = c(4, 6), mar = rep(2, 4))
 #par(mfrow = c(2, 2), mar = rep(4, 4))
 for(j in 1:length(subsets)) {
@@ -179,11 +186,12 @@ forplot <- list()
 booldata <- booldata[order(as.character(booldata$ptid)), ]
 fit$posteriors <- fit$posteriors[order(as.character(fit$posteriors$ptid)), ]
 posteriors <- fit$posteriors[, -1, drop = FALSE]
+logit <- function(x) log(x / (1 - x))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   post <- 1 - posteriors[, i]
-  negprop <- log(booldata$count / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "nonstim"]
-  envprop <- log(booldata$count / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "stim"]
+  negprop <- logit(booldata$count / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "nonstim"]
+  envprop <- logit(booldata$count / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "stim"]
   forplot[[j]] <- data.frame(subset = subsets[j],
                              negprop = negprop, envprop = envprop,
                              posterior = post, vaccine = vaccine,

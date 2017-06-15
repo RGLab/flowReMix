@@ -72,8 +72,17 @@ initializeModel <- function(dat, formula, method) {
     fit <- glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights)
     coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
     estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
-  } else {
+  } else if(method == "binom") {
     fit <- glm(formula, data = dat, family = "binomial", weights = weights)
+    coef <- coef(fit)
+    estProp <- predict(fit, type = "response")
+  } else if(method == "robust") {
+    fit <- NULL
+    try(fit <- robustbase::glmrob(formula, data = dat, family = "binomial",
+                              weights = weights))
+    if(is.null(fit)) {
+      fit <- glm(formula, data = dat, family = "binomial", weights = weights)
+    }
     coef <- coef(fit)
     estProp <- predict(fit, type = "response")
   }
@@ -242,7 +251,7 @@ flowReMix <- function(formula,
                       weights = NULL,
                       covariance = c("sparse", "dense", "diagonal"),
                       ising_model = c("sparse", "dense", "none"),
-                      regression_method = c("binom", "betabinom", "sparse"),
+                      regression_method = c("betabinom", "binom", "sparse", "robust"),
                       iterations = 10, parallel = TRUE, verbose = TRUE,
                       control = NULL) {
   # Getting control variables -------------------
@@ -323,16 +332,25 @@ flowReMix <- function(formula,
   }
 
   if(length(regressionMethod) > 1) regressionMethod <- regressionMethod[1]
-  if(!(regressionMethod %in% c(c("binom", "betabinom", "sparse")))) stop("regression_method must be one of binom, betabinom or sparse")
+  if(!(regressionMethod %in% c(c("binom", "betabinom", "sparse", "robust")))) stop("regression_method must be one of binom, betabinom or sparse")
   if(regressionMethod == "binom") {
     smallCounts <- FALSE
     betaDispersion <- FALSE
+    robustreg <- FALSE
   } else if(regressionMethod == "betabinom") {
     smallCounts <- FALSE
     betaDispersion <- TRUE
-  } else {
+    robustreg <- FALSE
+  } else if(regression_method == "sparse") {
     smallCounts <- TRUE
     betaDispersion <- TRUE
+    robustreg <- FALSE
+  } else if(regression_method == "robust") {
+    smallCounts <- FALSE
+    robustreg <- TRUE
+    betaDispersion <- TRUE
+  } else {
+    stop("Regression method not supported!")
   }
 
   if(length(covarianceMethod) > 1) covarianceMethod <- covarianceMethod[1]
@@ -562,8 +580,40 @@ flowReMix <- function(formula,
     if(iter > 1) {
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
-      # Beta - Binomial Case
-      if(betaDispersion & !smallCounts) {
+      # Robust
+      if(robustreg) {
+        glmFits <- foreach(j = 1:nSubsets) %dopar% {
+          if(sum(clusterAssignments[, j]) < 3) {
+            return(glmFits[[j]])
+          }
+          popdata <- dataByPopulation[[j]]
+          fit <- NULL
+          try(fit <- robustbase::glmrob(formula = glmformula,
+                                        data = popdata,
+                                        weights = weights,
+                                        family = "binomial"))
+          if(is.null(fit)) {
+            try(fit <- glm(formula = glmformula, data = popdata,
+                           weights = weights, family = "binomial"))
+            if(is.null(fit)) {
+              return(glmFits[[j]])
+            }
+          }
+          eta <- predict(fit)
+          mu <- 1 / (1 + exp(-eta))
+          N <- popdata$N
+          y <- popdata$y
+          M <- dispersionMLE(y, N, mu)
+          fit$M <- M
+          return(fit)
+        }
+        for(j in 1:nSubsets) {
+          if(!is.null(glmFits[[j]]$M)) {
+            M[j] <- max(glmFits[[j]]$M, minDispersion)
+          }
+        }
+        # Beta-Binomial
+      } else if(betaDispersion & !smallCounts) {
         glmFits <- foreach(j = 1:nSubsets) %dopar% {
           if(sum(clusterAssignments[, j]) < 3) {
             return(glmFits[[j]])
@@ -583,6 +633,7 @@ flowReMix <- function(formula,
             M[j] <- max(glmFits[[j]]$M, minDispersion)
           }
         }
+        # Sparse
       } else if(smallCounts) {
         tempFits <- foreach(j = 1:nSubsets) %dopar% {
           if(sum(clusterAssignments[, j]) < 3) {
@@ -611,6 +662,7 @@ flowReMix <- function(formula,
             M[j] <- tempFits[[j]]$M
           }
         }
+        # Binomial
       } else {
         tempFits <- foreach(j = 1:nSubsets) %dopar% {
           if(sum(clusterAssignments[, j]) < 3) {
