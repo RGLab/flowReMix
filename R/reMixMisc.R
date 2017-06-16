@@ -45,7 +45,7 @@
 #'
 #' @export
 flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
-                              initMHcoef = 0.4, nPosteriors = NULL,
+                              lastSample = NULL, initMHcoef = 0.4, nPosteriors = NULL,
                               maxDispersion = 10^3, minDispersion = 10^8, isingInit = -4,
                               keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
                               initMethod = NULL, ncores = NULL) {
@@ -53,6 +53,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
                  nsamp = nsamp,
+                 lastSample = lastSample,
                  initMHcoef = initMHcoef,
                  nPosteriors = nPosteriors,
                  maxDispersion = maxDispersion,

@@ -13,8 +13,7 @@ Imports: Rcpp,
     glmnet,
     data.table,
     PDSCE,
-    logistf,
-    snowfall
+    brglm2
 Suggests: ggplot2
 Depends: foreach
 RoxygenNote: 6.0.1

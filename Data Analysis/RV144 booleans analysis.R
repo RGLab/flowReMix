@@ -61,10 +61,11 @@ infection <- correlates$infect.y
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 4, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
+                             lastSample = 100,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -77,12 +78,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 12,
-                 cluster_assignment = preAssignment,
-                 parallel = TRUE,
+                 iterations = 8,
+                 #cluster_assignment = preAssignment,
+                 parallel = FALSE,
                  verbose = TRUE, control = control))
-#save(fit, file = "data analysis/results/boolean robust2 wPre.Robj")
-load(file = "data analysis/results/boolean robust2.Robj")
+#save(fit, file = "data analysis/results/boolean robust3.Robj")
+load(file = "data analysis/results/boolean robust3.Robj")
 # load(file = "data analysis/results/boolean robust2 wPre.Robj")
 # load(file = "data analysis/results/boolean upfit4 w pre.Robj")
 # load(file = "data analysis/results/boolean upfit3.Robj")
@@ -125,9 +126,10 @@ select <- rocResults$qvals < 0.05
 
 # ROC analysis for infection status --------------------
 require(pROC)
-posteriors <- fit$posteriors[, -1, drop = FALSE]
-posteriors <- subset(posteriors, infection != "PLACEBO")
+posteriors <- fit$posteriors
+posteriors <- posteriors[order(fit$posteriors$ptid), ]
 subinfect <- infection[infection != "PLACEBO"]
+posteriors <- posteriors[infection != "PLACEBO", -1]
 par(mfrow = c(4, 6), mar = rep(1, 4))
 #par(mfrow = c(2, 2), mar = rep(1, 4))
 auc <- numeric(length(subsets))
@@ -152,6 +154,7 @@ infectResult[order(infectResult$pvals), ]
 
 # Subject level posterior aggeregate?
 par(mfrow = c(1, 1), mar = rep(5, 5))
+
 weights <- apply(posteriors, 2, var)
 weights <- weights / sum(weights)
 aggregate <- as.vector(as.matrix(posteriors) %*% weights)
@@ -190,8 +193,8 @@ logit <- function(x) log(x / (1 - x))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   post <- 1 - posteriors[, i]
-  negprop <- logit(booldata$count / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "nonstim"]
-  envprop <- logit(booldata$count / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "stim"]
+  negprop <- logit((booldata$count + 1) / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "nonstim"]
+  envprop <- logit((booldata$count + 1) / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "stim"]
   forplot[[j]] <- data.frame(subset = subsets[j],
                              negprop = negprop, envprop = envprop,
                              posterior = post, vaccine = vaccine,

@@ -68,7 +68,17 @@ initializeModel <- function(dat, formula, method) {
   initdat <- model.frame(formula, data = dat)
   X <- model.matrix(formula, initdat)[, -1, drop = FALSE]
   y <- model.response(initdat)
-  if(ncol(X) > 1 & method == "sparse") {
+
+  # Checking for separation
+  sep <- glm(formula, data = dat, family = "binomial", weights = weights,
+             method = brglm2::detect_separation)$separation
+  if(sep & method != "sparse") {
+    X <- model.matrix(formula, dat)
+    fit <- glm(formula, data = dat, family = "binomial", weights = weights,
+               method = brglm2::brglmFit)
+    coef <- coef(fit)
+    estProp <- predict(fit, type = "response")
+  } else if(ncol(X) > 1 & method == "sparse") {
     fit <- glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights)
     coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
     estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
@@ -78,8 +88,8 @@ initializeModel <- function(dat, formula, method) {
     estProp <- predict(fit, type = "response")
   } else if(method == "robust") {
     fit <- NULL
-    try(fit <- robustbase::glmrob(formula, data = dat, family = "binomial",
-                              weights = weights))
+    try(capture.output(fit <- robustbase::glmrob(formula, data = dat, family = "binomial",
+                              weights = weights)))
     if(is.null(fit)) {
       fit <- glm(formula, data = dat, family = "binomial", weights = weights)
     }
@@ -90,7 +100,8 @@ initializeModel <- function(dat, formula, method) {
   propMat <- cbind(prop, estProp)
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
   randomEffects <- randomEffects[order(unique(dat$id))]
-  return(list(fit = fit, coef = coef, randomEffects = randomEffects))
+  return(list(fit = fit, coef = coef, randomEffects = randomEffects,
+              separation = sep))
 }
 
 #' Fitting a Mixture of Mixed Effect Models for Binomial Data
@@ -273,6 +284,7 @@ flowReMix <- function(formula,
   initMethod <- control$initMethod
   ncores <- control$ncores
   isingInit <- control$isingInit
+  lastSample <- control$lastSample
 
   if(parallel) {
     if(is.null(ncores)) {
@@ -500,6 +512,7 @@ flowReMix <- function(formula,
   glmFits <- lapply(initialization, function(x) x$fit)
   nSubjects <- length(unique(dat$id))
   nSubsets <- length(glmFits)
+  separation <- sapply(initialization, function(x) x$separation)
 
   if(isingMethod == "raIsing") {
     modelprobs <- (1 + nSubsets)^-1 / choose(nSubsets, 0:nSubsets)
@@ -569,6 +582,9 @@ flowReMix <- function(formula,
 
   # Starting analysis -------------------------------
   for(iter in 1:maxIter) {
+    if(iter == maxIter & !is.null(lastSample)) {
+      nsamp <- lastSample * keepEach
+    }
     iterweight <- 1 / max(iter - updateLag + 1, 1)
 
     # Refitting Model with current random effects/assignments
@@ -586,12 +602,19 @@ flowReMix <- function(formula,
           if(sum(clusterAssignments[, j]) < 3) {
             return(glmFits[[j]])
           }
+
           popdata <- dataByPopulation[[j]]
+          if(separation[j]) {
+            fit <- glm(glmformula, data = popdata, weights = weights,
+                       family = "binomial", method = brglm2::brglmFit)
+            return(fit)
+          }
+
           fit <- NULL
-          try(fit <- robustbase::glmrob(formula = glmformula,
+          try(capture.output(fit <- robustbase::glmrob(formula = glmformula,
                                         data = popdata,
                                         weights = weights,
-                                        family = "binomial"))
+                                        family = "binomial")))
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popdata,
                            weights = weights, family = "binomial"))
@@ -618,7 +641,14 @@ flowReMix <- function(formula,
           if(sum(clusterAssignments[, j]) < 3) {
             return(glmFits[[j]])
           }
+
           popdata <- dataByPopulation[[j]]
+          if(separation[j]) {
+            fit <- glm(glmformula, data = popdata, weights = weights,
+                       family = "binomial", method = brglm2::brglmFit)
+            return(fit)
+          }
+
           tempfit <- NULL
           try(tempfit <- BBreg(popdata, glmformula, weights))
           if(is.null(tempfit)) {
@@ -669,7 +699,8 @@ flowReMix <- function(formula,
             return(glmFits[[j]])
           }
           tempfit <- NULL
-          try(tempfit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
+          try(tempfit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights,
+                             method = brglm2::brglmFit))
           return(tempfit)
         }
         for(j in 1:nSubsets) {
@@ -857,8 +888,8 @@ flowReMix <- function(formula,
       isingCoefs <- isingfit
     } else if(isingMethod == "dense") {
       for(j in 1:nSubsets) {
-        firth <- logistf::logistf(assignmentList[, j] ~ assignmentList[, -j],
-                                  datout = FALSE)
+        firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
+                     method = brglm2::brglmFit)
         firth <- coef(firth)
         intercept <- firth[1]
         firth[-j] <- firth[-1]

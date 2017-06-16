@@ -37,11 +37,11 @@
   data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
   data$treatment2 <- data$treatment
 
-  control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 1,
+  control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
                                nPosteriors = 1, centerCovariance = TRUE,
-                               maxDispersion = 10^4 / 2, minDispersion = 10^7,
-                               randomAssignProb = 0.000001, intSampSize = 50,
-                               initMethod = "binom", ncores = NULL)
+                               maxDispersion = 10^3, minDispersion = 10^7,
+                               randomAssignProb = 10^-6, intSampSize = 50,
+                               initMethod = "robust", ncores = NULL)
 
   data$stim <- factor(data$stim, levels = c("negctrl", "env"))
   system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
@@ -51,10 +51,10 @@
                    data = data,
                    covariance = "sparse",
                    ising_model = "sparse",
-                   regression_method = "betabinom",
-                   iterations = 10, parallel = FALSE,
+                   regression_method = "robust",
+                   iterations = 20, parallel = TRUE,
                    verbose = TRUE, control = control))
-#save(fit, file = "Data Analysis/results/RV144 marginals dispersed model new 2.Robj")
+#save(fit, file = "Data Analysis/results/RV144 marginals dispersed model robust 2.Robj")
 
 ## ROC ------------------
 require(pROC)
