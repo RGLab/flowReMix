@@ -59,13 +59,25 @@ correlates <- rv144_correlates_data
 correlates <- correlates[order(as.character(correlates$PTID)), ]
 infection <- correlates$infect.y
 
+# Converting low counts to booleans --------------
+countByPop <- by(booldata, booldata$subset, function(x) max(x$count / x$parentcount) < 10^-3 / 2)
+countByPop <- by(booldata, booldata$subset, function(x) {
+  if(max(x$count / x$parentcount) < 10^-3 / 2) {
+    x$count <- as.numeric(x$count > 0)
+    x$parentcount <- 1
+  }
+  return(x)
+})
+# booldata <- do.call("rbind", countByPop)
+
+
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 4, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 10, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 100,
+                             lastSample = 100, isingInit = -log(99),
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -78,12 +90,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 8,
+                 iterations = 20,
                  #cluster_assignment = preAssignment,
-                 parallel = FALSE,
+                 parallel = TRUE,
                  verbose = TRUE, control = control))
-#save(fit, file = "data analysis/results/boolean robust3.Robj")
-load(file = "data analysis/results/boolean robust3.Robj")
+save(fit, file = "data analysis/results/boolean robust4.Robj")
+#load(file = "data analysis/results/boolean robust3.Robj")
 # load(file = "data analysis/results/boolean robust2 wPre.Robj")
 # load(file = "data analysis/results/boolean upfit4 w pre.Robj")
 # load(file = "data analysis/results/boolean upfit3.Robj")
@@ -121,17 +133,26 @@ pvals <- pwilcox(wilcox, n1, n2, lower.tail = FALSE)
 rocResults <- data.frame(subsets, auc, pvals)
 qvals <- p.adjust(pvals, method = "bonferroni")
 rocResults$qvals <- qvals
+rocResults$levelProbs <- fit$levelProbs
 rocResults[order(rocResults$pvals), ]
 select <- rocResults$qvals < 0.05
 
 # ROC analysis for infection status --------------------
 require(pROC)
+infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
+datId <- as.character(fit$posteriors$ptid)
+infectID <- as.character(infectDat$ptid)
+infectDat <- infectDat[infectID %in% datId, ]
+infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
+infectDat <- infectDat[order(infectDat$ptid), ]
+
 posteriors <- fit$posteriors
 posteriors <- posteriors[order(fit$posteriors$ptid), ]
-subinfect <- infection[infection != "PLACEBO"]
+subinfect <- infectDat[infectDat$infect != "PLACEBO", 2]
 posteriors <- posteriors[infection != "PLACEBO", -1]
 par(mfrow = c(4, 6), mar = rep(1, 4))
 #par(mfrow = c(2, 2), mar = rep(1, 4))
+subsets <- colnames(fit$posteriors)[-1]
 auc <- numeric(length(subsets))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
@@ -151,20 +172,7 @@ qvals <- p.adjust(infectResult$pvals, method = "BY")
 infectResult$qvals <- qvals
 infectResult[order(infectResult$pvals), ]
 
-
-# Subject level posterior aggeregate?
-par(mfrow = c(1, 1), mar = rep(5, 5))
-
-weights <- apply(posteriors, 2, var)
-weights <- weights / sum(weights)
-aggregate <- as.vector(as.matrix(posteriors) %*% weights)
-aggregate <- apply(posteriors, 1, function(x) sum(log(x + 10^-4)))
-rocfit <- roc(vaccine ~ aggregate)
-plot(pROC::roc(vaccine ~ aggregate),
-     main = paste("AUC - Overall", round(rocfit$auc, 3)),
-     cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)
-
-
+# FDR Curves -------------
 posteriors <- fit$posteriors
 posteriors <- posteriors[order(fit$posteriors$ptid), ]
 par(mfrow = c(4, 6), mar = rep(2, 4))
@@ -193,8 +201,8 @@ logit <- function(x) log(x / (1 - x))
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   post <- 1 - posteriors[, i]
-  negprop <- logit((booldata$count + 1) / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "nonstim"]
-  envprop <- logit((booldata$count + 1) / booldata$parentcount)[booldata$subset == subsets[j] & booldata$stim == "stim"]
+  negprop <- log(booldata$count / booldata$parentcount + 10^-5)[booldata$subset == subsets[j] & booldata$stim == "nonstim"]
+  envprop <- log(booldata$count / booldata$parentcount + 10^-5)[booldata$subset == subsets[j] & booldata$stim == "stim"]
   forplot[[j]] <- data.frame(subset = subsets[j],
                              negprop = negprop, envprop = envprop,
                              posterior = post, vaccine = vaccine,
@@ -203,6 +211,11 @@ for(j in 1:length(subsets)) {
 
 #forplot <- do.call("rbind", forplot[c(1:21, 23)])
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
+datId <- as.character(fit$posteriors$ptid)
+infectID <- as.character(infectDat$ptid)
+infectDat <- infectDat[infectID %in% datId, ]
+infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
+
 forplot <- do.call("rbind", forplot)
 forplot <- merge(forplot, infectDat, all.x = TRUE, by.x = "ptid", by.y = "ptid")
 require(ggplot2)
@@ -220,31 +233,6 @@ ggplot(forplot) +
 # grid.table(table, rows = NULL)
 # dev.off()
 
-# Testing Screening Procedure -------------------
-assignments <- fit$assignmentList
-names(assignments) <- substr(names(assignments), 1, 5)
-assignments <- lapply(unique(names(assignments)), function(x) {
-  do.call("rbind", assignments[names(assignments) == x])
-})
-subsets <- names(fit$coefficients)
-
-nSubsets <- length(fit$coefficients)
-nSubjects <- length(fit$assignmentList)
-screenPvals <- numeric(nSubsets)
-M <- numeric(nSubsets)
-for(j in 1:nSubsets) {
-  counts <- sapply(assignments, function(x) sum(x[, j]))
-  N <- sapply(assignments, function(x) length(x[, j]))
-  counts <- pmax(pmin(N - 1, counts), 1)
-  stest <- mcScreenTest(counts, N, 2000)
-  screenPvals[j] <- stest$pval
-  print(c(j, stest$M, screenPvals[j]))
-}
-pvals <- pchisq(likratios, nSubjects - 1, lower.tail = FALSE)
-cbind(rocResults, screenPvals)
-which(p.adjust(pvals, method = "bonferroni")  > 0.01)
-
-
 # Stability selection for graphical model ------------------------
 assignments <- fit$assignmentList
 names(assignments) <- substr(names(assignments), 1, 5)
@@ -253,7 +241,7 @@ assignments <- lapply(unique(names(assignments)), function(x) {
 })
 subsets <- names(fit$coefficients)
 
-reps <- 40
+reps <- 100
 modelList <- list()
 nsubsets <- ncol(assignments[[1]])
 countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
@@ -281,11 +269,13 @@ sum(props != 0) / 2
 require(GGally)
 library(network)
 library(sna)
+threshold <- 0.5
 network <- props
 keep <- apply(network, 1, function(x) any(abs(x) >= threshold)) #| rocResults$qvals < 0.05
 #keep <-  rep(TRUE, nrow(props))
 network <- network[keep, keep]
 net <- network(props)
+subsets <- colnames(fit$posteriors)[-1]
 nodes <- ggnet2(network, label = subsets[keep])$data
 edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
 p <- nrow(network)
@@ -328,6 +318,28 @@ ggplot() +
         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.background=element_blank())
 
+# Analysis with graph clusters --------------------
+group1 <- colnames(fit$posteriors)[c(2, 5, 7, 11, 20, 23)]
+group2 <- colnames(fit$posteriors)[c(4, 6, 8, 13, 15, 17, 19, 24)]
+
+score1 <- sapply(assignments, function(x) mean(x[, c(2, 5, 7, 11, 20, 23) - 1]))
+score2 <- sapply(assignments, function(x) mean(x[, c(4, 6, 8, 13, 15, 17, 19, 24) - 1]))
+
+par(mfrow = c(1, 2))
+vacauc1 <- roc(vaccine ~ score1)$auc
+plot(roc(vaccine ~ score1), main = paste("group 1 vaccine - ", round(vacauc1, 3)))
+vacauc2 <- roc(vaccine ~ score2)$auc
+plot(roc(vaccine ~ score2), main = paste("group 2 vaccine - ", round(vacauc2, 3)))
+
+n0 <- sum(subinfect == "INFECTED")
+n1 <- sum(subinfect != "INFECTED")
+infectauc1 <- roc(subinfect ~ score1[vaccine == 1])$auc
+plot(roc(subinfect ~ score1[vaccine == 1]), main = paste("group 1 infection - ", round(infectauc1, 3)))
+pval1 <- pwilcox(infectauc1 * n0 * n1, n0, n1, lower.tail = FALSE)
+infectauc2 <- roc(subinfect ~ score2[vaccine == 1])$auc
+plot(roc(subinfect ~ score2[vaccine == 1]), main = paste("group 2 infection - ", round(infectauc2, 3)))
+pval2 <- pwilcox(infectauc2 * n0 * n1, n0, n1, lower.tail = FALSE)
+
 # Posterior probabilities for nresponses ----------------
 graph <- fit$isingCov
 thresholds <- diag(graph)
@@ -335,19 +347,16 @@ diag(graph) <- 0
 assignment <- IsingSampler::IsingSampler(500, graph, thresholds)
 
 assignments <- fit$assignmentList
-names(assignments) <- substr(names(assignments), 1, 5)
-assignments <- lapply(unique(names(assignments)), function(x) {
-  do.call("rbind", assignments[names(assignments) == x])
-})
-selected <- rocResults$qvals < 0.05
-assignments <- lapply(assignments, function(x) x[, selected])
-subsets <- names(fit$coefficients)[selected]
+subsets <- names(fit$coefficients)
 resultList <- list()
 
-nfunctions <- sapply(subsets, function(x) length(gregexpr(",", paste(",", x))[[1]]))
+subsets <- names(fit$posteriors)[-1]
+selected <- sapply(fit$coefficients, function(x) x[2] > 0) & fit$levelProbs > 0.05
+assignments <- lapply(assignments, function(x) x[, selected])
+nfunctions <- sapply(subsets[selected], function(x) length(gregexpr(",", paste(",", x))[[1]]))
 M <- 6
 weights <- nfunctions / (choose(M, nfunctions))
-weights <- rep(1, length(subsets))
+#weights <- rep(1, length(selected))
 weights <- weights / sum(weights)
 
 allassign <- do.call("rbind", assignments)
@@ -359,10 +368,11 @@ for(i in 1:length(assignments)) {
   colnames(samp) <- rep("all", ncol(samp)) # for just one plot
   groups <- unique(colnames(samp))
   subjDatList <- list()
-  if(i == length(assignments)) {
+  if(i == length(assignments) + 1) {
+    next
     ptid <- "prior"
   } else {
-    ptid <- fit$posteriors$ptid[i]
+    ptid <- names(assignments)[i]
   }
   for(j in 1:length(groups)) {
     group <- groups[j]
@@ -380,16 +390,15 @@ for(i in 1:length(assignments)) {
   resultList[[i]] <- do.call("rbind", subjDatList)
 }
 responsedat <- do.call("rbind", resultList)
-outcome <- data.frame(ptid = fit$posteriors$ptid, vaccine = vaccine)
+outcome <- infectDat
 forplot <- merge(responsedat, outcome, by.x = "ptid", by.y = "ptid",
                  all.x = TRUE)
 forplot$VACCINE <- forplot$vaccine
-forplot <- merge(forplot, infectDat, by.x = "ptid", by.y = "ptid",
-                 all.x = TRUE)
+# forplot <- merge(forplot, infectDat, by.x = "ptid", by.y = "ptid",
+#                  all.x = TRUE)
 forplot$INFECT <- forplot$infect
 
-summarized <- summarize(group_by(forplot, group, presponses, VACCINE,
-                                 INFECT),
+summarized <- summarize(group_by(forplot, group, presponses, INFECT),
                         postProb = mean(postProb))
 
 ggplot(forplot) + geom_line(aes(x = presponses, y = 1 - postProb, group = ptid,
@@ -417,11 +426,13 @@ intCDF <- as.numeric(intCDF)
 roc(vaccine ~ intCDF)$auc
 rocfit <- roc(vaccine ~ intCDF)
 par(mfrow = c(1, 1))
-plot(rocfit, main = "ROC for Functionality Score - AUC = 0.9743")
+#plot(rocfit, main = "ROC for Functionality Score - AUC = 0.9743")
+subinfect <- as.numeric(by(forplot, forplot$ptid, function(x) x$infect[1]))
+subinfect <- subinfect[subinfect != 3]
 infectAUC <- roc(subinfect ~ intCDF[vaccine == 1])$auc
 infectAUC
-n1 <- sum(subinfect == "INFECTED")
-n2 <- sum(subinfect == "NON-INFECTED")
+n1 <- sum(subinfect == 1)
+n2 <- sum(subinfect == 2)
 pval <- pwilcox(infectAUC * n1 * n2, n1, n2, FALSE)
 plot(roc(subinfect ~ intCDF[vaccine == 1]))
 
@@ -457,7 +468,7 @@ for(i in 1:reps) {
 
 curveA <- data.frame(subset(summarized, INFECT == "INFECTED"))
 curveB <- data.frame(subset(summarized, INFECT == "NON-INFECTED"))
-obsdiff <- min((curveA[, 5] - curveB[, 5]))
+obsdiff <- min((curveA[, 4] - curveB[, 4]))
 plot(density(diff))
 abline(v = obsdiff)
 mean(obsdiff > diff)
@@ -467,7 +478,8 @@ require(dplyr)
 require(reshape2)
 outcome <- infectDat
 posteriors <- fit$posteriors
-posteriors[, c(16, 22)] <- 1 - posteriors[, c(16, 22)]
+selected <- sapply(fit$coefficients, function(x) x[2] > 0) & fit$levelProbs > 0.05
+posteriors <- posteriors[, c(TRUE, selected)]
 posteriors <- merge(posteriors, infectDat,
                     by.x = "ptid", by.y = "ptid",
                     all.x = TRUE)

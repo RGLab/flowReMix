@@ -109,11 +109,12 @@ subsetDat$subset <- factor(as.character(subsetDat$subset))
 
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 13, nsamp = 100, initMHcoef = 1,
-                             nPosteriors = 3, centerCovariance = TRUE,
-                             maxDispersion = 10^3 / 2, minDispersion = 10^6,
-                             randomAssignProb = 0.2, intSampSize = 50,
-                             initMethod = "binom")
+control <- flowReMix_control(updateLag = 12, nsamp = 100, initMHcoef = 2.5,
+                             nPosteriors = 1, centerCovariance = TRUE,
+                             maxDispersion = 10^3, minDispersion = 10^7,
+                             randomAssignProb = 10^-8, intSampSize = 50,
+                             lastSample = 100, isingInit = -log(95),
+                             initMethod = "robust")
 
 subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
@@ -124,10 +125,11 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  data = subsetDat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "betabinom",
+                 regression_method = "robust",
                  iterations = 20,
+                 parallel = FALSE,
                  verbose = TRUE, control = control)
-save(fit, file = "Data Analysis/results/HVTN bool betabinom 6 dropmore.Robj")
+#save(fit, file = "Data Analysis/results/HVTN bool robust.Robj")
 
 #load(file = "Data Analysis/results/HVTN bool betabinom 6 dropmore.Robj")
 
@@ -210,55 +212,55 @@ ggplot(temp) +
 
 # Stability selection for graphical model ------------------------
 assignments <- fit$assignmentList
-names(assignments) <- substr(names(assignments), 1, 9)
-assignments <- lapply(unique(names(assignments)), function(x) {
-  do.call("rbind", assignments[names(assignments) == x])
-})
 subsets <- names(fit$coefficients)
-isCMV <- substring(subsets, 1, 3) == "cmv"
-assignments <- lapply(assignments, function(x) x[, !isCMV])
-subsets <- subsets[!isCMV]
-expressed <- sapply(subsets, getExpression)
-map <- cbind(subsets, expressed)
 
 reps <- 100
 modelList <- list()
 nsubsets <- ncol(assignments[[1]])
 countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
+doParallel::registerDoParallel(cores = 2)
 for(i in 1:reps) {
   mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
   colnames(mat) <- expressed
   keep <- apply(mat, 2, function(x) any(x != x[1]))
   mat <- mat[, keep]
-  model <- IsingFit::IsingFit(mat, AND = TRUE, plot = TRUE)
-  modelList[[i]] <- model
+  #system.time(model <- IsingFit::IsingFit(mat, AND = TRUE, plot = TRUE))
+  coefs <- raIsing(mat, AND = TRUE, gamma = 0.9, method = "sparse")
   #plot(model)
-  countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
+  #countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
+  countCovar[keep, keep] <- countCovar[keep, keep] + (coefs != 0) * sign(coefs)
   print(i)
 }
 
 props <- countCovar / reps
-table(props)
-threshold <- 1
+table(props) / 2
+threshold <- 0.5
 which(props > threshold, arr.ind = TRUE)
 props[abs(props) <= threshold] <- 0
 sum(props != 0) / 2
-#save(props, file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
-load(file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
-subsets <- names(fit$coefficients)
+#save(props, file = "Data Analysis/results/HVTN bool robust graph.Robj")
+#load(file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
 
 # Plotting graph ---------------------
 require(GGally)
 library(network)
 library(sna)
-threshold <- 0.8
+threshold <- 0.5
 network <- props
 colnames(props) <- subsets
 rownames(props) <- subsets
-keep <- apply(network, 1, function(x) any(abs(x) > threshold)) & result$qvals < 0.05
+diag(network) <- 0
+# Cutting network
+# network[6, 8] <- 0
+# network[8, 6] <- 0
+# network[6, 40] <- 0
+# network[40, 6] <- 0
+#######
+keep <- apply(network, 1, function(x) any(abs(x) > threshold))
 #keep <-  (result$qvals <= 0.05)
 network <- network[keep, keep]
 net <- network(props)
+subsets <- names(fit$posteriors)[-1]
 nodes <- ggnet2(network, label = subsets[keep])$data
 edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
 p <- nrow(network)
@@ -274,7 +276,9 @@ for(j in 2:p) {
 
 edges <- data.frame(edges)
 names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
+aucs <- result$auc
 nodes$auc <- aucs[keep]
+nodes$infectauc <- infectresult$aucs[keep]
 nodes$qvals <- result$qvals[keep]
 nodes$sig <- nodes$qvals < 0.1
 
@@ -303,6 +307,44 @@ ggplot() +
 
 nodes[order(nodes$auc),]
 
+# Inference with connected components ----------------------
+library(igraph)
+network[network != 0] <- 1
+graph <- graph.adjacency(network)
+comp <- components(graph)
+
+# ROCs for vaccination
+n0 <- sum(vaccine == 1)
+n1 <- sum(vaccine == 0)
+par(mfrow = c(2, 2))
+for(i in 1:sum(comp$csize > 2)) {
+  group <- which(comp$csize > 2)[i]
+  group <- which(comp$membership == group)
+  cols <- which(names(fit$posteriors) %in% names(group))
+  score <- rowMeans(fit$posteriors[, cols])
+  rocfit <- roc(vaccine ~ score)
+  auc <- rocfit$auc
+  pval <- pwilcox(auc * n0 * n1, n0, n1, lower.tail = FALSE)
+  plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 3), "pval", round(pval, 3)))
+}
+
+# ROCs for infection
+n0 <- sum(vaccine == 1)
+n1 <- sum(vaccine == 0)
+par(mfrow = c(2, 2))
+vaccines <- vaccine == 1
+pvals <- numeric(4)
+for(i in 1:sum(comp$csize > 2)) {
+  group <- which(comp$csize > 2)[i]
+  group <- which(comp$membership == group)
+  cols <- which(names(fit$posteriors) %in% names(group))
+  score <- rowMeans(fit$posteriors[, cols])
+  rocfit <- roc(hiv ~ score[vaccines])
+  auc <- rocfit$auc
+  pval <- pwilcox(auc * n0 * n1, n0, n1, lower.tail = FALSE)
+  pvals[i] <- pval
+  plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 2), "pval", round(pval, 5)))
+}
 
 # Posteriors box plots ------------------------------------
 require(dplyr)

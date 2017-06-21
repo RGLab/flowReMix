@@ -20,7 +20,6 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
   }
 
   isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
-    print(j)
     y <- as.vector(mat[, j])
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)

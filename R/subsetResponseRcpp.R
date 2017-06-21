@@ -96,6 +96,12 @@ initializeModel <- function(dat, formula, method) {
     coef <- coef(fit)
     estProp <- predict(fit, type = "response")
   }
+
+  # First estimate for dispersion
+  M <- dispersionMLE(dat$y, dat$N, estProp)
+  fit$M <- M
+
+  # Terminating
   prop <- dat$y / dat$N
   propMat <- cbind(prop, estProp)
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
@@ -495,8 +501,10 @@ flowReMix <- function(formula,
   initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
 
   # Initializing covariates and random effects------------------
+  if(verbose) print("Initializing Regression Equations")
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
   initialization <- foreach(j = 1:length(dataByPopulation)) %dopar% {
+    #print(unique(as.character(dataByPopulation[[j]]$sub.population)))
     initializeModel(dataByPopulation[[j]], initFormula, initMethod)
   }
 
@@ -570,7 +578,8 @@ flowReMix <- function(formula,
   }
 
   clusterDensities <- matrix(nrow = 2, ncol = intSampSize)
-  isingCoefs <- matrix(0, ncol = nSubsets, nrow = nSubsets)
+  isingRho <- 0 #ifelse(isingInit < 0, -isingInit / nSubsets, 0)
+  isingCoefs <- matrix(isingRho, ncol = nSubsets, nrow = nSubsets)
   diag(isingCoefs) <- isingInit
   if(betaDispersion) {
     M <- rep(minDispersion, nSubsets)
@@ -581,6 +590,7 @@ flowReMix <- function(formula,
   flagEquation <- rep(0, nSubsets)
 
   # Starting analysis -------------------------------
+  if(verbose) print("Starting Stochastic EM")
   for(iter in 1:maxIter) {
     if(iter == maxIter & !is.null(lastSample)) {
       nsamp <- lastSample * keepEach
@@ -689,7 +699,7 @@ flowReMix <- function(formula,
         for(j in 1:nSubsets) {
           if(!is.null(tempFits[[j]])) {
             glmFits[[j]] <- tempFits[[j]]
-            M[j] <- tempFits[[j]]$M
+            M[j] <- max(glmFits[[j]]$M, minDispersion)
           }
         }
         # Binomial

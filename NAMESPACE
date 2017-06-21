@@ -2,6 +2,7 @@
 
 export(computeGraphAUC)
 export(flowReMix)
+export(raIsing)
 export(flowReMix_control)
 importFrom(Rcpp,sourceCpp)
 useDynLib(flowReMix)
