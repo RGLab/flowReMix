@@ -40,16 +40,23 @@ cart$outcome[cart$best %in% c("CR", "PR")] <- "positive"
 cart$outcome[is.na(cart$best) | cart$best == "NA"] <- NA
 cart <- subset(cart, cart$parentcount > 0)
 
+# Keeping only leaves
+leaves <- unique(cart$population)
+parents <- unique(cart$parent)
+leaves <- leaves[!(leaves %in% parents)]
+cart <- subset(cart, population %in% leaves)
+
 # Collapse the IP timepoint
-# ip <- subset(cart, timepoint %in% c("CD4 IP", "CD8 IP"))
-# cart <- subset(cart, !(timepoint %in% c("CD4 IP", "CD8 IP")))
-# trimmed <- do.call("rbind", by(ip, ip$ptid, function(x) x[1, ]))
-# trimmed <- trimmed[, -c(1, 4, 2)]
-# trimmed$timepoint <- "d0"
-# ip <- summarize(group_by(ip, ptid, parent, population),
-#                   count = sum(count), parentcount = sum(parentcount))
-# ip <- merge(ip, trimmed, all.x = TRUE)
-# cart <- rbind(cart[, -1], ip)
+ip <- subset(cart, timepoint %in% c("CD4 IP", "CD8 IP"))
+cart <- subset(cart, !(timepoint %in% c("CD4 IP", "CD8 IP")))
+trimmed <- do.call("rbind", by(ip, ip$ptid, function(x) x[1, ]))
+trimmed <- trimmed[, -c(1, 4, 2)]
+trimmed$timepoint <- "d0"
+ip <- summarize(group_by(ip, ptid, parent, population),
+                  count = sum(count), parentcount = sum(parentcount))
+ip <- merge(ip, trimmed, all.x = TRUE)
+ip$timepoint <- "d0"
+cart <- rbind(cart[, -1], ip)
 
 # Transforming timepoints to categories
 cart$timenum <- 0
@@ -78,10 +85,10 @@ poutcome[is.na(cart$bestResponse)] <- NA
 cart$prop <- cart$count / cart$parentcount
 cart$poutcome <- poutcome
 
-ggplot(cart) +
-  geom_boxplot(aes(x = factor(timenum), color = outcome,
-                   y = log(prop + 1 / parentcount))) +
-  facet_wrap(~ subset, scales = "free")
+# ggplot(cart) +
+#   geom_boxplot(aes(x = factor(timenum), color = outcome,
+#                    y = log(prop + 1 / parentcount))) +
+#   facet_wrap(~ subset, scales = "free")
 
 # Analysis
 cart$treatment <- rep(1, nrow(cart))
@@ -96,25 +103,26 @@ cart$timenum <- factor(cart$timenum)
 
 
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 100, initMHcoef = 1,
+control <- flowReMix_control(updateLag = 3, nsamp = 100, initMHcoef = 1,
                              nPosteriors = 1, centerCovariance = TRUE,
-                             maxDispersion = 10^4, minDispersion = 10^7,
+                             maxDispersion = 10^2 * 5, minDispersion = 10^4,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 40, isingInit = -log(89),
-                             initMethod = "binom")
+                             initMethod = "robust")
 
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+tempdat <- subset(cart, !is.na(outcome))
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ timenum*outcome,
                              subject_id = ptid,
                              cell_type = subset,
-                             cluster_variable = treatment,
-                             data = cart,
+                             cluster_variable = NULL,
+                             data = tempdat,
                              covariance = "sparse",
                              ising_model = "sparse",
-                             regression_method = "binom",
-                             iterations = 10,
+                             regression_method = "robust",
+                             iterations = 6,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/carTagain 3.Robj")
+#save(fit, file = "data analysis/results/carTagain 3.Robj")
 #load(file = "data analysis/results/carTagain 1.Robj")
 post <- fit$posteriors
 post <- merge(post, unique(data.frame(ptid = cart$ptid, outcome =  cart$outcome)),

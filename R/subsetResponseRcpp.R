@@ -47,22 +47,24 @@ estimateIntercept <- function(propMat) {
   return(mean(logit - estLogit))
 }
 
-initializeModel <- function(dat, formula, method) {
+initializeModel <- function(dat, formula, method, mixed) {
   if(is.null(dat)) {
     warning("Some cell-subsets are empty!")
     return("empty!")
   }
-  if(all(dat$treatmentvar == 1)) {
-    props <- dat$y / dat$N
-    mu <- mean(props)
-    var <- var(props)
-    alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
-    beta <- alpha * (1 / mu - 1)
-    probs <- pbeta(props, alpha, beta)
-    dat$treatmentvar <- rbinom(nrow(dat), 1, probs)
-    mtrt <- mean(dat$treatmentvar)
-    if(mtrt < 0.2 | mtrt > 0.8 | is.na(mtrt)) {
-      dat$treatmentvar <- rbinom(nrow(dat), 1, 0.5)
+  if(!mixed) {
+    if(all(dat$treatmentvar == 1)) {
+      props <- dat$y / dat$N
+      mu <- mean(props)
+      var <- var(props)
+      alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
+      beta <- alpha * (1 / mu - 1)
+      probs <- pbeta(props, alpha, beta)
+      dat$treatmentvar <- rbinom(nrow(dat), 1, probs)
+      mtrt <- mean(dat$treatmentvar)
+      if(mtrt < 0.2 | mtrt > 0.8 | is.na(mtrt)) {
+        dat$treatmentvar <- rbinom(nrow(dat), 1, 0.5)
+      }
     }
   }
   initdat <- model.frame(formula, data = dat)
@@ -70,8 +72,12 @@ initializeModel <- function(dat, formula, method) {
   y <- model.response(initdat)
 
   # Checking for separation
-  sep <- glm(formula, data = dat, family = "binomial", weights = weights,
-             method = brglm2::detect_separation)$separation
+  if(ncol(X) > 1) {
+    sep <- glm(formula, data = dat, family = "binomial", weights = weights,
+               method = brglm2::detect_separation)$separation
+  } else {
+    sep <- FALSE
+  }
   if(sep & method != "sparse") {
     X <- model.matrix(formula, dat)
     fit <- glm(formula, data = dat, family = "binomial", weights = weights,
@@ -340,8 +346,11 @@ flowReMix <- function(formula,
   }
 
   call <- as.list(match.call())
+  mixed <- FALSE
   if(is.null(call$cluster_variable)) {
-    stop("Treatment variable must be specified!")
+    message("Cluster variable not specified, fitting a mixed effect model!")
+    mixed <- TRUE
+    treatmentvar <- 1
   }
 
   if(length(isingMethod) > 1) isingModel<- isingModel[1]
@@ -419,8 +428,6 @@ flowReMix <- function(formula,
       }else{
         treatmentvar <- eval(call$cluster_variable, envir=parent.frame())
       }
-    }else if(is.null(call$cluster_variable)){
-      stop("Treatment variable must be specified!")
     }
   }
 
@@ -495,7 +502,9 @@ flowReMix <- function(formula,
 
   # Editing formulas ------------------------------
   covariates <- deparse(formula[[3]])
-  covariates <- gsub(as.character(call$cluster_variable), "treatmentvar", covariates)
+  if(!mixed) {
+    covariates <- gsub(as.character(call$cluster_variable), "treatmentvar", covariates)
+  }
   formula <- update.formula(formula, as.formula(paste(". ~", covariates)))
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
   initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
@@ -505,7 +514,7 @@ flowReMix <- function(formula,
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
   initialization <- foreach(j = 1:length(dataByPopulation)) %dopar% {
     #print(unique(as.character(dataByPopulation[[j]]$sub.population)))
-    initializeModel(dataByPopulation[[j]], initFormula, initMethod)
+    initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
   }
 
   isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
@@ -546,6 +555,9 @@ flowReMix <- function(formula,
   if(is.null(cluster_assignment)) {
     preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
     preAssignment$assign <- rep(-1, nrow(preAssignment))
+    if(mixed) {
+      preAssignment$assign <- 1
+    }
   } else {
     preAssignment <- cluster_assignment
     if(ncol(preAssignment) != 3) stop("preAssignment must have 3 columns: id, subset, assignment")
@@ -736,21 +748,33 @@ flowReMix <- function(formula,
     for(j in 1:length(dataByPopulation)) {
       coefs <- coefficientList[[j]]
       coefs <- coefs[!is.na(coefs)]
-      if(is.factor(dataByPopulation[[j]]$treatmentvar)) {
-        baseline <- levels(dataByPopulation[[j]]$tempTreatment)[1]
-        dataByPopulation[[j]]$treatmentvar <- factor(baseline, levels = levels(dataByPopulation[[j]]$tempTreatment))
-      } else {
-        dataByPopulation[[j]]$treatmentvar <- 0
+
+      # Updating nullEta only if we are fitting a model w clustering
+      if(!mixed) {
+        if(is.factor(dataByPopulation[[j]]$treatmentvar)) {
+          baseline <- levels(dataByPopulation[[j]]$tempTreatment)[1]
+          dataByPopulation[[j]]$treatmentvar <- factor(baseline, levels = levels(dataByPopulation[[j]]$tempTreatment))
+        } else {
+          dataByPopulation[[j]]$treatmentvar <- 0
+        }
+
+        modelMat <- NULL
+        try(modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]]))
+        if(!all(colnames(modelMat) %in% names(coefs))) {
+          modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
+        }
+        newNullEta <- as.numeric(modelMat %*% coefs)
+        if(iter > 1) {
+          nullEta <- dataByPopulation[[j]]$nullEta
+        } else {
+          nullEta <- 0
+        }
+
+        dataByPopulation[[j]]$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
+        dataByPopulation[[j]]$treatmentvar <- dataByPopulation[[j]]$tempTreatment
       }
 
-      modelMat <- NULL
-      try(modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]]))
-      if(!all(colnames(modelMat) %in% names(coefs))) {
-        modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
-      }
-      newNullEta <- as.numeric(modelMat %*% coefs)
 
-      dataByPopulation[[j]]$treatmentvar <- dataByPopulation[[j]]$tempTreatment
       modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]])
       if(!all(colnames(modelMat) %in% names(coefs))) {
         modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
@@ -758,13 +782,10 @@ flowReMix <- function(formula,
       newAltEta <- as.numeric(modelMat %*% coefs)
 
       if(iter > 1) {
-        nullEta <- dataByPopulation[[j]]$nullEta
         altEta <- dataByPopulation[[j]]$altEta
       } else {
-        nullEta <- 0
         altEta <- 0
       }
-      dataByPopulation[[j]]$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
       dataByPopulation[[j]]$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
     }
 
@@ -792,15 +813,19 @@ flowReMix <- function(formula,
       iterPosteriors <- rep(0, nSubsets)
       unifVec <- runif(nsamp * nSubsets)
       normVec <- rnorm(intSampSize)
-      assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
-                                         subjectData$nullEta, subjectData$altEta,
-                                         covariance, nsamp, nSubsets, keepEach, intSampSize,
-                                         MHcoef,
-                                         as.integer(popInd),
-                                         unifVec, normVec,
-                                         M, betaDispersion,
-                                         as.integer(preAssignment[[i]]$assign),
-                                         randomAssignProb, modelprobs)
+      if(mixed) {
+        assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
+      } else {
+        assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
+                                           subjectData$nullEta, subjectData$altEta,
+                                           covariance, nsamp, nSubsets, keepEach, intSampSize,
+                                           MHcoef,
+                                           as.integer(popInd),
+                                           unifVec, normVec,
+                                           M, betaDispersion,
+                                           as.integer(preAssignment[[i]]$assign),
+                                           randomAssignProb, modelprobs)
+      }
 
       unifVec <- runif(nsamp * nSubsets)
       eta <- subjectData$nullEta
@@ -884,45 +909,51 @@ flowReMix <- function(formula,
     }
 
     # Updating Ising -----------------------
-    print("Updating Ising!")
-    if(iter == maxIter) {
-      exportAssignment <- assignmentList
-      names(exportAssignment) <- names(databyid)
-    }
-    assignmentList <- do.call("rbind",assignmentList)
-    unscrambled <- assignmentList
-    assignmentList <- data.frame(assignmentList)
-    names(assignmentList) <- names(dataByPopulation)
+    if(!mixed) {
+      print("Updating Ising!")
+      if(iter == maxIter) {
+        exportAssignment <- assignmentList
+        names(exportAssignment) <- names(databyid)
+      }
+      assignmentList <- do.call("rbind",assignmentList)
+      unscrambled <- assignmentList
+      assignmentList <- data.frame(assignmentList)
+      names(assignmentList) <- names(dataByPopulation)
 
-    if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
-      if(isingMethod == "raIsing") {
-        # UPDATING PRIOR MODEL SIZE PROBABILITIES
-        tempprobs <- estimateMonotoneProbs(assignmentList, method = "arrange")
-        modelprobs <- (1 - iterweight) * modelprobs + iterweight * tempprobs
-        #modelprobs <- 0.5 ^ (3 * 0:nSubsets)
-        modelprobs <- modelprobs / sum(modelprobs)
+      if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
+        if(isingMethod == "raIsing") {
+          # UPDATING PRIOR MODEL SIZE PROBABILITIES
+          tempprobs <- estimateMonotoneProbs(assignmentList, method = "arrange")
+          modelprobs <- (1 - iterweight) * modelprobs + iterweight * tempprobs
+          #modelprobs <- 0.5 ^ (3 * 0:nSubsets)
+          modelprobs <- modelprobs / sum(modelprobs)
+        }
+        isingfit <- raIsing(assignmentList, AND = TRUE,
+                            modelprobs = modelprobs,
+                            minprob = 1 / nSubjects)
+        isingCoefs <- isingfit
+      } else if(isingMethod == "dense") {
+        for(j in 1:nSubsets) {
+          firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
+                       method = brglm2::brglmFit)
+          firth <- coef(firth)
+          intercept <- firth[1]
+          firth[-j] <- firth[-1]
+          firth[j] <- intercept
+          isingCoefs[j, ] <- (1 - iterweight) * isingCoefs[j, ] + iterweight * firth
+        }
+      } else {
+        levelProbabilities <- colMeans(assignmentList)
+        isingCoefs <- matrix(0, nrow = nSubsets, ncol = nSubsets)
+        minprob <- 10^-4
+        diag(isingCoefs) <- logit(pmin(pmax(levelProbabilities, minprob), 1 - minprob))
       }
-      isingfit <- raIsing(assignmentList, AND = TRUE,
-                             modelprobs = modelprobs,
-                             minprob = 1 / nSubjects)
-      isingCoefs <- isingfit
-    } else if(isingMethod == "dense") {
-      for(j in 1:nSubsets) {
-        firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
-                     method = brglm2::brglmFit)
-        firth <- coef(firth)
-        intercept <- firth[1]
-        firth[-j] <- firth[-1]
-        firth[j] <- intercept
-        isingCoefs[j, ] <- (1 - iterweight) * isingCoefs[j, ] + iterweight * firth
-      }
+      levelProbs <- colMeans(posteriors)
     } else {
-      levelProbabilities <- colMeans(assignmentList)
-      isingCoefs <- matrix(0, nrow = nSubsets, ncol = nSubsets)
-      minprob <- 10^-4
-      diag(isingCoefs) <- logit(pmin(pmax(levelProbabilities, minprob), 1 - minprob))
+      isingFit <- NULL
+      isingCov <- NULL
+      isingCoefs <- NULL
     }
-    levelProbs <- colMeans(posteriors)
 
     # Updating MH coefficient ----------------
     ratevec <- numeric(nSubsets)
@@ -945,25 +976,25 @@ flowReMix <- function(formula,
       print(c(iter, levelP = levelProbs))
       if(betaDispersion) print(c(M = M))
       print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
-      # print(modelprobs)
-      # print(diff(log(modelprobs)))
     }
   }
 
   # Processing posteriors -------------------
-  posteriors <- data.frame(posteriors)
   uniqueIDs <- sapply(databyid, function(x) x$id[1])
-  if(dataReplicates <= 1) {
-    posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
-    names(posteriors) <- c(as.character(call$subject_id), names(dataByPopulation))
-  } else {
-    realIDs <- gsub("\\%%%.*", "", uniqueIDs)
-    post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
-    postid <- names(post)
-    posteriors <- data.frame(do.call("rbind", post))
-    names(posteriors) <- names(dataByPopulation)
-    posteriors <- cbind(id = postid, 1 - posteriors)
-    names(posteriors)[1] <- as.character(call$subject_id)
+  if(!mixed) {
+    posteriors <- data.frame(posteriors)
+    if(dataReplicates <= 1) {
+      posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
+      names(posteriors) <- c(as.character(call$subject_id), names(dataByPopulation))
+    } else {
+      realIDs <- gsub("\\%%%.*", "", uniqueIDs)
+      post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
+      postid <- names(post)
+      posteriors <- data.frame(do.call("rbind", post))
+      names(posteriors) <- names(dataByPopulation)
+      posteriors <- cbind(id = postid, 1 - posteriors)
+      names(posteriors)[1] <- as.character(call$subject_id)
+    }
   }
 
   # Processing random effects -----------
@@ -973,15 +1004,18 @@ flowReMix <- function(formula,
 
   # Preparing flowReMix object --------------------
   result <- list()
-  result$posteriors <- posteriors
-  result$levelProbs <- levelProbs
   result$coefficients <- coefficientList
+  names(result$coefficients) <- names(dataByPopulation)
   result$covariance <- covariance
   result$randomEffects <- estimatedRandomEffects
-  result$isingCov <- isingCoefs
-  result$isingfit <- isingfit
   result$dispersion <- M
-  result$assignmentList <- exportAssignment
+  if(!mixed) {
+    result$isingCov <- isingCoefs
+    result$isingfit <- isingfit
+    result$assignmentList <- exportAssignment
+    result$posteriors <- posteriors
+    result$levelProbs <- levelProbs
+  }
   class(result) <- "flowReMix"
 
   if(parallel) {
