@@ -13,10 +13,11 @@ unique(malaria$stim)
 malaria$stimgroup[malaria$stim %in% c("PfRBC", "uRBC")] <- "RBC"
 malaria$stimgroup[!(malaria$stim %in% c("PfRBC", "uRBC"))] <- "SPZ"
 malaria$stim[malaria$stim == "uRBC"] <- "control"
-malaria$stim <- factor(malaria$stim, levels = c("control", "PfSPZ", "PfRBC"))
+malaria$stim[malaria$stim != "control"] <- "stim"
+malaria$stim <- factor(malaria$stim, levels = c("control", "stim"))
 isCytokine <- substring(malaria$population, nchar(malaria$population)) == "+"
 malaria <- subset(malaria, isCytokine)
-malaria$subset <- paste(malaria$stimgroup, "/", malaria$population, sep = "")
+malaria$subset <- paste(malaria$visitno, "/", malaria$stimgroup, "/", malaria$population, sep = "")
 malaria$visitno <- factor(malaria$visitno)
 
 malaria$infection <- TRUE
@@ -28,30 +29,37 @@ toRemove <- sapply(countlist, function(x) mean(x > 4) < 0.05)
 toRemove <- names(countlist)[toRemove]
 malaria <- subset(malaria, !(subset %in% toRemove))
 malaria$subset <- factor(malaria$subset)
+malaria$ptid <- factor(malaria$ptid)
+malaria <- malaria[order(malaria$ptid, malaria$stimgroup), ]
 
 # Analysis -----------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 34, initMHcoef = 1,
-                             nPosteriors = 3, centerCovariance = TRUE,
-                             maxDispersion = 5000, minDispersion = 10^7,
-                             randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 100, isingInit = -log(89),
-                             initMethod = "sparse")
+control <- flowReMix_control(updateLag = 4, keepEach = 5, nsamp = 30, initMHcoef = 2,
+                             nPosteriors = 1, centerCovariance = TRUE,
+                             maxDispersion = 500, minDispersion = 10^6,
+                             randomAssignProb = 10^-8, intSampSize = 100,
+                             lastSample = 40, isingInit = -log(1),
+                             initMethod = "binom")
 
-tempdat <- subset(malaria, parent == "4+")
+tempdat <- subset(malaria, parent %in% c("4+"))
+tempdat<- subset(tempdat, stimgroup == "RBC")
+tempdat$time <- tempdat$visitno
 tempdat$subset <- factor(as.character(tempdat$subs))
-fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
+tempdat$stim[tempdat$stim]
+tempdat$trt <-1
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~
+                               stim + stim:trt,
                  subject_id = ptid,
                  cell_type = subset,
-                 cluster_variable = visitno,
-                 data = malaria,
+                 cluster_variable = trt,
+                 data = tempdat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "sparse",
-                 iterations = 10,
+                 regression_method = "binom",
+                 iterations = 7,
                  parallel = FALSE,
-                 verbose = TRUE, control = control)
-save(fit, file = "data analysis/results/new malaria.Robj")
+                 verbose = TRUE, control = control))
+#save(fit, file = "data analysis/results/new malaria 4+ 4+CXCR5+ 8+ E.Robj")
 
 # ROC analysis for infection -----------------
 posteriors <- fit$posteriors
@@ -70,7 +78,9 @@ n1 <- length(infect) - n0
 pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
 qvals <- p.adjust(pvals, method = "BH")
 rocResults <- data.frame(subset = subsets, auc = aucs,
+                         prob = fit$levelProbs,
                          pval = pvals, qval = qvals)
+rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
 # Stability selection for graphical model --------------
 assignments <- fit$assignmentList
@@ -79,7 +89,7 @@ assignments <- lapply(unique(names(assignments)), function(x) {
   do.call("rbind", assignments[names(assignments) == x])
 })
 
-reps <- 40
+reps <- 50
 modelList <- list()
 nsubsets <- ncol(assignments[[1]])
 countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
@@ -88,7 +98,8 @@ for(i in 1:reps) {
   colnames(mat) <- subsets
   keep <- apply(mat, 2, function(x) any(x != x[1]))
   mat <- mat[, keep]
-  system.time(model <- IsingFit::IsingFit(mat, AND = TRUE, plot = TRUE))
+  system.time(model <- IsingFit::IsingFit(mat, AND = FALSE, plot = FALSE,
+                                          gamma = 0))
   #coefs <- raIsing(mat, AND = TRUE, gamma = 0.9, method = "sparse")
   #plot(model)
   countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
@@ -96,29 +107,28 @@ for(i in 1:reps) {
   print(i)
 }
 
-threshold <- 0
+threshold <- 0.5
 props <- countCovar / reps
 #save(props, file = "data analysis/results/new malaria graph 4+ only.Robj")
 table(props) / 2
 which(props > threshold, arr.ind = TRUE)
-props[abs(props) <= threshold] <- 0
+props[props <= threshold] <- 0
 sum(props != 0) / 2
 
 # Plotting graph ---------------------
 require(GGally)
 library(network)
 library(sna)
-threshold <- 0.1
+#threshold <- 0.4
 network <- props
 colnames(props) <- subsets
 rownames(props) <- subsets
 diag(network) <- 0
-# Cutting network
-# network[6, 8] <- 0
-# network[8, 6] <- 0
-# network[6, 40] <- 0
-# network[40, 6] <- 0
-#######
+
+# network <- fit$isingCov
+# diag(network) <- 0
+# threshold <- quantile(abs(network)[abs(network) > 0], 0.9)
+
 keep <- apply(network, 1, function(x) any(abs(x) > threshold))
 #keep <-  (result$qvals <= 0.05)
 network <- network[keep, keep]
@@ -176,15 +186,17 @@ comp <- components(graph)
 # ROCs for vaccination
 n0 <- sum(infect == 0)
 n1 <- sum(infect == 1)
-par(mfrow = c(1, 2))
-for(i in 1:sum(comp$csize > 2)) {
-  group <- which(comp$csize > 2)[i]
+par(mfrow = c(2, 2))
+pvals <- c()
+for(i in 1:sum(comp$csize >= 2)) {
+  group <- which(comp$csize >= 2)[i]
   group <- subsets[keep][which(comp$membership == group)]
   cols <- which(names(fit$posteriors) %in% group)
   score <- rowMeans(fit$posteriors[, cols])
   rocfit <- roc(infect ~ score)
   auc <- rocfit$auc
   pval <- pwilcox(auc * n0 * n1, n0, n1, lower.tail = FALSE)
+  pvals <- c(pvals, pval)
   plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 4), "pval", round(pval, 3)))
 }
 

@@ -94,8 +94,8 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  #cluster_assignment = preAssignment,
                  parallel = TRUE,
                  verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/boolean robust4.Robj")
-#load(file = "data analysis/results/boolean robust3.Robj")
+#save(fit, file = "data analysis/results/boolean robust4.Robj")
+# load(file = "data analysis/results/boolean robust4.Robj")
 # load(file = "data analysis/results/boolean robust2 wPre.Robj")
 # load(file = "data analysis/results/boolean upfit4 w pre.Robj")
 # load(file = "data analysis/results/boolean upfit3.Robj")
@@ -115,15 +115,17 @@ vaccine <- vaccinemat
 vaccine[, 1] <- factor(as.character(vaccine[, 1]), levels = levels(fit$posteriors$ptid))
 vaccine <- vaccine[order(vaccine[, 1]), ]
 vaccine <- vaccine[, 2]
-par(mfrow = c(4, 6), mar = rep(1, 4))
-#par(mfrow = c(2, 2), mar = rep(1, 4))
+#par(mfrow = c(4, 6), mar = rep(1, 4))
+par(mfrow = c(2, 2), mar = rep(1, 4))
 auc <- numeric(length(subsets))
+targets <- c("CD154", "CD154,IL17a", "IL4", "IL4,IL2,CD154")
 for(j in 1:length(subsets)) {
   i <- which(names(posteriors) == subsets[j])
   try(rocfit <- roc(!vaccine ~ posteriors[, i]))
   auc[j] <- rocfit$auc
-  # try(print(plot(rocfit, main = paste(subsets[j], "- AUC", round(rocfit$auc, 3)),
-  #            cex.main = 0.8, cex.lab = 0.7, cex.axis = 0.6)))
+  if(subsets[j] %in% targets) {
+    plot(rocfit, main = paste(subsets[j], "AUC-", round(auc[j], 2)))
+  }
 }
 
 n1 <- sum(vaccine)
@@ -219,7 +221,8 @@ infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$
 forplot <- do.call("rbind", forplot)
 forplot <- merge(forplot, infectDat, all.x = TRUE, by.x = "ptid", by.y = "ptid")
 require(ggplot2)
-ggplot(forplot) +
+#ggplot(subset(forplot, subset %in% c("CD154", "CD154,IL17a", "IL4", "IL4,IL2,CD154"))) +
+  ggplot(forplot) +
         geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine == 1)) +
         facet_wrap(~ subset, scales = 'free', ncol = 6) +
         geom_abline(slope = 1, intercept = 0) +
@@ -264,6 +267,7 @@ which(props > threshold, arr.ind = TRUE)
 props[abs(props) < threshold] <- 0
 sum(props != 0) / 2
 #save(props, file = "Data Analysis/results/RV144 1 graph.Robj")
+#load(file = "Data Analysis/results/RV144 1 graph.Robj")
 
 # Plotting graph ---------------------
 require(GGally)

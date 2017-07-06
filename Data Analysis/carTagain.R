@@ -38,17 +38,18 @@ cart[, c(5, 1, 4, 6, 22)]
 cart$outcome <- "negative"
 cart$outcome[cart$best %in% c("CR", "PR")] <- "positive"
 cart$outcome[is.na(cart$best) | cart$best == "NA"] <- NA
+cart <- subset(cart, cart$parentcount > 0)
 
 # Collapse the IP timepoint
-ip <- subset(cart, timepoint %in% c("CD4 IP", "CD8 IP"))
-cart <- subset(cart, !(timepoint %in% c("CD4 IP", "CD8 IP")))
-trimmed <- do.call("rbind", by(ip, ip$ptid, function(x) x[1, ]))
-trimmed <- trimmed[, -c(1, 4, 2)]
-trimmed$timepoint <- "d0"
-ip <- summarize(group_by(ip, ptid, parent, population),
-                  count = sum(count))
-ip <- merge(ip, trimmed, all.x = TRUE)
-cart <- rbind(cart[, -1], ip)
+# ip <- subset(cart, timepoint %in% c("CD4 IP", "CD8 IP"))
+# cart <- subset(cart, !(timepoint %in% c("CD4 IP", "CD8 IP")))
+# trimmed <- do.call("rbind", by(ip, ip$ptid, function(x) x[1, ]))
+# trimmed <- trimmed[, -c(1, 4, 2)]
+# trimmed$timepoint <- "d0"
+# ip <- summarize(group_by(ip, ptid, parent, population),
+#                   count = sum(count), parentcount = sum(parentcount))
+# ip <- merge(ip, trimmed, all.x = TRUE)
+# cart <- rbind(cart[, -1], ip)
 
 # Transforming timepoints to categories
 cart$timenum <- 0
@@ -63,9 +64,11 @@ cart$timenum[cart$timenum > 35] <- 3
 table(cart$timenum)
 
 # Creating subset variable
+cart <- subset(cart, !is.na(timenum))
 cart$subset <- paste(cart$parent, cart$population, sep = "/")
-by(cart, cart$id, function(x) unique(x$bestResponse))
-by(cart, cart$subset, function(x) unique(x$poutcome))
+#cart$subset <- paste(cart$timenum, cart$subset, sep = "/")
+by(cart, cart$ptid, function(x) unique(x$best))
+by(cart, cart$subset, function(x) unique(x$outcome))
 
 # Exploration
 unique(cart$population)
@@ -74,10 +77,11 @@ poutcome[cart$bestResponse %in% c("SD", "PD")] <- FALSE
 poutcome[is.na(cart$bestResponse)] <- NA
 cart$prop <- cart$count / cart$parentcount
 cart$poutcome <- poutcome
-# ggplot(cart) +
-#   geom_boxplot(aes(x = factor(timenum), color = poutcome,
-#                    y = log(prop + 1 / parentcount))) +
-#   facet_wrap(~ subset, scales = "free")
+
+ggplot(cart) +
+  geom_boxplot(aes(x = factor(timenum), color = outcome,
+                   y = log(prop + 1 / parentcount))) +
+  facet_wrap(~ subset, scales = "free")
 
 # Analysis
 cart$treatment <- rep(1, nrow(cart))
@@ -91,22 +95,65 @@ cart <- subset(cart, timenum < 4)
 cart$timenum <- factor(cart$timenum)
 
 
-control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 1,
-                             nPosteriors = 2, centerCovariance = TRUE,
-                             maxDispersion = 10^8, minDispersion = 10^8,
-                             randomAssignProb = 0.35, intSampSize = 50,
-                             initMethod = "sparse")
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~
-                               treatment*timenum + disease + isolation + age + plannedDose,
+library(flowReMix)
+control <- flowReMix_control(updateLag = 5, nsamp = 100, initMHcoef = 1,
+                             nPosteriors = 1, centerCovariance = TRUE,
+                             maxDispersion = 10^4, minDispersion = 10^7,
+                             randomAssignProb = 10^-8, intSampSize = 50,
+                             lastSample = 40, isingInit = -log(89),
+                             initMethod = "binom")
+
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+                             subject_id = ptid,
                              cell_type = subset,
-                             subject_id =  id, data = cart,
                              cluster_variable = treatment,
-                             weights = NULL,
+                             data = cart,
                              covariance = "sparse",
                              ising_model = "sparse",
-                             regression_method = "sparse",
+                             regression_method = "binom",
                              iterations = 10,
-                             control = control))
+                             parallel = TRUE,
+                             verbose = TRUE, control = control))
+save(fit, file = "data analysis/results/carTagain 3.Robj")
+#load(file = "data analysis/results/carTagain 1.Robj")
+post <- fit$posteriors
+post <- merge(post, unique(data.frame(ptid = cart$ptid, outcome =  cart$outcome)),
+              all.x = TRUE, all.y = FALSE)
+post <- post[, -1]
+outcome <- post[, ncol(post)]
+post <- post[, -ncol(post)]
+#outcome[is.na(outcome)] <- "negative"
+library(pROC)
+aucs <- numeric(ncol(post))
+for(i in 1:ncol(post)) {
+  aucs[i] <- roc(outcome ~ post[, i])$auc
+}
+n0 <- sum(outcome == "negative", na.rm = TRUE)
+n1 <- sum(outcome == "positive", na.rm = TRUE)
+pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
+results <- data.frame(probs = fit$levelProbs, auc = aucs, pval = pvals)
+results <- results[order(results$auc), ]
+results <- subset(results, probs > 0.05 & probs < 0.95)
+qvals <- p.adjust(results$pval, method = "BH")
 
 
+# Graphical Model -------------
+graph <- fit$isingfit
+diag(graph) <- 0
+which(graph != 0, arr.ind = TRUE)
+library(igraph)
+graph <- graph.adjacency(graph)
+comp <- components(graph)
+aucs <- numeric(2)
+g <- 1
+test <- which(comp$csize > 4)
+for(i in c(test)) {
+  group <- which(comp$membership == i)
+  score <- rowMeans(post[, group])
+  aucs[g] <- roc(outcome ~ score)$auc
+  g <- g + 1
+}
+n0 <- sum(outcome == "negative", na.rm = TRUE)
+n1 <- sum(outcome == "positive", na.rm = TRUE)
+pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
 

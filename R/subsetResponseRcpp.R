@@ -61,7 +61,7 @@ initializeModel <- function(dat, formula, method) {
     probs <- pbeta(props, alpha, beta)
     dat$treatmentvar <- rbinom(nrow(dat), 1, probs)
     mtrt <- mean(dat$treatmentvar)
-    if(mtrt < 0.1 | mtrt > 0.9 | is.na(mtrt)) {
+    if(mtrt < 0.2 | mtrt > 0.8 | is.na(mtrt)) {
       dat$treatmentvar <- rbinom(nrow(dat), 1, 0.5)
     }
   }
@@ -588,6 +588,7 @@ flowReMix <- function(formula,
   }
 
   flagEquation <- rep(0, nSubsets)
+  netFlags <- rep(FALSE, nSubsets)
 
   # Starting analysis -------------------------------
   if(verbose) print("Starting Stochastic EM")
@@ -604,6 +605,7 @@ flowReMix <- function(formula,
 
     # Updating Regression Equation -------------------
     if(iter > 1) {
+      print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
       # Robust
@@ -676,16 +678,18 @@ flowReMix <- function(formula,
         # Sparse
       } else if(smallCounts) {
         tempFits <- foreach(j = 1:nSubsets) %dopar% {
-          if(sum(clusterAssignments[, j]) < 3) {
+          if(sum(clusterAssignments[, j]) < 3 | netFlags[j]) {
             return(glmFits[[j]])
           }
           popdata <- dataByPopulation[[j]]
+          print(unique(as.character(popdata$sub.population)))
           try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
           y <- cbind(popdata$N - popdata$y, popdata$y)
           fit <- NULL
-          try(fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
-                                       offset = popdata$randomOffset))
+          try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
+                                                            offset = popdata$randomOffset),
+                                   timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
             eta <- predict(fit, newx = X, offset = popdata$randomOffset, s = "lambda.min")
             mu <- 1 / (1 + exp(-eta))
@@ -700,6 +704,9 @@ flowReMix <- function(formula,
           if(!is.null(tempFits[[j]])) {
             glmFits[[j]] <- tempFits[[j]]
             M[j] <- max(glmFits[[j]]$M, minDispersion)
+          } else {
+            print(paste("subset", j, "did not converge!"))
+            netFlags[j] <- TRUE
           }
         }
         # Binomial
@@ -775,6 +782,7 @@ flowReMix <- function(formula,
     MHattempts <- rep(0, nSubsets)
     MHsuccess <- rep(0, nSubsets)
     # S-step ------------------------------
+    print("Sampling!")
     MHresult <- foreach(i = 1:nSubjects) %dopar% {
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
@@ -855,6 +863,7 @@ flowReMix <- function(formula,
     }
 
     # Updating Covariance -------------------------
+    print("Estimating Covariance!")
     randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
@@ -875,6 +884,7 @@ flowReMix <- function(formula,
     }
 
     # Updating Ising -----------------------
+    print("Updating Ising!")
     if(iter == maxIter) {
       exportAssignment <- assignmentList
       names(exportAssignment) <- names(databyid)
@@ -935,8 +945,8 @@ flowReMix <- function(formula,
       print(c(iter, levelP = levelProbs))
       if(betaDispersion) print(c(M = M))
       print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
-      print(modelprobs)
-      print(diff(log(modelprobs)))
+      # print(modelprobs)
+      # print(diff(log(modelprobs)))
     }
   }
 

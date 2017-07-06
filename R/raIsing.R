@@ -69,6 +69,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
   nonzero <- t(apply(nonzero, 1, sort))
   nonzero <- unique(nonzero)
   for(i in 1:nrow(nonzero)) {
+    if(nrow(nonzero) == 0) break
     u <- nonzero[i, 1]
     v <- nonzero[i, 2]
     first <- isingmat[u, v]

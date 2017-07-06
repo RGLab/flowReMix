@@ -131,7 +131,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  verbose = TRUE, control = control)
 #save(fit, file = "Data Analysis/results/HVTN bool robust.Robj")
 
-#load(file = "Data Analysis/results/HVTN bool betabinom 6 dropmore.Robj")
+#load(file = "Data Analysis/results/HVTN bool robust.Robj")
 
 
 # ROC plots -----------------------------
@@ -163,6 +163,7 @@ qvals <- p.adjust(pvals, method = "bonferroni")
 vaccineSelect <- qvals <= 0.05
 subsets <- names(posteriors)[-c(1, ctrlCol)]
 result <- data.frame(subsets, aucs, pvals, qvals)
+result$prob <- fit$levelProbs
 result[order(result$aucs, decreasing = TRUE), ]
 
 # ROC analysis for infection ---------------------
@@ -185,6 +186,7 @@ infectPvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)#[vaccineSelec
 infectQvals <- p.adjust(infectPvals, method = "bonferroni")
 subsets <- names(posteriors)[-c(1, ctrlCol)]#[vaccineSelect]
 infectresult <- data.frame(subsets, aucs, infectPvals, infectQvals)
+infectresult$prob <- fit$levelProbs
 infectresult[order(infectresult$aucs, decreasing = TRUE), ]
 
 # Scatter plots -----------------------
@@ -218,28 +220,29 @@ reps <- 100
 modelList <- list()
 nsubsets <- ncol(assignments[[1]])
 countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
-doParallel::registerDoParallel(cores = 2)
+doParallel::registerDoParallel(cores = 1)
 for(i in 1:reps) {
   mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
-  colnames(mat) <- expressed
+  colnames(mat) <- subsets
   keep <- apply(mat, 2, function(x) any(x != x[1]))
   mat <- mat[, keep]
   #system.time(model <- IsingFit::IsingFit(mat, AND = TRUE, plot = TRUE))
-  coefs <- raIsing(mat, AND = TRUE, gamma = 0.9, method = "sparse")
+  system.time(coefs <- raIsing(mat, AND = TRUE, gamma = 0.9, method = "sparse"))
   #plot(model)
   #countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
   countCovar[keep, keep] <- countCovar[keep, keep] + (coefs != 0) * sign(coefs)
   print(i)
 }
 
+doParallel::stopImplicitCluster()
 props <- countCovar / reps
+#save(props, file = "Data Analysis/results/HVTN bool robust graph.Robj")
 table(props) / 2
 threshold <- 0.5
 which(props > threshold, arr.ind = TRUE)
 props[abs(props) <= threshold] <- 0
 sum(props != 0) / 2
-#save(props, file = "Data Analysis/results/HVTN bool robust graph.Robj")
-#load(file = "Data Analysis/results/HVTN bool betabinom 3 graph.Robj")
+#load(file = "Data Analysis/results/HVTN bool robust graph.Robj")
 
 # Plotting graph ---------------------
 require(GGally)
@@ -250,15 +253,12 @@ network <- props
 colnames(props) <- subsets
 rownames(props) <- subsets
 diag(network) <- 0
-# Cutting network
-# network[6, 8] <- 0
-# network[8, 6] <- 0
-# network[6, 40] <- 0
-# network[40, 6] <- 0
+### 2 component graph
+#keep2 <- which(comp$membership %in% c(2, 4))
 #######
 keep <- apply(network, 1, function(x) any(abs(x) > threshold))
-#keep <-  (result$qvals <= 0.05)
-network <- network[keep, keep]
+keep2 <- rep(TRUE, sum(keep))
+network <- network[keep, keep][keep2, keep2]
 net <- network(props)
 subsets <- names(fit$posteriors)[-1]
 nodes <- ggnet2(network, label = subsets[keep])$data
@@ -277,9 +277,9 @@ for(j in 2:p) {
 edges <- data.frame(edges)
 names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
 aucs <- result$auc
-nodes$auc <- aucs[keep]
-nodes$infectauc <- infectresult$aucs[keep]
-nodes$qvals <- result$qvals[keep]
+nodes$auc <- aucs[keep][keep2]
+nodes$infectauc <- infectresult$aucs[keep][keep2]
+nodes$qvals <- result$qvals[keep][keep2]
 nodes$sig <- nodes$qvals < 0.1
 
 names(edges)[5] <- "Dependence"
@@ -293,7 +293,7 @@ ggplot() +
                                  alpha = abs(Dependence)),
                size = 1) +
   #scale_fill_gradient2(low = "white", high = "red", limits = c(0.7, 1)) +
-  scale_fill_gradientn(colours = rainbow(4))+
+  scale_fill_gradientn(colours = rainbow(4), limits = c(0.5, 1))+
   geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
              size = 8, col = "grey") +
   scale_shape(solid = FALSE) +
@@ -316,8 +316,8 @@ comp <- components(graph)
 # ROCs for vaccination
 n0 <- sum(vaccine == 1)
 n1 <- sum(vaccine == 0)
-par(mfrow = c(2, 2))
-for(i in 1:sum(comp$csize > 2)) {
+par(mfrow = c(1, 2))
+for(i in c(2, 3)) {
   group <- which(comp$csize > 2)[i]
   group <- which(comp$membership == group)
   cols <- which(names(fit$posteriors) %in% names(group))
@@ -325,16 +325,16 @@ for(i in 1:sum(comp$csize > 2)) {
   rocfit <- roc(vaccine ~ score)
   auc <- rocfit$auc
   pval <- pwilcox(auc * n0 * n1, n0, n1, lower.tail = FALSE)
-  plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 3), "pval", round(pval, 3)))
+  plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 3)))
 }
 
 # ROCs for infection
 n0 <- sum(vaccine == 1)
 n1 <- sum(vaccine == 0)
-par(mfrow = c(2, 2))
+par(mfrow = c(1, 2))
 vaccines <- vaccine == 1
 pvals <- numeric(4)
-for(i in 1:sum(comp$csize > 2)) {
+for(i in c(2, 3)) {
   group <- which(comp$csize > 2)[i]
   group <- which(comp$membership == group)
   cols <- which(names(fit$posteriors) %in% names(group))
@@ -345,6 +345,7 @@ for(i in 1:sum(comp$csize > 2)) {
   pvals[i] <- pval
   plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 2), "pval", round(pval, 5)))
 }
+
 
 # Posteriors box plots ------------------------------------
 require(dplyr)
