@@ -1,6 +1,8 @@
+#' @export
 raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
-                    method = "sparse") {
+                    method = "sparse", cv = FALSE,
+                    family = "binomial") {
   nvars <- ncol(mat)
   if(!is.null(modelprobs) & length(modelprobs) != (ncol(mat) + 1)) {
     warning("modelprobs must be of length ncol(mat) + 1 !")
@@ -23,15 +25,19 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     y <- as.vector(mat[, j])
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)
-    regX <- X[, xcols >= 4]
+    if(family == "binomial") {
+      regX <- X[, xcols >= 4]
+    } else {
+      regX <- X
+    }
 
-    if(sum(y == 0) < 8) {
+    if(sum(y == 0) < 8 & family == "binomial") {
       p <- min(mean(y), 1 - minprob)
       row <- rep(0, ncol(mat))
       coef <- log(p / (1 - p))
       row[j] <- coef
       return(row)
-    } else if(sum(y == 1) < 8) {
+    } else if(sum(y == 1) < 8 & family == "binomial") {
       p <- max(mean(y), minprob)
       row <- rep(0, ncol(mat))
       coef <- log(p / (1 - p))
@@ -45,20 +51,31 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
       return(row)
     }
 
-    # if(method == "joint") {
-    #   off <- rep(-3, length(y))
-    # } else {
-    # }
-    off <- offsets[rowSums(X) + 1]
-    netfit <- glmnet::glmnet(regX, y, family = "binomial", offset = off,
-                             intercept = TRUE)
-    logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
-    dfs <- netfit$df
-    ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
-    lambda <- netfit$lambda[which.min(ebic)]
+    if(method == "raIsing") {
+      off <- offsets[rowSums(X) + 1]
+    } else {
+      off <- NULL
+    }
+
+    if(!cv) {
+      netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
+                               intercept = TRUE)
+      logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
+      dfs <- netfit$df
+      ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
+      lambda <- netfit$lambda[which.min(ebic)]
+    } else {
+      netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
+                                  intercept = TRUE)
+      lambda <- netfit$lambda.min
+    }
     matrow <- rep(0, ncol(mat))
     coefs <- rep(0, ncol(mat))
-    coefs[c(1, which(xcols >= 4) + 1)] <- coef(netfit, s = lambda)
+    if(family == "binomial") {
+      coefs[c(1, which(xcols >= 4) + 1)] <- coef(netfit, s = lambda)
+    } else {
+      coefs <- coef(netfit, s = lambda)
+    }
     matrow[-j] <- coefs[-1]
     matrow[j] <- coefs[1]
     return(matrow)
@@ -84,10 +101,6 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     isingmat[u, v] <- meanval
     isingmat[v, u] <- meanval
   }
-
-  # if(method == "joint") {
-  #   diag(isingmat) <- -3
-  # }
 
   return(isingmat)
 }

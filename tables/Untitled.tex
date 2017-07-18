@@ -1,0 +1,43 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+\begin{document}
+$$
+\log P(S) = \int_R f(y) dy 
+$$$$
+\frac{\partial}{\partial \theta} \log P(s) 
+= \frac{\partial}{\partial\theta} \log \int_R \varphi(y;\theta,\Sigma) dy 
+= \frac{1}{P(S)} \frac{\partial}{\partial \theta} P(S)
+$$
+
+$$
+\frac{\partial}{\partial\theta} P(S) = \int_R \left(\Sigma^{-1}y - \Sigma^{-1}\theta \right)  \varphi(y;\theta, \Sigma)dy
+$$$$
+= P(S) \left(\Sigma^{-1}E(y|S) - \Sigma^{-1} \theta \right)
+$$$$
+\Rightarrow \frac{\partial}{\partial \theta} \log P(s)  = \Sigma^{-1}E(y|S) - \Sigma^{-1} \theta
+$$
+
+$$
+\frac{\partial^{2}}{\partial\theta^{2}} \log P(S) = 
+-\Sigma^{-1} + \frac{\partial}{\partial\theta} \Sigma^{-1} E(y|S)
+$$
+
+$$
+\frac{\partial}{\partial\theta} E(y|S) =
+\int_R \frac{y}{P(S)^{2}}\left(P(S) (\Sigma^{-1} y - \Sigma^{-1}\theta) \varphi(y;\theta,\Sigma) -\varphi(y; \theta,\Sigma) P(S)(\Sigma^{-1}E(y|S) -\Sigma^{-1}\theta)
+\right)
+$$$$
+=\int_R f(y|S) y\left(\Sigma^{-1}y - \Sigma^{-1} E(y|S) \right)dy = Var(y|S)\Sigma^{-1}
+$$
+
+$$
+\Rightarrow \frac{\partial^{2}}{\partial\theta^{2}} \log P(S) 
+= Var(\Sigma^{-1}y|S) - \Sigma^{-1}
+$$
+
+
+
+
+
+\end{document}

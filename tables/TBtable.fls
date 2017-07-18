@@ -1,0 +1,17 @@
+PWD /Users/amitmeir/Documents/rglab/flowReMix/tables
+INPUT /usr/local/texlive/2016/texmf.cnf
+INPUT /usr/local/texlive/2016/texmf-dist/web2c/texmf.cnf
+INPUT /usr/local/texlive/2016/texmf-var/web2c/pdftex/pdflatex.fmt
+INPUT TBtable.tex
+OUTPUT TBtable.log
+INPUT /usr/local/texlive/2016/texmf-dist/tex/latex/base/article.cls
+INPUT /usr/local/texlive/2016/texmf-dist/tex/latex/base/article.cls
+INPUT /usr/local/texlive/2016/texmf-dist/tex/latex/base/size10.clo
+INPUT /usr/local/texlive/2016/texmf-dist/tex/latex/base/size10.clo
+INPUT TBtable.aux
+INPUT TBtable.aux
+OUTPUT TBtable.aux
+OUTPUT TBtable.pdf
+INPUT /usr/local/texlive/2016/texmf-var/fonts/map/pdftex/updmap/pdftex.map
+INPUT TBtable.aux
+INPUT /usr/local/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb

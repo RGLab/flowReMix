@@ -96,7 +96,9 @@ cart$plannedDose[is.na(cart$plannedDose)] <- 4
 cart$disease[is.na(cart$disease)] <- "missing"
 cart$age[is.na(cart$age)] <- mean(cart$age[!is.na(cart$age)])
 cart$isolation[is.na(cart$isolation)] <- "missing"
-cart <- subset(cart, population != "!LAG3&!PD1&!TIM3")
+cart <- subset(cart, population %in% c("PD-1&!LAG3&!TIM3", "!PD-1&LAG3&!TIM3", "!PD-1&!LAG3&TIM3",
+                                       "!PD-1&LAG3&TIM3", "PD-1&!LAG3&TIM3", "PD-1&LAG3&!TIM3",
+                                       "PD-1&LAG3&TIM3"))
 cart$subset <- factor(cart$subset)
 cart <- subset(cart, timenum < 4)
 cart$timenum <- factor(cart$timenum)

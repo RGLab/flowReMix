@@ -73,7 +73,7 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 10, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 12, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -94,7 +94,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  #cluster_assignment = preAssignment,
                  parallel = TRUE,
                  verbose = TRUE, control = control))
-#save(fit, file = "data analysis/results/boolean robust4.Robj")
+#save(fit, file = "data analysis/results/boolean robust5 wrandom.Robj")
 # load(file = "data analysis/results/boolean robust4.Robj")
 # load(file = "data analysis/results/boolean robust2 wPre.Robj")
 # load(file = "data analysis/results/boolean upfit4 w pre.Robj")
@@ -237,6 +237,15 @@ require(ggplot2)
 # dev.off()
 
 # Stability selection for graphical model ------------------------
+stability <- stabilityGraph(fit, type = "ising", cpus = 2, reps = 50)
+plot(stability, fill = rocResults$auc, threshold = 0.5)
+randStability <- stabilityGraph(fit, type = "randomEffects", cpus = 2, reps = 51,
+                                cv = TRUE)
+plot(randStability, fill = rocResults$auc, threshold = 0.5)
+
+
+
+
 assignments <- fit$assignmentList
 names(assignments) <- substr(names(assignments), 1, 5)
 assignments <- lapply(unique(names(assignments)), function(x) {
@@ -497,6 +506,82 @@ ggplot(posteriors, aes(x = infect, y = 1- posterior)) +
 ggplot(posteriors, aes(x = infect, y = 1- posterior, col = infect)) +
   geom_boxplot() + #geom_jitter(size = 0.05, alpha = 0.2) +
   xlab("vaccine") + theme_bw() + facet_wrap(~ subset, nrow = 3)
+
+# Random Effect Covariance ---------------------
+random <- fit$randomEffectSamp
+reps <- 100
+modelList <- list()
+nsubsets <- ncol(assignments[[1]])
+p <- ncol(random[[1]])
+countCovar <- matrix(0, nrow = p , ncol = p )
+doParallel::registerDoParallel(cores = 2)
+for(i in 1:reps) {
+  mat <- t(sapply(random, function(x) x[sample(1:nrow(x), 1), ]))
+  colnames(mat) <- subsets
+  model <- raIsing(mat, family = "gaussian", gamma = 0, cv = TRUE)
+  modelList[[i]] <- model
+  diag(model) <- 0
+  countCovar <- countCovar + (model != 0) * sign(model)
+  print(i)
+}
+doParallel::stopImplicitCluster()
+props <- countCovar / reps
+#save(props, file = "data analysis/results/RV144 RE net 1.Robj")
+table(props)
+estnet <- props
+diag(estnet) <- 0
+threshold <- 0.6
+estnet[abs(estnet) < threshold] <- 0
+
+network <- estnet
+require(GGally)
+library(network)
+library(sna)
+keep <- apply(network, 1, function(x) any(abs(x) >= threshold)) #| rocResults$qvals < 0.05
+network <- network[keep, keep]
+net <- network(network)
+subsets <- colnames(fit$posteriors)[-1]
+nodes <- ggnet2(network, label = subsets[keep])$data
+edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
+p <- nrow(network)
+row <- 1
+for(j in 2:p) {
+  for(i in 1:(j-1)) {
+    if(network[i, j] != 0) {
+      edges[row, ] <- unlist(c(nodes[i, 6:7], nodes[j, 6:7], network[i, j]))
+      row <- row + 1
+    }
+  }
+}
+
+edges <- data.frame(edges)
+names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
+nodes$auc <- rocResults$auc[keep]
+nodes$qvals <- rocResults$qvals[keep]
+nodes$sig <- nodes$qvals < 0.05
+
+names(edges)[5] <- "Dependence"
+lims <- max(abs(props))
+library(ggplot2)
+ggplot() +
+  scale_colour_gradient2(limits = c(-lims, lims), low="dark red", high = "dark green") +
+  geom_segment(data = edges, aes(x = xstart, y = ystart,
+                                 xend = xend, yend = yend,
+                                 col = (Dependence),
+                                 alpha = abs(Dependence)),
+               size = 1) +
+  #scale_fill_gradient2(low = "white", high = "red", limits = c(0.7, 1)) +
+  scale_fill_gradientn(colours = rainbow(4))+
+  geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
+             size = 8, col = "grey") +
+  scale_shape(solid = FALSE) +
+  geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
 
 
 

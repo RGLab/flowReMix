@@ -397,7 +397,7 @@ subsets <- names(fit$coefficients)
 nfunctions <- sapply(subsets, function(x) length(strsplit(x, "+", fixed = TRUE)[[1]]) - 1)
 weightList <- list()
 weightList$poly <- weights <- nfunctions / choose(5, nfunctions)
-#weightList$func <- rep(1, length(nfunctions))
+weightList$func <- rep(1, length(nfunctions))
 
 resultList <- list()
 type <- "poly"

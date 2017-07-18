@@ -72,12 +72,19 @@ initializeModel <- function(dat, formula, method, mixed) {
   y <- model.response(initdat)
 
   # Checking for separation
-  if(ncol(X) > 1) {
-    sep <- glm(formula, data = dat, family = "binomial", weights = weights,
-               method = brglm2::detect_separation)$separation
-  } else {
-    sep <- FALSE
+  if(method == "firth") {
+    sep = TRUE
   }
+
+  if(ncol(X) > 0) {
+    outputsep <- glm(formula, data = dat, family = "binomial", weights = weights,
+               method = brglm2::detect_separation)$separation
+    if(method != "firth") sep <- outputsep
+  } else {
+    outputsep <- FALSE
+    if(method != "firth") sep <- FALSE
+  }
+
   if(sep & method != "sparse") {
     X <- model.matrix(formula, dat)
     fit <- glm(formula, data = dat, family = "binomial", weights = weights,
@@ -113,7 +120,7 @@ initializeModel <- function(dat, formula, method, mixed) {
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
   randomEffects <- randomEffects[order(unique(dat$id))]
   return(list(fit = fit, coef = coef, randomEffects = randomEffects,
-              separation = sep))
+              separation = outputsep))
 }
 
 #' Fitting a Mixture of Mixed Effect Models for Binomial Data
@@ -359,7 +366,7 @@ flowReMix <- function(formula,
   }
 
   if(length(regressionMethod) > 1) regressionMethod <- regressionMethod[1]
-  if(!(regressionMethod %in% c(c("binom", "betabinom", "sparse", "robust")))) stop("regression_method must be one of binom, betabinom or sparse")
+  if(!(regressionMethod %in% c(c("firth", "binom", "betabinom", "sparse", "robust")))) stop("regression_method must be one of binom, betabinom, sparse, robust or firth!")
   if(regressionMethod == "binom") {
     smallCounts <- FALSE
     betaDispersion <- FALSE
@@ -368,11 +375,11 @@ flowReMix <- function(formula,
     smallCounts <- FALSE
     betaDispersion <- TRUE
     robustreg <- FALSE
-  } else if(regression_method == "sparse") {
+  } else if(regressionMethod == "sparse") {
     smallCounts <- TRUE
     betaDispersion <- TRUE
     robustreg <- FALSE
-  } else if(regression_method == "robust") {
+  } else if(regressionMethod == "robust" | regressionMethod == "firth") {
     smallCounts <- FALSE
     robustreg <- TRUE
     betaDispersion <- TRUE
@@ -530,6 +537,9 @@ flowReMix <- function(formula,
   nSubjects <- length(unique(dat$id))
   nSubsets <- length(glmFits)
   separation <- sapply(initialization, function(x) x$separation)
+  if(regressionMethod == "firth") {
+    separation <- rep(TRUE, length(separation))
+  }
 
   if(isingMethod == "raIsing") {
     modelprobs <- (1 + nSubsets)^-1 / choose(nSubsets, 0:nSubsets)
@@ -865,6 +875,7 @@ flowReMix <- function(formula,
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
       randomMat <- randomList[[i]]
+      randomMat[is.na(randomMat)] <- 0
       randomEst <- randomMat[nrow(randomMat), ]
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
@@ -889,11 +900,19 @@ flowReMix <- function(formula,
 
     # Updating Covariance -------------------------
     print("Estimating Covariance!")
+    if(iter == maxIter) {
+      randomOutput <- randomList
+      names(randomOutput) <- names(databyid)
+    }
     randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
-        pdsoftFit <- PDSCE::pdsoft.cv(randomList, init = "dense")
+        pdsoftFit <- NULL
+        try(pdsoftFit <- PDSCE::pdsoft.cv(randomList, init = "dense"))
+        if(is.null(pdsoftFit)) {
+          print("shit")
+        }
         covariance <- pdsoftFit$sigma
         invcov <- pdsoftFit$omega
       } else if(covarianceMethod == "dense") {
@@ -1009,6 +1028,7 @@ flowReMix <- function(formula,
   result$covariance <- covariance
   result$randomEffects <- estimatedRandomEffects
   result$dispersion <- M
+  result$randomEffectSamp <- randomOutput
   if(!mixed) {
     result$isingCov <- isingCoefs
     result$isingfit <- isingfit
