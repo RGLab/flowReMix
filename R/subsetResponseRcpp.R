@@ -935,7 +935,7 @@ flowReMix <- function(formula,
         names(exportAssignment) <- names(databyid)
       }
       assignmentList <- do.call("rbind",assignmentList)
-      unscrambled <- assignmentList
+      # assignmentList <- t(sapply(assignmentList, function(x) x[nrow(x), ]))
       assignmentList <- data.frame(assignmentList)
       names(assignmentList) <- names(dataByPopulation)
 
@@ -950,7 +950,7 @@ flowReMix <- function(formula,
         isingfit <- raIsing(assignmentList, AND = TRUE,
                             modelprobs = modelprobs,
                             minprob = 1 / nSubjects)
-        isingCoefs <- isingfit
+        isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
       } else if(isingMethod == "dense") {
         for(j in 1:nSubsets) {
           firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
@@ -1023,6 +1023,7 @@ flowReMix <- function(formula,
 
   # Preparing flowReMix object --------------------
   result <- list()
+  result$modelFrame <- dat
   result$coefficients <- coefficientList
   names(result$coefficients) <- names(dataByPopulation)
   result$covariance <- covariance
@@ -1033,6 +1034,7 @@ flowReMix <- function(formula,
     result$isingCov <- isingCoefs
     result$isingfit <- isingfit
     result$assignmentList <- exportAssignment
+    posteriors[, -1] <- 1 - posteriors[, -1]
     result$posteriors <- posteriors
     result$levelProbs <- levelProbs
   }

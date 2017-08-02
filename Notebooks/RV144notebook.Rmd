@@ -1,0 +1,309 @@
+---
+title: "RV144 Analysis"
+output: html_notebook
+---
+```{r "setup", include=TRUE, warning=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/amitmeir/Documents/rglab/flowReMix")
+```
+
+**Loading Data**
+
+```{r, results = "hide", message=FALSE, warning=FALSE}
+library(flowReMix)
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+library(cowplot)
+
+assign <- function(x) {
+  x$prop <- x$count / x$parentcount
+  assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
+  assign[assign == 1] <- -1
+  result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
+  return(result)
+}
+
+require(pROC)
+require(reshape2)
+data("rv144_booleans")
+bySubset <- by(data.frame(booleans$stim, booleans$nonstim), booleans$Subset, function(x) x)
+largerThanThershold <- sapply(bySubset, function(x) colSums(x >5))
+
+booldata <- melt(booleans, c("PTID", "Subset"))
+names(booldata)[3:4] <- c("stim", "count")
+
+booldata <- by(booldata, INDICES = list(booldata$PTID, booldata$stim), function(x) {
+  x$parentcount <- sum(x$count)
+  return(x)
+})
+booldata <- do.call("rbind", booldata)
+
+booldata <- subset(booldata, Subset != "!TNFa&!IFNg&!IL4&!IL2&!CD154&!IL17a")
+booldata$treatment <- as.numeric(booldata$stim == "stim")
+uniquepop <- unique(booldata$Subset)
+booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
+booldata <- subset(booldata, !is.na(Subset))
+allsubset <- booldata
+booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
+
+# Naming ------------------
+subsets <- unique(booldata$Subset)
+booldata$Subset <- as.character(booldata$Subset)
+nfunctions <- numeric(length(subsets))
+for(i in 1:length(subsets)) {
+  split <- strsplit(as.character(subsets[i]), "&")[[1]]
+  first <- substr(split, 1, 1)
+  nfunction <- sum(first != "!")
+  nfunctions[i] <- nfunction
+  name <- paste(split[first != "!"], collapse = ",")
+  booldata$nfunction[booldata$Subset == subsets[[i]]] <- nfunction
+  booldata$Subset[booldata$Subset == subsets[[i]]] <- name
+}
+subsets <- unique(booldata$Subset)
+booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
+names(booldata) <- tolower(names(booldata))
+
+# Getting vaccine information --------------------
+data("rv144")
+rv144 <- rv144[order(rv144$ptid), ]
+vaccine <- (by(rv144, rv144$ptid, function(x) x$vaccine[1] == "VACCINE"))
+vaccine <- data.frame(ptid = names(vaccine), vaccine = as.numeric(vaccine))
+vaccinemat <- vaccine[vaccine$ptid %in% booldata$ptid, ]
+
+# Getting infection status
+data("rv144_correlates_data")
+correlates <- rv144_correlates_data
+correlates <- correlates[order(as.character(correlates$PTID)), ]
+infection <- correlates$infect.y
+
+# Converting low counts to booleans --------------
+countByPop <- by(booldata, booldata$subset, function(x) max(x$count / x$parentcount) < 10^-3 / 2)
+countByPop <- by(booldata, booldata$subset, function(x) {
+  if(max(x$count / x$parentcount) < 10^-3 / 2) {
+    x$count <- as.numeric(x$count > 0)
+    x$parentcount <- 1
+  }
+  return(x)
+})
+# booldata <- do.call("rbind", countByPop)
+```
+
+**Data Analysis**
+```{r, eval=FALSE}
+library(flowReMix)
+control <- flowReMix_control(updateLag = 25, nsamp = 100, initMHcoef = 2.5,
+                             nPosteriors = 1, centerCovariance = TRUE,
+                             maxDispersion = 10^3, minDispersion = 10^7,
+                             randomAssignProb = 10^-8, intSampSize = 50,
+                             lastSample = 100, isingInit = -log(99),
+                             initMethod = "robust")
+
+booldata$subset <- factor(booldata$subset)
+preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+                 subject_id = ptid,
+                 cell_type = subset,
+                 cluster_variable = treatment,
+                 data = booldata,
+                 covariance = "sparse",
+                 ising_model = "sparse",
+                 regression_method = "robust",
+                 iterations = 40,
+                 # cluster_assignment = preAssignment,
+                 parallel = TRUE,
+                 verbose = TRUE, control = control))
+```
+
+**Loading Results**
+```{r, warning=FALSE}
+load(file = "data analysis/results/boolean robust15.Robj")
+```
+
+
+**Scatter Plots**
+```{r, warning=FALSE, fig.height=9}
+ids <- fit$posteriors[, 1:2]
+vaccine[, 1] <- as.character(vaccine[, 1])
+vaccine[, 1] <- factor(vaccine[, 1], levels = levels(ids[, 1]))
+vaccine <- vaccine[!is.na(vaccine[, 1]), ]
+vaccine <- vaccine[order(vaccine[, 1]), ]
+ids <- merge(ids, vaccine, all.x = TRUE, all.y = FALSE,
+                 by = "ptid", sort = FALSE)
+vaccination <- ids[, 3]
+
+scatter <- plot(fit, target = vaccination, type = "scatter",
+                ncol = 4)
+scatter + theme_bw()
+```
+
+
+**ROC plot**
+```{r, warning=FALSE}
+
+rocplot <- plot(fit, target = vaccination, type = "ROC", ncols = 5,
+     direction = "auto", thresholdPalette = NULL,
+     subsets = NULL)
+rocplot
+```
+
+**FDR Curves**
+```{r,warning=FALSE}
+plot(fit, target = vaccination, type = "FDR")
+```
+
+**ROC table**
+
+```{r, warning=FALSE}
+rocResults <- rocTable(fit, vaccination, direction = ">", adjust = "BH",
+                       sortAUC = FALSE)
+rocResults[order(rocResults$auc, decreasing = TRUE), ]
+```
+
+**Some Functionality Analysis**
+```{r,warning=FALSE}
+# Getting infection status
+infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
+datId <- as.character(fit$posteriors$ptid)
+infectID <- as.character(infectDat$ptid)
+infectDat <- infectDat[infectID %in% datId, ]
+infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
+infectDat <- infectDat[order(infectDat$ptid), ]
+ids <- merge(ids, infectDat, sort = FALSE)
+infect <- ids[, 4]
+infect[infect == "PLACEBO"] <- NA
+
+# Computing Functionality Score
+func <- rowSums(fit$posteriors[, -1])
+funcAUC <- roc(infect ~ func)$auc
+n0 <- sum(infect == "INFECTED", na.rm = TRUE)
+n1 <- sum(infect == "NON-INFECTED", na.rm = TRUE)
+print("AUC for detecting infection based on functionality score.")
+funcAUC
+pwilcox(funcAUC * n0 * n1, n0, n1, lower.tail = FALSE)
+
+# Computing polyfunctionality score
+nfunctions <- sapply(subsets, function(x) length(gregexpr(",", paste(",", x))[[1]]))
+M <- 6
+weights <- nfunctions / (choose(M, nfunctions))
+poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weights))
+# poly <- apply(fit$posteriors[, -1], 1, function(x) median(weights * x))
+polyAUC <- roc(infect ~ poly)$auc
+n0 <- sum(infect == "INFECTED", na.rm = TRUE)
+n1 <- sum(infect == "NON-INFECTED", na.rm = TRUE)
+print("AUC for detecting infection based on polyfunctionality score.")
+polyAUC
+pwilcox(polyAUC * n0 * n1, n0, n1, lower.tail = FALSE)
+
+print("AUCs for dicriminating between Vaccinees and Placebos based on functionality and polyfunctionality scores.")
+roc(vaccination ~ func)
+roc(vaccination ~ poly)
+```
+
+**Polyfunctionality Boxplots**
+```{r, warning=FALSE}
+hiv <- infect
+nfunctions <- sapply(names(fit$posteriors)[-1], function(x) length(strsplit(x, ",", fixed = TRUE)[[1]]))
+weights <- list()
+weights$FS <- rep(1, ncol(fit$posteriors) - 1)
+M <- 6
+weights$PFS <- nfunctions / choose(6, nfunctions)
+hiv[is.na(hiv)] <- "PLACEBO"
+plot(fit, target = hiv, type = "boxplot", groups = "all", weights = weights)
+```
+
+
+**Logistic Regressions**
+```{r, warning = FALSE}
+group <- c(24, 21, 15, 8)
+score <- rowMeans(fit$posteriors[, group])
+rocfit <- roc(infect ~ score)
+pwilcox(rocfit$auc * n0 * n1, n0, n1, lower.tail = FALSE)
+ids$groupscore <- score
+ids$poly <- poly
+ids$func <- func
+
+vaccines <- subset(correlates, infect.y != "PLACEBO")
+vaccines$PTID <- as.character(vaccines$PTID)
+ids$ptid <- as.character(ids$ptid)
+vaccines <- merge(vaccines, ids, all.x = TRUE, all.y = TRUE,
+                  by.x = "PTID", by.y = "ptid")
+
+vaccines <- subset(vaccines, vaccines$infect != "PLACEBO")
+
+plot(vaccines$PFS, vaccines$poly, main = "COMPASS polyfunctionality vs. new polyfunctionality")
+lines(lowess(vaccines$PFS, vaccines$poly), col = "red", lwd = 2)
+abline(v = c(0.05, .085))
+abline(h = c(0.35))
+target <- vaccines$poly > 0.35 & vaccines$PFS > 0.05 & vaccines$PFS < 0.085
+
+summary(glm(infect ~ func + IgAprim + risk.medium + risk.high + sex,
+            family = "binomial",
+            data = vaccines))
+
+summary(glm(infect ~ poly + IgAprim + risk.medium + risk.high + sex,
+            family = "binomial",
+            data = vaccines))
+
+summary(glm(infect ~ groupscore + IgAprim + risk.medium + risk.high + sex,
+            family = "binomial",
+            data = vaccines))
+
+```
+
+**Logistic Regressions for Single Subsets**
+```{r, warning=FALSE}
+vaccines <- subset(correlates, infect.y != "PLACEBO")
+resultList <- list()
+adjRocList <- list()
+for(i in 1:(ncol(fit$posteriors) - 1)) {
+  vaccines$post <- NULL
+  post <- fit$posteriors[!is.na(infect), c(1, i + 1)]
+  names(post)[2] <- "post"
+  vaccines <- merge(vaccines, post, by.x = "PTID", by.y = "ptid", all.x = TRUE)
+  resultList[[i]] <- summary(glm(infect.y ~ post + IgAprim + agecat + risk.medium + risk.high + sex,
+                                 family = "binomial",
+                                 data = vaccines))
+  resid <- lm(post ~ IgAprim + agecat + risk.medium + risk.high + sex,
+              data = vaccines)$residuals
+  infectResid <- glm(infect.y  ~ IgAprim + agecat + risk.medium + risk.high + sex,
+                     family = "binomial", data = vaccines)$residuals
+
+  adjRocList[[i]] <- roc(vaccines$infect.y ~ resid)
+}
+
+names(resultList) <- colnames(fit$posteriors)[-1]
+names(adjRocList) <- colnames(fit$posteriors)[-1]
+regResult <- t(sapply(resultList, function(x) x$coefficient[2, c(1,4)]))
+regResult <- data.frame(regResult)
+regResult$auc <- sapply(adjRocList, function(x) x$auc)
+regResult$aucPval <- pwilcox(regResult$auc * n0 * n1, n0, n1, lower.tail = FALSE)
+regResult$aucQval <- p.adjust(regResult$aucPval, method = "BH")
+regResult[order(regResult[, 2], decreasing = FALSE), ]
+```
+
+**Dependence Structure for Random Effects for Varying Threshold**
+```{r,warning=FALSE}
+# randStability <- stabilityGraph(fit, type = "randomEffects", cpus = 2, reps = 100,
+#                                 cv = TRUE)
+# save(randStability, file = "data analysis/results/RV144rand15.Robj")
+load("data analysis/results/RV144rand15.Robj")
+for(threshold in c(0.5, 0.75, 0.85, 0.9, 0.95, 1)) {
+  randplot <- plot(randStability, fill = rocResults$auc, threshold = threshold)
+  print(randplot)
+}
+
+```
+
+
+**Ising Network for Varying Threshold**
+```{r, warning=FALSE,message=FALSE}
+# stability <- stabilityGraph(fit, type = "ising", cpus = 2, reps = 100)
+# save(stability, file = "data analysis/results/RV144ising15.Robj")
+load("data analysis/results/RV144ising15.Robj")
+for(threshold in c(0.5, 0.75, 0.85, 0.9, 0.95, 1)) {
+  isingplot <- plot(stability, fill = rocResults$auc, threshold = threshold)
+  print(isingplot)
+}
+
+```
+

@@ -1,2 +1,14 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+data/*
+data-raw/*
+figures/*
+Notebooks/*
+prototypes/*
+Data Analysis/*
+presentation/*
+results/*
+Simulations/*
+tables/*
+write-ups/*
+Notebooks/*

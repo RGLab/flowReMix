@@ -13,7 +13,10 @@ Imports: Rcpp,
     glmnet,
     data.table,
     PDSCE,
-    brglm2
-Suggests: ggplot2
+    brglm2,
+Suggests: ggplot2,
+    pROC,
+    reshape2,
+    igraph
 Depends: foreach
 RoxygenNote: 6.0.1

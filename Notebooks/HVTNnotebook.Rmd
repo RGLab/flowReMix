@@ -1,0 +1,212 @@
+---
+title: "RV144 analysis"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r "setup", include=TRUE, warning=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/amitmeir/Documents/rglab/flowReMix")
+```
+
+**Loading Data**
+
+```{r, results = "hide", warning=FALSE}
+library(flowReMix)
+getExpression <- function(str) {
+  first <- substr(str, 1, 7)
+  second <- substr(str, 8, nchar(str))
+  second <- strsplit(second, "")[[1]]
+  seperators <- c(0, which(second %in% c("-", "+")))
+  expressed <- list()
+  for(i in 2:length(seperators)) {
+    if(second[seperators[i]] == "+") {
+      expressed[[i]] <- paste(second[(seperators[(i - 1)] + 1) : seperators[i]], collapse = '')
+    }
+  }
+
+  expressed <- paste(unlist(expressed), collapse = '')
+  expressed <- paste(first, expressed, sep = '')
+  return(expressed)
+}
+
+# Loading Data --------------------------------
+# hvtn <- read.csv(file = "data/merged_505_stats.csv")
+# names(hvtn) <- tolower(names(hvtn))
+# hvtn <- subset(hvtn, !is.na(ptid))
+# saveRDS(hvtn, file = "data/505_stats.rds")
+
+
+# Getting Demographic data ------------------------
+demo <- read.csv(file = "data/primary505.csv")
+infect <- data.frame(ptid = demo$ptid, status = demo$HIVwk28preunbl)
+infect <- subset(infect, infect$ptid %in% hvtn$ptid)
+
+# Getting marginals -----------------------------
+library(flowReMix)
+hvtn <- readRDS(file = "data/505_stats.rds")
+length(unique(hvtn$name))
+length(unique(hvtn$ptid))
+length(unique(hvtn$population))
+unique(hvtn$population)
+unique(hvtn$stim)
+nchars <- nchar(as.character(unique(hvtn$population)))
+#marginals <- unique(hvtn$population)[nchars < 26]
+marginals <- unique(hvtn$population)[nchars == 26]
+marginals <- subset(hvtn, population %in% marginals)
+marginals <- subset(marginals, stim %in% c("negctrl", "VRC ENV A",
+                                           "VRC ENV B", "VRC ENV C",
+                                           "VRC GAG B", "VRC NEF B",
+                                           "VRC POL 1 B", "VRC POL 2 B"))
+marginals <- subset(marginals, !(population %in% c("4+", "8+")))
+marginals <- subset(marginals, !(population %in% c("8+/107a-154-IFNg-IL2-TNFa-", "4+/107a-154-IFNg-IL2-TNFa-")))
+marginals$stim <- factor(as.character(marginals$stim))
+marginals$population <- factor(as.character(marginals$population))
+
+# Descriptives -------------------------------------
+library(ggplot2)
+marginals$prop <- marginals$count / marginals$parentcount
+# ggplot(marginals) + geom_boxplot(aes(x = population, y = log(prop), col = stim))
+
+require(dplyr)
+negctrl <- subset(marginals, stim == "negctrl")
+negctrl <- summarize(group_by(negctrl, ptid, population), negprop = mean(prop))
+negctrl <- as.data.frame(negctrl)
+marginals <- merge(marginals, negctrl, all.x = TRUE)
+
+# ggplot(subset(marginals, stim != "negctrl" & parent == "4+")) +
+#   geom_point(aes(x = log(negprop), y = log(prop)), size = 0.25) +
+#   facet_grid(stim ~ population, scales = "free") +
+#   theme_bw() +
+#   geom_abline(intercept = 0, slope = 1)
+
+# Setting up data for analysis ---------------------------
+unique(marginals$stim)
+gag <- subset(marginals, stim %in% c("VRC GAG B", "negctrl"))
+gag$subset <- factor(paste("gag", gag$population, sep = "/"))
+gag$stimGroup <- "gag"
+pol <-subset(marginals, stim %in% c("negctrl", "VRC POL 1 B", "VRC POL 2 B"))
+pol$subset <- factor(paste("pol", pol$population, sep = "/"))
+pol$stimGroup <- "pol"
+env <- subset(marginals, stim %in% c("negctrl", "VRC ENV C", "VRC ENV B", "VRC ENV A"))
+env$subset <- factor(paste("env", env$population, sep = "/"))
+env$stimGroup <- "env"
+nef <- subset(marginals, stim %in% c("negctrl", "VRC NEF B"))
+nef$subset <- factor(paste("nef", nef$population, sep = "/"))
+nef$stimGroup <- "nef"
+subsetDat <- rbind(gag, pol, env, nef)
+subsetDat$stim <- as.character(subsetDat$stim)
+subsetDat$stim[subsetDat$stim == "negctrl"] <- 0
+subsetDat$stim <- factor(subsetDat$stim)
+
+# Converting subset names ------------------
+subsets <- as.character(unique(subsetDat$subset))
+expressed <- sapply(subsets, getExpression)
+map <- cbind(subsets, expressed)
+subsetDat$subset <- as.character(subsetDat$subset)
+for(i in 1:nrow(map)) {
+  subsetDat$subset[which(subsetDat$subset == map[i, 1])] <- map[i, 2]
+}
+subsetDat$subset <- factor(subsetDat$subset)
+
+# Getting outcomes -------------------------------
+treatmentdat <- read.csv(file = "data/rx_v2.csv")
+names(treatmentdat) <- tolower(names(treatmentdat))
+treatmentdat$ptid <- factor(gsub("-", "", (treatmentdat$ptid)))
+treatmentdat <- subset(treatmentdat, ptid %in% unique(subsetDat$ptid))
+
+# Finding problematic subsets?
+keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$count > 1) > 0.02)
+keep <- names(keep[sapply(keep, function(x) x)])
+#result$subsets[result$qvals < 0.1] %in% keep
+subsetDat <- subset(subsetDat, subset %in% keep)
+subsetDat$subset <- factor(as.character(subsetDat$subset))
+```
+
+**Loading Model**
+```{r, message = FALSE,warning=FALSE}
+load(file = "Data Analysis/results/HVTNclust2.Robj")
+```
+
+**ROC Table for Vaccination**
+```{r,warning=FALSE}
+require(pROC)
+outcome <- treatmentdat[, c(13, 15)]
+rocResults <- rocTable(fit, outcome[, 2], direction = ">", adjust = "BH",
+                       sortAUC = FALSE)
+rocResults[order(rocResults$auc, decreasing = TRUE), ]
+```
+
+**ROC Table for Infection**
+```{r,warning=FALSE}
+vaccine <- outcome[, 2] == 0
+hiv <- infect[, 2]
+hiv[vaccine == 0] <- NA
+infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
+                      sortAUC = FALSE)
+infectROC[order(infectROC$auc, decreasing = TRUE), ]
+```
+
+**Scatter Plot**: Figure too larget to fit here...
+```{r, eval = FALSE,warning=FALSE}
+scatter <- plot(fit, target = vaccine, type = "scatter", ncol = 11)
+```
+
+**FDR Curves**: Figure too larget to fit here...
+```{r,warning=FALSE}
+vaccination <- outcome[, 2] == 0
+fdrplot <- plot(fit, target = vaccination, type = "FDR")
+```
+
+
+**Functionality and Polyfunctionality Boxplots**
+```{r,warning=FALSE}
+nfunctions <- sapply(strsplit(colnames(fit$posteriors)[-1], "+", fixed = TRUE), function(x) length(x) - 1)
+weightList <- list()
+weightList$polyfunctionality <- weights <- nfunctions / choose(5, nfunctions)
+weightList$functionality <- rep(1, length(nfunctions))
+
+subsets <- names(fit$posteriors[, -1])
+stim <- sapply(strsplit(subsets, "/"), function(x) x[1])
+stimnames <- unique(stim)
+stim <- lapply(stimnames, function(x) subsets[stim %in% x])
+names(stim) <- stimnames
+parent <- sapply(strsplit(subsets, "/"), function(x) x[2])
+parentnames <- unique(parent)
+parent <- lapply(parentnames, function(x) subsets[parent %in% x])
+names(parent) <- parentnames
+stimparent  <- sapply(strsplit(subsets, "/"), function(x) paste(x[1:2], collapse = "/"))
+stimparentnames <-unique(stimparent)
+stimparent <- lapply(stimparentnames, function(x) subsets[stimparent %in% x])
+names(stimparent) <- stimparentnames
+
+infection <- hiv
+infection[hiv == 0] <- "NON-INFECTED"
+infection[hiv == 1] <- "INFECTED"
+infection[is.na(hiv)] <- "PLACEBO"
+plot(fit, type = "boxplot", groups = stim, weights = weightList, ncol = 2,
+     target = infection)
+plot(fit, type = "boxplot", groups = parent, weights = weightList, ncol = 2,
+                  target = infection)
+plot(fit, type = "boxplot", groups = stimparent, weights = weightList, ncol = 3, target = infection)
+```
+
+**Random effect model for differnt thresholds**
+```{r Random Effect Graph,warning=FALSE}
+load("data analysis/results/HVTNrand2.Robj")
+for(threshold in c(0.5, 0.75, 0.85, 0.9, 0.95, 1)) {
+  randplot <- plot(randStability, fill = rocResults$auc,
+                  threshold = threshold)
+  print(randplot)
+}
+```
+
+**Ising model for differnt thresholds**
+```{r,warning=FALSE}
+load("data analysis/results/HVTNising2.Robj")
+for(threshold in c(0.5, 0.75, 0.85, 0.9, 0.95, 1)) {
+  isingplot <- plot(stability, fill = rocResults$auc, threshold = threshold)
+  print(isingplot)
+}
+```
+

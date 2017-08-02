@@ -59,6 +59,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
                                      fill = NULL, fillRange = NULL, fillPalette = NULL,
                                      title = TRUE) {
+  require(ggplot2)
   measure <- fill
   props <- obj$network
   props[abs(props) < threshold] <- 0
@@ -112,7 +113,7 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
         fillRange <- c(min(measure), max(measure))
       }
       if(is.null(fillPalette)) {
-        fillPalette <- rainbow(4)
+        fillPalette <- viridis::plasma(256)
       }
 
       figure <- figure + geom_point(data = nodes, aes(x = x, y = y, fill = nodes$measure), shape = 21, size = 8, col = "grey") +
@@ -139,4 +140,28 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
   }
 
   return(figure)
+}
+
+#' @export
+getGraphComponents <- function(obj, threshold = 0.5,
+                               minsize = 2, groupNames = NULL) {
+  # Finding groups -------------
+  library(igraph)
+  network <- obj$network
+  network[abs(network) < threshold] <- 0
+  network[network != 0] <- 1
+  graph <- igraph::graph.adjacency(network)
+  comp <- igraph::components(graph)
+  groups <- which(comp$csize >= minsize)
+  groups <- lapply(groups, function(x) names(comp$membership)[comp$membership == x])
+  if(is.null(groupNames)) {
+    names(groups) <- sapply(groups, function(x) x[1])
+  } else if(length(groupNames) != length(groups)) {
+    warning("Length of groupNames must equal the number of groups!")
+    names(groups) <- sapply(groups, function(x) x[1])
+  } else {
+    names(groups) <- groupNames
+  }
+
+  return(groups)
 }
