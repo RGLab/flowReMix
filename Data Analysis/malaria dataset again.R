@@ -35,27 +35,26 @@ malaria <- malaria[order(malaria$ptid, malaria$stimgroup), ]
 # Analysis -----------------------
 library(flowReMix)
 control <- flowReMix_control(updateLag = 4, keepEach = 5, nsamp = 30, initMHcoef = 2,
-                             nPosteriors = 1, centerCovariance = TRUE,
+                             nPosteriors = 6, centerCovariance = TRUE,
                              maxDispersion = 500, minDispersion = 10^6,
                              randomAssignProb = 10^-8, intSampSize = 100,
                              lastSample = 40, isingInit = -log(1),
-                             initMethod = "binom")
+                             initMethod = "firth")
 
 tempdat <- subset(malaria, parent %in% c("4+"))
-tempdat<- subset(tempdat, stimgroup == "RBC")
 tempdat$time <- tempdat$visitno
 tempdat$subset <- factor(as.character(tempdat$subs))
 tempdat$stim[tempdat$stim]
-tempdat$trt <-1
+tempdat$trt <- 1
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~
-                               stim + stim:trt,
+                               stim,
                  subject_id = ptid,
                  cell_type = subset,
-                 cluster_variable = trt,
+                 cluster_variable = stim,
                  data = tempdat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "binom",
+                 regression_method = "firth",
                  iterations = 7,
                  parallel = FALSE,
                  verbose = TRUE, control = control))

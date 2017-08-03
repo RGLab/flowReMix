@@ -255,15 +255,15 @@ regResult[order(regResult[, 2], decreasing = FALSE), ]
 # FDR Curves -------------
 fdrTable <- fdrTable(fit, vaccination)
 fdrplot <- plot(fit, target = vaccination, type = "FDR")
-save_plot("figures/RV144FDRplot.pdf", fdrplot,
-          base_height = 9,
-          base_width = 12)
+# save_plot("figures/RV144FDRplot.pdf", fdrplot,
+#           base_height = 9,
+#           base_width = 12)
 
 # Scatter plots -----------------
 scatter <- plot(fit, target = vaccination, type = "scatter")
-save_plot("figures/zeroRuleScatterRV144_2.pdf", scatter,
-          base_height = 9,
-          base_width = 12)
+# save_plot("figures/zeroRuleScatterRV144_2.pdf", scatter,
+#           base_height = 9,
+#           base_width = 12)
 
 # Boxplots ------------------
 # infect[is.na(infect)] <- "PLACEBO"
@@ -276,7 +276,7 @@ weights <- list()
 weights[[1]] <- nfunctions / choose(6, nfunctions)
 names(weights) <- "Polyfunctionality"
 box <- plot(fit, target = infect, type = "boxplot", groups = groups,
-     weights = weights)
+     weights = weights, test = "t-test")
 # save_plot("figures/RV144boxplotALLforBio.pdf", box,
 #           base_width = 9, base_height = 5)
 
@@ -320,9 +320,9 @@ for(i in 1:length(groups)) {
 }
 names(groups) <- paste(names(groups), "p-value:", round(pvals, 4))
 graphbox <- plot(fit, type = "boxplot", target = infect, groups = groups,
-     weights = weights)
-save_plot(graphbox, file = "figures/RV144isingBoxplot.pdf",
-          base_height = 5, base_width = 9)
+     weights = weights, test = "none")
+# save_plot(graphbox, file = "figures/RV144isingBoxplot.pdf",
+#           base_height = 5, base_width = 9)
 
 # Posterior probabilities for nresponses ----------------
 graph <- fit$isingCov

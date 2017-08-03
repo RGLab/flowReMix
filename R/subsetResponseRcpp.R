@@ -85,7 +85,8 @@ initializeModel <- function(dat, formula, method, mixed) {
     if(method != "firth") sep <- FALSE
   }
 
-  if(sep & method != "sparse") {
+  if((sep & method != "sparse") |
+     (method == "sparse" & ncol(X) == 1)) {
     X <- model.matrix(formula, dat)
     fit <- glm(formula, data = dat, family = "binomial", weights = weights,
                method = brglm2::brglmFit)
@@ -94,7 +95,7 @@ initializeModel <- function(dat, formula, method, mixed) {
   } else if(ncol(X) > 1 & method == "sparse") {
     fit <- glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights)
     coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
-    estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X)
+    estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X, s = "lambda.min")
   } else if(method == "binom") {
     fit <- glm(formula, data = dat, family = "binomial", weights = weights)
     coef <- coef(fit)

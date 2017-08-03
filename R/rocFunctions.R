@@ -252,6 +252,8 @@ plotScatter <- function(obj, subsets = NULL,
 #' @export
 plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
+                        test = c("none", "logistic", "t-test", "wilcoxon"),
+                        one_sided = FALSE,
                         ncol = 5) {
   require(ggplot2)
   if(is.null(varname) & !is.null(target)) {
@@ -319,6 +321,43 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
     }
   }
   forplot <- data.table::rbindlist(datlist)
+
+  test <- test[1]
+  if(test != "none" & length(unique(target)) != 2) {
+    warning("Target has more than two levels, testing level 1 vs. other levels!")
+  }
+
+  facTarget <- factor(target, levels = sort(unique(target)))
+  baseline <- levels(facTarget)[1]
+  tempTarget <- rep(1, length(target))
+  tempTarget[facTarget == baseline] <- 0
+  if(test == "logistic") {
+    pvalues <- by(forplot, list(forplot$group, forplot$measure),
+                  function(x) summary(glm(tempTarget ~ score, family = "binomial", data = x))$coefficients[2, 4])
+  } else if(test == "t-test") {
+    pvalues <- by(forplot, list(forplot$group, forplot$measure),
+                  function(x) t.test(x$score[tempTarget == 1], x$score[tempTarget == 0],
+                                     var.equal = TRUE)$p.value)
+  } else if(test == "wilcoxon") {
+    pvalues <- by(forplot, list(forplot$group, forplot$measure),
+                  function(x) wilcox.test(x$score[tempTarget == 1], x$score[tempTarget == 0],
+                                     exact = FALSE)$p.value)
+  }
+
+  if(test %in% c("t-test", "wilcoxon", "logistic")) {
+    pvalues <- as.numeric(pvalues)
+    if(one_sided) pvalues <- pvalues / 2
+    slot <- 1
+    forplot$group <- as.character(forplot$group)
+    for(i in 1:length(weights)) {
+      for(j in 1:length(groups)) {
+        index <- forplot$group == names(groups)[j] & forplot$measure == names(weights)[i]
+        forplot$group[index] <- paste(forplot$group[index], ", ", test,
+                                      ": ", round(pvalues[slot], 5), sep = "")
+        slot <- slot + 1
+      }
+    }
+  }
 
   figure <- ggplot(forplot)
   if(is.null(target)) {

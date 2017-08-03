@@ -139,10 +139,11 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  iterations = 20,
                  parallel = FALSE,
                  verbose = TRUE, control = control)
-load(file = "Data Analysis/results/HVTN bool robust.Robj")
+# load(file = "Data Analysis/results/HVTN bool robust.Robj")
 #load(file = "Data Analysis/results/HVTNclust1.Robj")
 # load(file = "Data Analysis/results/HVTNclust2.Robj")
-fit$posteriors[, -1] <- 1 - fit$posteriors[, -1]
+load(file = "Data Analysis/results/HVTNclust4.Robj")
+# fit$posteriors[, -1] <- 1 - fit$posteriors[, -1]
 
 # Post-hoc assignment -------------------
 # subjects <- unique(preAssign$ptid)
@@ -259,9 +260,9 @@ save_plot("figures/HVTNallboxplot.pdf", allboxplot)
 
 # Stability selection for graphical model ------------------------
 # load("data analysis/results/HVTNising2.Robj")
-# stability <- stabilityGraph(fit, type = "ising", reps = 100, cpus = 2)
-# save(stability, file = "data analysis/results/HVTN bool robust graph3.Robj")
-load("data analysis/results/HVTN bool robust graph3.Robj")
+# stability <- stabilityGraph(fit, type = "ising", reps = 50, cpus = 2, gamma = 0.25)
+# save(stability, file = "data analysis/results/HVTN bool robust graph4.Robj")
+load("data analysis/results/HVTN bool robust graph4.Robj")
 colnames(stability$network) <- colnames(fit$posteriors)[-1]
 isingplot <- plot(stability, fill = rocResults$auc, threshold = 0.65)
 isingplot
@@ -279,26 +280,27 @@ randplot
 groups <- getGraphComponents(stability, threshold = 0.65, minsize = 4)
 weightList$Polyfunctionality <- weights <- nfunctions / choose(5, nfunctions)
 names(groups) <- c("107+", "Large CD4+", "env/8+")
-pvals <- numeric(length(groups))
-weights <- list()
-weights[[1]] <- rep(1, ncol(fit$posteriors) - 1)
-names(weights) <-  "Aggregate"
-post <- fit$posteriors[, -1]
-for(i in 1:length(groups)) {
-  group <- groups[[i]]
-  w <- weightList[[1]]
-  sub <- colnames(post) %in% group
-  score <- 1 - apply(post[, sub], 1, function(x) weighted.mean(x, w[sub]))
-  glmfit <- glm(hiv ~ score, family = "binomial")
-  pvals[i] <- summary(glmfit)$coefficients[2, 4] / 2
-  print(roc(hiv ~ score)$auc)
-}
-names(groups) <- paste(names(groups), "pvalue:", round(pvals, 4))
+# pvals <- numeric(length(groups))
+# weights <- list()
+# weights[[1]] <- rep(1, ncol(fit$posteriors) - 1)
+# names(weights) <-  "Aggregate"
+# post <- fit$posteriors[, -1]
+# for(i in 1:length(groups)) {
+#   group <- groups[[i]]
+#   w <- weightList[[1]]
+#   sub <- colnames(post) %in% group
+#   score <- 1 - apply(post[, sub], 1, function(x) weighted.mean(x, w[sub]))
+#   glmfit <- glm(hiv ~ score, family = "binomial")
+#   pvals[i] <- summary(glmfit)$coefficients[2, 4] / 2
+#   print(roc(hiv ~ score)$auc)
+# }
+# names(groups) <- paste(names(groups), "pvalue:", round(pvals, 4))
 
 clusterbox <- plot(fit, type = "boxplot", target = infection, groups = groups, ncol = 3,
-                   weights = weights)
-save_plot("figures/HVTNisingBoxplotBio.pdf", clusterbox,
-          base_width = 8, base_height = 3)
+                   weights = weightList, test = "t-test",
+                   one_sided = TRUE)
+# save_plot("figures/HVTNisingBoxplotBio.pdf", clusterbox,
+#           base_width = 8, base_height = 3)
 
 # Posterior probabilities for nresponses ----------------
 infect$hiv <- "non-infected"
