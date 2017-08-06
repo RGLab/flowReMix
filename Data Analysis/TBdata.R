@@ -90,18 +90,20 @@ control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 1,
 # tempdat$stim <- tempdat$stimtemp
 # tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
 # tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
-fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
-                 subject_id = ptid,
-                 cell_type = subset,
-                 cluster_variable = stim,
-                 data = tempdat,
-                 covariance = "sparse",
-                 ising_model = "sparse",
-                 regression_method = "sparse",
-                 iterations = 25,
-                 parallel = TRUE,
-                 verbose = TRUE, control = control)
+# fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+#                  subject_id = ptid,
+#                  cell_type = subset,
+#                  cluster_variable = stim,
+#                  data = tempdat,
+#                  covariance = "sparse",
+#                  ising_model = "sparse",
+#                  regression_method = "sparse",
+#                  iterations = 25,
+#                  parallel = TRUE,
+#                  verbose = TRUE, control = control)
 load(file = "data analysis/results/TBsep5.Robj")
+# load(file = "data analysis/results/TBsep7robust.Robj")
+# load(file = "data analysis/results/TBsep8robust.Robj")
 
 # Scatter plots with posteriors ---------------
 library(cowplot)
@@ -120,7 +122,7 @@ rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
 level <- 0.1
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
-select <- nresponders[1, ] < level
+select <- nresponders[2, ] < level
 rocTable$qvalue <- NA
 rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
 rocTable[order(rocTable$auc, decreasing = TRUE), ]
@@ -169,5 +171,6 @@ stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collap
 scnames <- unique(stimcell)
 stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
 names(stimcell) <- scnames
+stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
 plot(fit, type = "boxplot", target = group, test = "wilcoxon",
      groups = stimcell, ncol = 4)

@@ -73,16 +73,16 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 25, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 4, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 100, isingInit = -log(99),
+                             lastSample = 20, isingInit = -log(99),
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = treatment,
@@ -90,10 +90,10 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 40,
+                 iterations = 8,
                  # cluster_assignment = preAssignment,
-                 parallel = TRUE,
-                 verbose = TRUE, control = control))
+                 parallel = FALSE,
+                 verbose = TRUE, control = control)
 # save(fit, file = "data analysis/results/boolean robust15.Robj")
 # load(file = "data analysis/results/boolean robust15.Robj")
 # load(file = "data analysis/results/boolean robust14.Robj")
@@ -108,9 +108,13 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 # load(file = "data analysis/results/RV144cluster4.Robj")
 # load(file = "data analysis/results/RV144cluster5.Robj")
 # load(file = "data analysis/results/RV144cluster6.Robj")
-load(file = "data analysis/results/RV144cluster7.Robj")
 # load(file = "data analysis/results/RV144cluster8wPre.Robj")
 # load(file = "data analysis/results/RV144cluster9weak.Robj")
+# load(file = "data analysis/results/RV144cluster10.Robj")
+# load(file = "data analysis/results/RV144cluster11moreDisp.Robj")
+# load(file = "data analysis/results/RV144cluster7.Robj")
+# load(file = "data analysis/results/RV144cluster12LessDisp.Robj")
+
 
 
 
@@ -276,7 +280,7 @@ weights <- list()
 weights[[1]] <- nfunctions / choose(6, nfunctions)
 names(weights) <- "Polyfunctionality"
 box <- plot(fit, target = infect, type = "boxplot", groups = groups,
-     weights = weights, test = "t-test")
+     weights = weights)
 # save_plot("figures/RV144boxplotALLforBio.pdf", box,
 #           base_width = 9, base_height = 5)
 
@@ -284,11 +288,12 @@ box <- plot(fit, target = infect, type = "boxplot", groups = groups,
 # Stability selection for graphical model ------------------------
 # stability <- stabilityGraph(fit, type = "ising", cpus = 2, reps = 50,
 #                             cv = FALSE, gamma = 0.25)
-load("data analysis/results/RV144clusterIsing7.Robj")
-isingplot <- plot(stability, fill = rocResults$auc, threshold = 0.75)
+load("data analysis/results/RV144clusterIsing12.Robj")
+
+isingplot <- plot(stability, fill = rocResults$auc, threshold = 0.78)
 isingplot
-save_plot("figures/RV144isingplot.pdf", isingplot,
-          base_width = 9, base_height = 5)
+# save_plot("figures/RV144isingplot.pdf", isingplot,
+#           base_width = 9, base_height = 5)
 
 
 # randStability <- stabilityGraph(fit, type = "randomEffects", cpus = 2, reps = 100,
@@ -301,10 +306,12 @@ save_plot("figures/RV144isingplot.pdf", isingplot,
 
 # Analysis with graph clusters --------------------
 # groups <- getGraphComponents(stability, threshold = 0.96)
-groups <- list(c("IFNg", "TNFa,IL4,IL2,CD154", "IL2", "IL4,IL2,CD154", "IL4,CD154",
-                 "IFNg,IL4,IL2,CD154"),
-               c("IL2,CD154", "CD154", "TNFa,IFNg,IL2,CD154", "TNFa,IL2,CD154"))
-names(groups) <- c("Th2", "Th1")
+groups <- list(c("INFg,CD154", "CD154", "IFNG,IL2", "TNFa,CD154", "IL4,IL2,CD154",
+                 "IFNg", "IL4,CD154"),
+               c("IL2,CD154", "TNFa,IFNg,IL2,CD154",
+                 "TNFa,IL4,IL2,CD154", "TNFa,IL2,CD154"))
+groups$all <- c(groups[[1]], groups[[2]])
+names(groups) <- c("Th2", "Th1", "all")
 infect[infect == "PLACEBO"] <- NA
 pvals <- numeric(2)
 for(i in 1:length(groups)) {

@@ -631,16 +631,18 @@ flowReMix <- function(formula,
       print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
+      popList <- lapply(1:nSubsets, function(j) list(dataByPopulation[[j]], separation[j], clusterAssignments[, j]))
       # Robust
       if(robustreg) {
-        glmFits <- foreach(j = 1:nSubsets) %dopar% {
-          if(sum(clusterAssignments[, j]) < 3) {
-            return(glmFits[[j]])
+        # glmFits <- foreach(j = 1:nSubsets) %dopar% {
+        glmResult <- foreach(popDat = popList) %dopar% {
+          if(sum(popDat[[3]]) < 3) {
+            return(NULL)
           }
 
-          popdata <- dataByPopulation[[j]]
-          if(separation[j]) {
-            fit <- glm(glmformula, data = popdata, weights = weights,
+          # popdata <- dataByPopulation[[j]]
+          if(popDat[[2]]) {
+            fit <- glm(glmformula, data = popDat[[1]], weights = weights,
                        family = "binomial", method = brglm2::brglmFit)
             return(fit)
           }
@@ -654,7 +656,7 @@ flowReMix <- function(formula,
             try(fit <- glm(formula = glmformula, data = popdata,
                            weights = weights, family = "binomial"))
             if(is.null(fit)) {
-              return(glmFits[[j]])
+              return(NULL)
             }
           }
           eta <- predict(fit)
@@ -666,58 +668,63 @@ flowReMix <- function(formula,
           return(fit)
         }
         for(j in 1:nSubsets) {
-          if(!is.null(glmFits[[j]]$M)) {
-            M[j] <- max(glmFits[[j]]$M, minDispersion)
+          if(!is.null(glmResult[[j]])) {
+            glmFits[[j]] <- glmResult[[j]]
+            if(!is.null(glmFits[[j]]$M)) {
+              M[j] <- max(glmFits[[j]]$M, minDispersion)
+            }
           }
         }
         # Beta-Binomial
       } else if(betaDispersion & !smallCounts) {
-        glmFits <- foreach(j = 1:nSubsets) %dopar% {
-          if(sum(clusterAssignments[, j]) < 3) {
-            return(glmFits[[j]])
+        glmResult <- foreach(popDat = popList) %dopar% {
+          if(sum(popDat[[3]]) < 3) {
+            return(NULL)
           }
 
-          popdata <- dataByPopulation[[j]]
+          # popdata <- dataByPopulation[[j]]
           if(separation[j]) {
-            fit <- glm(glmformula, data = popdata, weights = weights,
+            fit <- glm(glmformula, data = popDat[[1]], weights = weights,
                        family = "binomial", method = brglm2::brglmFit)
             return(fit)
           }
 
           tempfit <- NULL
-          try(tempfit <- BBreg(popdata, glmformula, weights))
+          try(tempfit <- BBreg(popDat[[1]], glmformula, weights))
           if(is.null(tempfit)) {
-            try(fit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights))
+            try(fit <- glm(glmformula, family = "binomial", data = popDat[[1]], weights = weights))
           } else {
             fit <- tempfit
           }
           return(fit)
         }
         for(j in 1:nSubsets) {
+          if(!is.null(glmResult[[j]])) {
+            glmFits[[j]] <- glmResult[[j]]
+          }
           if(class(glmFits[[j]])[1] == "bbreg") {
             M[j] <- max(glmFits[[j]]$M, minDispersion)
           }
         }
         # Sparse
       } else if(smallCounts) {
-        tempFits <- foreach(j = 1:nSubsets) %dopar% {
-          if(sum(clusterAssignments[, j]) < 3 | netFlags[j]) {
-            return(glmFits[[j]])
+        tempFits <- foreach(popDat = popList) %dopar% {
+          if(sum(popDat[[3]]) < 3) {
+            return(NULL)
           }
-          popdata <- dataByPopulation[[j]]
-          print(unique(as.character(popdata$sub.population)))
-          try(X <- model.matrix(glmformula, data = popdata)[, - 1], silent = TRUE)
+          # popdata <- dataByPopulation[[j]]
+          try(X <- model.matrix(glmformula, data = popDat[[1]])[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
           y <- cbind(popdata$N - popdata$y, popdata$y)
           fit <- NULL
-          try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popdata$weights, family = "binomial",
-                                                            offset = popdata$randomOffset),
+          try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
+                                                            offset = popDat[[1]]$randomOffset),
                                    timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
-            eta <- predict(fit, newx = X, offset = popdata$randomOffset, s = "lambda.min")
+            eta <- predict(fit, newx = X, offset = popdat[[1]]$randomOffset, s = "lambda.min")
             mu <- 1 / (1 + exp(-eta))
-            N <- popdata$N
-            y <- popdata$y
+            N <- popDat[[1]]$N
+            y <- popDat[[1]]$y
             M <- dispersionMLE(y, N, mu)
             fit$M <- M
           }
@@ -734,12 +741,13 @@ flowReMix <- function(formula,
         }
         # Binomial
       } else {
-        tempFits <- foreach(j = 1:nSubsets) %dopar% {
-          if(sum(clusterAssignments[, j]) < 3) {
-            return(glmFits[[j]])
+        tempFits <- foreach(popDat = popList) %dopar% {
+          if(sum(popDat[[3]]) < 3) {
+            return(NULL)
           }
           tempfit <- NULL
-          try(tempfit <- glm(glmformula, family = "binomial", data = dataByPopulation[[j]], weights = weights,
+          try(tempfit <- glm(glmformula, family = "binomial", data = popDat[[1]],
+                             weights = weights,
                              method = brglm2::brglmFit))
           return(tempfit)
         }
@@ -815,11 +823,15 @@ flowReMix <- function(formula,
     MHsuccess <- rep(0, nSubsets)
     # S-step ------------------------------
     print("Sampling!")
-    MHresult <- foreach(i = 1:nSubjects) %dopar% {
-      subjectData <- databyid[[i]]
-      popInd <- subjectData$subpopInd
-      N <- subjectData$N
-      y <- subjectData$y
+    listForMH <- lapply(1:nSubjects, function(i) list(dat = databyid[[i]],
+                                                      pre = preAssignment[[i]],
+                                                      rand = estimatedRandomEffects[i, ],
+                                                      index = i))
+    MHresult <- foreach(subjectData = listForMH) %dopar% {
+      # subjectData <- databyid[[i]]
+      popInd <- subjectData$dat$subpopInd
+      N <- subjectData$dat$N
+      y <- subjectData$dat$y
       prop <- y/N
       iterPosteriors <- rep(0, nSubsets)
       unifVec <- runif(nsamp * nSubsets)
@@ -828,28 +840,28 @@ flowReMix <- function(formula,
         assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
       } else {
         assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
-                                           subjectData$nullEta, subjectData$altEta,
+                                           subjectData$dat$nullEta, subjectData$dat$altEta,
                                            covariance, nsamp, nSubsets, keepEach, intSampSize,
                                            MHcoef,
                                            as.integer(popInd),
                                            unifVec, normVec,
                                            M, betaDispersion,
-                                           as.integer(preAssignment[[i]]$assign),
+                                           as.integer(subjectData$pre$assign),
                                            randomAssignProb, modelprobs)
       }
 
       unifVec <- runif(nsamp * nSubsets)
-      eta <- subjectData$nullEta
+      eta <- subjectData$dat$nullEta
       assignment <- as.vector(assignmentMat[nrow(assignmentMat), ])
       responderSubset <- popInd %in% which(assignment == 1)
-      eta[responderSubset] <- subjectData$altEta[responderSubset]
-      randomEst <- as.numeric(estimatedRandomEffects[i, ])
+      eta[responderSubset] <- subjectData$dat$altEta[responderSubset]
+      randomEst <- as.numeric(subjectData$rand)
 
       MHattempts <- rep(0, nSubsets)
       MHsuccess <- rep(0, nSubsets)
       randomMat <- randomEffectCoordinateMH(y, N,
-                                            as.integer(i), nsamp, nSubsets,
-                                            MHcoef,
+                                            subjectData$index,
+                                            nsamp, nSubsets, MHcoef,
                                             as.vector(assignment),
                                             as.integer(popInd),
                                             as.numeric(eta),

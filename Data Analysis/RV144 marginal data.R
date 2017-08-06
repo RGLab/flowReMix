@@ -56,6 +56,9 @@
                    verbose = TRUE, control = control))
 #save(fit, file = "Data Analysis/results/RV144 marginals dispersed model robust 2.Robj")
 
+vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
+plot(fit, type = "scatter", target = vaccine)
+
 ## ROC ------------------
 require(pROC)
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
