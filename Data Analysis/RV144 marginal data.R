@@ -1,4 +1,4 @@
-  preAssign <- function(dat) {
+preAssign <- function(dat) {
     subsets <- unique(dat$population)
     nSubsets <- length(subsets)
     preAssign <- numeric(nSubsets)

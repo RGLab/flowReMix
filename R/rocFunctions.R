@@ -1,9 +1,9 @@
 #' @export
+#' @import ggplot2
 plotROC <- function(obj, target, direction = "auto",
                     ncols = 5,
                     thresholdPalette = NULL,
                     subsets = NULL, varname = NULL) {
-  require(ggplot2)
   notNA <- !is.na(target)
   post <- obj$posteriors[notNA, -1]
   if(!is.null(subsets)) {
@@ -149,10 +149,9 @@ fdrTable <- function(obj, target) {
 }
 
 #' @export
+#' @import ggplot2
 plot.flowReMix_fdrTable <- function(obj, target, subsets = NULL,
                                     varname = NULL) {
-  require(ggplot2)
-
   plotList <- obj$empiricalFDR
   if(!is.null(subsets)) {
     plotList <- subset(plotList, subset %in% subsets)
@@ -173,12 +172,11 @@ plot.flowReMix_fdrTable <- function(obj, target, subsets = NULL,
     ggtitle(paste("FDR and Power Curves for", varname))
 }
 
-
+#' @export
+#' @import  ggplot2
 plotScatter <- function(obj, subsets = NULL,
                         target = NULL, varname = NULL,
                         ncol = 5, colPalette = NULL) {
-  require(ggplot2)
-
   dat <- obj$modelFrame
   if(length(grep("%%%", dat$id[1])) == 1) {
     split <- strsplit(dat$id, "%%%")
@@ -250,12 +248,12 @@ plotScatter <- function(obj, subsets = NULL,
 }
 
 #' @export
+#' @import ggplot2
 plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
                         test = c("none", "logistic", "t-test", "wilcoxon"),
                         one_sided = FALSE,
                         ncol = 5) {
-  require(ggplot2)
   if(is.null(varname) & !is.null(target)) {
     varname <- as.character(match.call()$target)
     varname <- varname[length(varname)]

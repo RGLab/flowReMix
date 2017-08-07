@@ -271,6 +271,8 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'   EM algorithm.
 #'
 #'
+#' @importFrom foreach %dopar%
+#' @importFrom foreach foreach
 #' @md
 #' @export
 flowReMix <- function(formula,
