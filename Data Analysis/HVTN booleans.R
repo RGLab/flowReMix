@@ -17,7 +17,7 @@ getExpression <- function(str) {
 
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
-  assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != 0]) > mean(y$prop[y$stim == 0])))
+  assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != 0]) > min(y$prop[y$stim == 0])))
   assign[assign == 1] <- -1
   result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
   return(result)
@@ -142,7 +142,9 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 # load(file = "Data Analysis/results/HVTN bool robust.Robj")
 #load(file = "Data Analysis/results/HVTNclust1.Robj")
 # load(file = "Data Analysis/results/HVTNclust2.Robj")
-load(file = "Data Analysis/results/HVTNclust4.Robj")
+# load(file = "Data Analysis/results/HVTNclust4.Robj")
+load(file = "Data Analysis/results/HVTNclust7npost1niter24.Robj")
+load(file = "Data Analysis/results/HVTNclust7npost10niter24.Robj")
 # fit$posteriors[, -1] <- 1 - fit$posteriors[, -1]
 
 # Post-hoc assignment -------------------
@@ -169,6 +171,21 @@ hiv[vaccine == 0] <- NA
 infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
                       sortAUC = FALSE)
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
+
+# Raw Graphical Models ---------------
+isingThreshold <- 0.945
+plot(fit, type = "graph", graph = "ising",
+     fill = rocResults$auc, normalize = FALSE,
+     threshold = isingThreshold)
+
+plot(fit, type = "graph", graph = "ising",
+     fill = infectROC$auc, normalize = FALSE,
+     threshold = isingThreshold)
+
+plot(fit, type = "graph", graph = "randomEffects",
+     fill = rocResults$auc, normalize = FALSE,
+     threshold = 0.99)
+
 
 # Scatter plots -----------------------
 scatter <- plot(fit, target = vaccine, type = "scatter", ncol = 11)
@@ -238,15 +255,18 @@ infection <- factor(infection, levels = c("PLACEBO", "INFECTED", "NON-INFECTED")
 stimbox <- plot(fit, type = "boxplot", groups = stim,
                 weights = weightList, ncol = 2,
                 target = infection)
+stimbox
 # save_plot("figures/hvtnStimBox.pdf", stimbox,
 #           base_width = 9, base_height = 6)
 parentbox <- plot(fit, type = "boxplot", groups = parent,
                   weights = weightList, ncol = 2,
                   target = infection)
+parentbox
 # save_plot("figures/hvtnParentBox.pdf", parentbox,
 #           base_width = 9, base_height = 5)
 parentstimbox <- plot(fit, type = "boxplot", groups = stimparent,
                       weights = weightList, ncol = 3, target = infection)
+parentstimbox
 # save_plot("figures/hvtnParentStimBox.pdf", parentstimbox,
 #           base_width = 10, base_height = 8)
 
@@ -256,15 +276,17 @@ poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weightList[[
 allpval <- summary(glm(hiv ~ poly, family = "binomial"))$coefficients[2, 4] / 2
 names(all) <- paste("All Subsets, p-value:", round(allpval, 4))
 allboxplot <- plot(fit, target = infection, type = "boxplot", groups = all)
-save_plot("figures/HVTNallboxplot.pdf", allboxplot)
+# save_plot("figures/HVTNallboxplot.pdf", allboxplot)
 
 # Stability selection for graphical model ------------------------
 # load("data analysis/results/HVTNising2.Robj")
 # stability <- stabilityGraph(fit, type = "ising", reps = 50, cpus = 2, gamma = 0.25)
 # save(stability, file = "data analysis/results/HVTN bool robust graph4.Robj")
-load("data analysis/results/HVTN bool robust graph4.Robj")
+load("data analysis/results/HVTNising7setting3.Robj")
 colnames(stability$network) <- colnames(fit$posteriors)[-1]
-isingplot <- plot(stability, fill = rocResults$auc, threshold = 0.65)
+isingplot <- plot(stability,
+                  fill = rocResults$auc,
+                  threshold = 0.82)
 isingplot
 # save_plot("figures/HVTNising2.pdf", isingplot,
 #           base_width = 9, base_height = 5)

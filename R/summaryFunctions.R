@@ -1,6 +1,6 @@
 #' @export
 plot.flowReMix <- function(obj, target = NULL, varname = NULL,
-                           type = c("scatter", "boxplot", "FDR", "ROC"), ...) {
+                           type = c("scatter", "boxplot", "FDR", "ROC", "ising"), ...) {
   if(!is.null(target) & is.null(varname)) {
     varname <- as.character(match.call()$target)
     varname <- varname[length(varname)]
@@ -20,6 +20,14 @@ plot.flowReMix <- function(obj, target = NULL, varname = NULL,
     return(plotScatter(obj, target = target, varname = varname, ...))
   } else if(type == "boxplot") {
     return(plotBoxplot(obj, target = target, varname = varname, ...))
+  } else if(type == "graph") {
+    if(!is.null(match.call()$fill) & is.null(match.call()$fillName)) {
+      fillName <- as.character(match.call()$fill)
+      fillName <- fillName[length(fillName)]
+      return(plotRawGraph(obj, fillName = fillName, ...))
+    } else {
+      return(plotRawGraph(obj, ...))
+    }
   }
 }
 

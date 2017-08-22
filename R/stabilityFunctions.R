@@ -56,8 +56,63 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 }
 
 #' @export
+plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FALSE,
+                         fill = NULL, fillName = NULL,
+                         fillRange = NULL, fillPalette = NULL,
+                         title = TRUE, normalize = TRUE) {
+  if(graph == "ising") {
+    ising <- obj$isingAvg
+    if(normalize) {
+      isingZ <- ising / sqrt(obj$isingVar)
+    } else {
+      isingZ <- ising
+    }
+  } else if(graph == "randomEffects") {
+    ising <- obj$invCovAvg
+    isingZ <- ising / sqrt(obj$invCovVar)
+    if(normalize) {
+      isingZ <- ising / sqrt(obj$isingVar)
+    } else {
+      isingZ <- ising
+    }
+  } else {
+    stop("Graph type not supported!")
+  }
+  isingZ[is.nan(isingZ)] <- 0
+  diag(isingZ) <- 0
+  edges <- isingZ[lower.tri(isingZ)]
+  nonZero <- abs(edges) > 0
+  edges[nonZero] <- sapply(edges[nonZero], function(x) mean(abs(edges[nonZero]) <= abs(x)))
+  isingZ[lower.tri(isingZ)] <- edges
+  for(i in 1:(nrow(isingZ) - 1)) {
+    for(j in (i+1):ncol(isingZ)) {
+      isingZ[i, j] <- isingZ[j, i]
+    }
+  }
+  network <- list()
+  rownames(isingZ) <- names(fit$coefficients)
+  colnames(isingZ) <- names(fit$coefficients)
+  network$network <- isingZ
+  network$type <- "ising"
+
+  if(is.null(fillName) & !is.null(fill)) {
+    fillName <- as.character(match.call()$fill)
+    fillName <- fillName[length(fillName)]
+  }
+
+  network$raw <- TRUE
+
+  figure <- plot.flowReMix_stability(network, threshold = threshold, plotAll = plotAll,
+                                     fill = fill, fillRange = fillRange, fillPalette = fillPalette,
+                                     fillName = fillName,
+                                     title = title)
+  return(figure)
+}
+
+#' @export
 plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
-                                     fill = NULL, fillRange = NULL, fillPalette = NULL,
+                                     fill = NULL, fillName = NULL,
+                                     fillRange = NULL, fillPalette = NULL,
                                      title = TRUE) {
   require(ggplot2)
   measure <- fill
@@ -97,6 +152,12 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
   edgecol <- scale_colour_manual(name = "Correlation", values = c("dark green", "dark red"))
   edges$Dependence <- abs(edges$Dependence)
 
+  if(is.null(obj$raw)) {
+    alphaTitle <- "Edge Propensity"
+  } else {
+    alphaTitle <- "Edge Quantile"
+  }
+
   library(ggplot2)
   figure <- ggplot() +
     edgecol +
@@ -105,10 +166,14 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
                                    col = Correlation,
                                    alpha = Dependence),
                  size = 1) +
-    scale_alpha_continuous(name = "Edge Propensity")
+    scale_alpha_continuous(name = alphaTitle)
     if(!is.null(measure)) {
-      measureName <- as.character(match.call()$fill)
-      measureName <- measureName[length(measureName)]
+      if(is.null(fillName)) {
+        measureName <- as.character(match.call()$fill)
+        measureName <- measureName[length(measureName)]
+      } else {
+        measureName <- fillName
+      }
       if(is.null(fillRange)) {
         fillRange <- c(min(measure), max(measure))
       }

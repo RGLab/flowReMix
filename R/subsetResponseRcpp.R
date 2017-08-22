@@ -307,6 +307,7 @@ flowReMix <- function(formula,
   ncores <- control$ncores
   isingInit <- control$isingInit
   lastSample <- control$lastSample
+  preAssignCoefs <- control$preAssignCoefs
 
   if(parallel) {
     if(is.null(ncores)) {
@@ -562,6 +563,8 @@ flowReMix <- function(formula,
   levelProbs <- rep(0.5, nSubsets)
   covariance <- diag(apply(estimatedRandomEffects, 2, var))
   invcov <- diag(1 / diag(covariance))
+  invCovAvg <- invcov
+  invCovVar <- invcov^2
   isingfit <- NULL
 
   # Setting up preAssignment ----------------------
@@ -586,6 +589,11 @@ flowReMix <- function(formula,
 
   preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
   preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
+
+  if(any(preAssignCoefs > 1) | any(preAssignCoefs < 0)) {
+    warning("preAssignCoefs must be a numeric vector the coordinates of which must be between 0 and 1!")
+    preAssignCoefs <- pmin(1, pmax(preAssignCoefs, 0))
+  }
 
   # More preparations ---------------------------
   dat$tempTreatment <- dat$treatmentvar
@@ -614,6 +622,8 @@ flowReMix <- function(formula,
 
   flagEquation <- rep(0, nSubsets)
   netFlags <- rep(FALSE, nSubsets)
+  isingAvg <- isingCoefs
+  isingVar <- isingCoefs^2
 
   # Starting analysis -------------------------------
   if(verbose) print("Starting Stochastic EM")
@@ -651,11 +661,11 @@ flowReMix <- function(formula,
 
           fit <- NULL
           try(capture.output(fit <- robustbase::glmrob(formula = glmformula,
-                                        data = popdata,
+                                        data = popDat[[1]],
                                         weights = weights,
                                         family = "binomial")))
           if(is.null(fit)) {
-            try(fit <- glm(formula = glmformula, data = popdata,
+            try(fit <- glm(formula = glmformula, data = popDat[[1]],
                            weights = weights, family = "binomial"))
             if(is.null(fit)) {
               return(NULL)
@@ -663,8 +673,8 @@ flowReMix <- function(formula,
           }
           eta <- predict(fit)
           mu <- 1 / (1 + exp(-eta))
-          N <- popdata$N
-          y <- popdata$y
+          N <- popDat[[1]]$N
+          y <- popDat[[1]]$y
           M <- dispersionMLE(y, N, mu)
           fit$M <- M
           return(fit)
@@ -717,7 +727,7 @@ flowReMix <- function(formula,
           # popdata <- dataByPopulation[[j]]
           try(X <- model.matrix(glmformula, data = popDat[[1]])[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
-          y <- cbind(popdata$N - popdata$y, popdata$y)
+          y <- cbind(popDat[[1]]$N - popDat[[1]]$y, popDat[[1]]$y)
           fit <- NULL
           try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
                                                             offset = popDat[[1]]$randomOffset),
@@ -829,13 +839,14 @@ flowReMix <- function(formula,
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
                                                       index = i))
+    iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
+    # print(mem_used()) #### MEMORY CHECK
     MHresult <- foreach(subjectData = listForMH) %dopar% {
       # subjectData <- databyid[[i]]
       popInd <- subjectData$dat$subpopInd
       N <- subjectData$dat$N
       y <- subjectData$dat$y
       prop <- y/N
-      iterPosteriors <- rep(0, nSubsets)
       unifVec <- runif(nsamp * nSubsets)
       normVec <- rnorm(intSampSize)
       if(mixed) {
@@ -849,7 +860,7 @@ flowReMix <- function(formula,
                                            unifVec, normVec,
                                            M, betaDispersion,
                                            as.integer(subjectData$pre$assign),
-                                           randomAssignProb, modelprobs)
+                                           randomAssignProb, modelprobs, iterAssignCoef)
       }
 
       unifVec <- runif(nsamp * nSubsets)
@@ -876,6 +887,7 @@ flowReMix <- function(formula,
       return(list(assign = assignmentMat, rand = randomMat,
                   rate = MHsuccess / MHattempts))
     }
+    # print(mem_used()) #### MEMORY CHECK
 
     assignmentList <- lapply(MHresult, function(x) x$assign)
     MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
@@ -912,6 +924,10 @@ flowReMix <- function(formula,
       }
       databyid[[i]] <- subjectData
     }
+    rm(assignmentMat)
+    rm(randomMat)
+    rm(subjectData)
+    rm(popInd)
 
     # Updating Covariance -------------------------
     print("Estimating Covariance!")
@@ -940,6 +956,8 @@ flowReMix <- function(formula,
         covariance <- diag(apply(randomList, 2, function(x) mean(x^2)))
         invcov <- diag(1 / diag(covariance))
       }
+      invCovAvg <- invcov * iterweight + invCovAvg * (1 - iterweight)
+      invCovVar <- invcov^2 * iterweight + invCovVar * (1 - iterweight)
     }
 
     # Updating Ising -----------------------
@@ -966,6 +984,8 @@ flowReMix <- function(formula,
                             modelprobs = modelprobs,
                             minprob = 1 / nSubjects)
         isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
+        isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
+        isingVar <- isingVar * (1 - iterweight) + isingfit^2 * iterweight
       } else if(isingMethod == "dense") {
         for(j in 1:nSubsets) {
           firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
@@ -1042,6 +1062,8 @@ flowReMix <- function(formula,
   result$coefficients <- coefficientList
   names(result$coefficients) <- names(dataByPopulation)
   result$covariance <- covariance
+  result$invCovAvg <- invCovAvg
+  result$invCovVar <- invCovVar - invCovAvg^2
   result$randomEffects <- estimatedRandomEffects
   result$dispersion <- M
   result$randomEffectSamp <- randomOutput
@@ -1052,6 +1074,8 @@ flowReMix <- function(formula,
     posteriors[, -1] <- 1 - posteriors[, -1]
     result$posteriors <- posteriors
     result$levelProbs <- levelProbs
+    result$isingAvg <- isingAvg
+    result$isingVar <- isingVar - isingAvg^2
   }
   class(result) <- "flowReMix"
 

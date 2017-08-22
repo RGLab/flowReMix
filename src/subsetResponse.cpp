@@ -116,7 +116,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector dispersion, bool betaDispersion,
                                 IntegerVector preAssignment,
                                 double randomAssignProb,
-                                NumericVector mprobs) {
+                                NumericVector mprobs, double preAssignCoef) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -137,7 +137,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   int unifPosition = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
-      if(preAssignment[j] != -1) {
+      if(preAssignment[j] != -1 & preAssignCoef < 10e-4) {
         assignment[j] = preAssignment[j] ;
         continue ;
       }
@@ -189,6 +189,13 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       pResponder = 1.0 / (1.0 + densityRatio) ;
       pResponder = std::max(pResponder, randomAssignProb) ;
       pResponder = std::min(pResponder, 1 - randomAssignProb) ;
+
+      if(preAssignment[j] == 1) {
+        pResponder = 1 - (1 - pResponder) * preAssignCoef ;
+      } else if(preAssignment[j] == 0) {
+        pResponder = pResponder * preAssignCoef ;
+      }
+
       if(unifVec[unifPosition++] < pResponder) {
         assignment[j] = 1 ;
       } else {

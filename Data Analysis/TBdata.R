@@ -101,9 +101,13 @@ control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 1,
 #                  iterations = 25,
 #                  parallel = TRUE,
 #                  verbose = TRUE, control = control)
-load(file = "data analysis/results/TBsep5.Robj")
+# load(file = "data analysis/results/TBsep5.Robj")
 # load(file = "data analysis/results/TBsep7robust.Robj")
 # load(file = "data analysis/results/TBsep8robust.Robj")
+# load(file = "data analysis/results/TBsep14withPmedium.Robj")
+# load(file = "data analysis/results/TBsep13withPshort.Robj")
+# load(file = "data analysis/results/TBsep12withPlonger.Robj")
+
 
 # Scatter plots with posteriors ---------------
 library(cowplot)
@@ -112,17 +116,17 @@ outcome <- by(tempdat, tempdat$ptid, function(x) unique(x$type))
 outcome <- data.frame(ptid = names(outcome), outcome = as.character(outcome))
 post <- merge(post, outcome)
 outcome <- post[, ncol(post)]
-scatter <- plot(fit, type = "scatter", target = outcome,
-                ncol = 10)
+# scatter <- plot(fit, type = "scatter", target = outcome,
+#                 ncol = 10)
 # save_plot(scatter, filename = "figures/TBscatter.pdf",
 #           base_width = 20, base_height = 20)
 
 # Fitting ROC curves -----------------
 rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
-level <- 0.1
+level <- 1
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
-select <- nresponders[2, ] < level
+select <- nresponders[1, ] < level
 rocTable$qvalue <- NA
 rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
 rocTable[order(rocTable$auc, decreasing = TRUE), ]
@@ -130,13 +134,17 @@ sum(rocTable$qvalue < 0.05, na.rm = TRUE)
 sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 
 # Graph -----------------
-load("data analysis/results/TBising5.Robj")
-plot(stability, fill = rocTable$auc, threshold = 0.5)
+load("data analysis/results/TBising14.Robj")
+isingplot <- plot(stability, fill = rocTable$auc,
+                  threshold = 0.5)
+isingplot
+# save_plot(isingplot, filename = "figures/TBdatIsing3.pdf",
+#           base_height = 5.5, base_width = 6.6)
 
 # Boxplot by graph clusters -------------
 groups <- getGraphComponents(stability, threshold = 0.5, minsize = 3)
 plot(fit, type = "boxplot", target = outcome, groups = groups,
-     test = "t-test", ncol = 2)
+     test = "logistic", ncol = 2)
 
 # Boxplots by categories -----------
 subsets <- names(fit$posteriors)[-1]
@@ -155,22 +163,34 @@ stimgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[1]])
 stimnames <- unique(stimgroups)
 stimgroups <- lapply(stimnames, function(x) subsets[stimgroups == x])
 names(stimgroups) <- stimnames
-plot(fit, type = "boxplot", weights = weights,
-     target = group,
-     test = "wilcoxon",
-     groups = stimgroups)
+stimbox <- plot(fit, type = "boxplot", weights = weights,
+                target = group,
+                test = "wilcoxon",
+                one_sided = TRUE,
+                groups = stimgroups)
+stimbox
+# save_plot(stimbox, filename = "figures/TBstimBoxplots.pdf",
+#           base_height = 4, base_width = 8)
 
 cellgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[2]])
 cellnames <- unique(cellgroups)
 cellgroups <- lapply(cellnames, function(x) subsets[cellgroups == x])
 names(cellgroups) <- cellnames
-plot(fit, type = "boxplot", target = group, test = "wilcoxon",
+cellbox <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
      groups = cellgroups, ncol = 3, weights = weights)
+cellbox
+# save_plot(cellbox, filename = "figures/TBparentBoxplots.pdf",
+#           base_height = 4, base_width = 8)
+
 
 stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
 scnames <- unique(stimcell)
 stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
 names(stimcell) <- scnames
 stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
-plot(fit, type = "boxplot", target = group, test = "wilcoxon",
+scboxplot <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
      groups = stimcell, ncol = 4)
+scboxplot
+# save_plot(scboxplot, filename = "figures/TBstimParentBoxplot.pdf",
+#           base_height = 5, base_width = 10)
+
