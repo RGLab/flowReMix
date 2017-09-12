@@ -2,26 +2,26 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 MH <- function(lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter, rate, unifs, nullEta, altEta, updateLag) {
-    invisible(.Call('flowReMix_MH', PACKAGE = 'flowReMix', lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter, rate, unifs, nullEta, altEta, updateLag))
+    invisible(.Call('_flowReMix_MH', PACKAGE = 'flowReMix', lastMean, estimatedRandomEffects, y, N, randomEffectSamp, i, popInd, invcov, accept, iter, rate, unifs, nullEta, altEta, updateLag))
 }
 
 zero <- function(accept) {
-    .Call('flowReMix_zero', PACKAGE = 'flowReMix', accept)
+    .Call('_flowReMix_zero', PACKAGE = 'flowReMix', accept)
 }
 
 vecBetaBinomDens <- function(count, N, prob, M) {
-    .Call('flowReMix_vecBetaBinomDens', PACKAGE = 'flowReMix', count, N, prob, M)
+    .Call('_flowReMix_vecBetaBinomDens', PACKAGE = 'flowReMix', count, N, prob, M)
 }
 
 setNumericVectorToZero <- function(x) {
-    invisible(.Call('flowReMix_setNumericVectorToZero', PACKAGE = 'flowReMix', x))
+    invisible(.Call('_flowReMix_setNumericVectorToZero', PACKAGE = 'flowReMix', x))
 }
 
 subsetAssignGibbs <- function(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs) {
-    .Call('flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs)
+    .Call('_flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs)
 }
 
 randomEffectCoordinateMH <- function(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach) {
-    .Call('flowReMix_randomEffectCoordinateMH', PACKAGE = 'flowReMix', y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach)
+    .Call('_flowReMix_randomEffectCoordinateMH', PACKAGE = 'flowReMix', y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach)
 }
 

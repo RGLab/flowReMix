@@ -651,11 +651,11 @@ flowReMix <- function(formula,
 
           fit <- NULL
           try(capture.output(fit <- robustbase::glmrob(formula = glmformula,
-                                        data = popdata,
+                                        data = popDat[[1]],
                                         weights = weights,
                                         family = "binomial")))
           if(is.null(fit)) {
-            try(fit <- glm(formula = glmformula, data = popdata,
+            try(fit <- glm(formula = glmformula, data = popDat[[1]],
                            weights = weights, family = "binomial"))
             if(is.null(fit)) {
               return(NULL)
@@ -663,8 +663,8 @@ flowReMix <- function(formula,
           }
           eta <- predict(fit)
           mu <- 1 / (1 + exp(-eta))
-          N <- popdata$N
-          y <- popdata$y
+          N <- popDat[[1]]$N
+          y <- popDat[[1]]$y
           M <- dispersionMLE(y, N, mu)
           fit$M <- M
           return(fit)
@@ -717,13 +717,13 @@ flowReMix <- function(formula,
           # popdata <- dataByPopulation[[j]]
           try(X <- model.matrix(glmformula, data = popDat[[1]])[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
-          y <- cbind(popdata$N - popdata$y, popdata$y)
+          y <- cbind(popDat[[1]]$N - popDat[[1]]$y, popDat[[1]]$y)
           fit <- NULL
           try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
                                                             offset = popDat[[1]]$randomOffset),
                                    timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
-            eta <- predict(fit, newx = X, offset = popdat[[1]]$randomOffset, s = "lambda.min")
+            eta <- predict(fit, newx = X, offset = popDat[[1]]$randomOffset, s = "lambda.min")
             mu <- 1 / (1 + exp(-eta))
             N <- popDat[[1]]$N
             y <- popDat[[1]]$y
