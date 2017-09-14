@@ -128,17 +128,17 @@ subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 preAssign <- by(subsetDat, subsetDat$ptid, assign)
 preAssign <- do.call("rbind", preAssign)
-fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
-                 subject_id = ptid,
-                 cell_type = subset,
-                 cluster_variable = stim,
-                 data = subsetDat,
-                 covariance = "sparse",
-                 ising_model = "sparse",
-                 regression_method = "robust",
-                 iterations = 20,
-                 parallel = FALSE,
-                 verbose = TRUE, control = control)
+# fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+#                  subject_id = ptid,
+#                  cell_type = subset,
+#                  cluster_variable = stim,
+#                  data = subsetDat,
+#                  covariance = "sparse",
+#                  ising_model = "sparse",
+#                  regression_method = "robust",
+#                  iterations = 20,
+#                  parallel = FALSE,
+#                  verbose = TRUE, control = control)
 # load(file = "Data Analysis/results/HVTN bool robust.Robj")
 #load(file = "Data Analysis/results/HVTNclust1.Robj")
 # load(file = "Data Analysis/results/HVTNclust2.Robj")
@@ -173,10 +173,14 @@ infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 
 # Raw Graphical Models ---------------
-isingThreshold <- 0.945
-plot(fit, type = "graph", graph = "ising",
+isingThreshold <- .945
+ising <- plot(fit, type = "graph", graph = "ising",
      fill = rocResults$auc, normalize = FALSE,
      threshold = isingThreshold)
+ising
+library(cowplot)
+# save_plot(ising, filename = "figures/hvtnIsingRaw.pdf",
+#           base_width = 7, base_height = 6)
 
 plot(fit, type = "graph", graph = "ising",
      fill = infectROC$auc, normalize = FALSE,
@@ -217,6 +221,7 @@ for(i in 1:length(stim)) {
   sub <- which(names(fit$posteriors)[-1] %in% group)
   aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
   stimpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
+  # stimpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
 }
 names(stim) <- paste(names(stim), "pvalue:", round(stimpvals, 4))
 
@@ -231,6 +236,7 @@ for(i in 1:length(parent)) {
   sub <- which(names(fit$posteriors)[-1] %in% group)
   aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
   parentpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
+  # parentpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
 }
 names(parent) <- paste(names(parent), "pvalue:", round(parentpvals, 4))
 
@@ -244,38 +250,47 @@ for(i in 1:length(stimparent)) {
   sub <- which(names(fit$posteriors)[-1] %in% group)
   aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
   sppvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
+  # sppvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
 }
 names(stimparent) <- paste(names(stimparent), "pvalue:", round(sppvals, 4))
 
 infection <- hiv
 infection[hiv == 0] <- "NON-INFECTED"
 infection[hiv == 1] <- "INFECTED"
-# infection[is.na(hiv)] <- "PLACEBO"
+infection[is.na(hiv)] <- "PLACEBO"
 infection <- factor(infection, levels = c("PLACEBO", "INFECTED", "NON-INFECTED"))
 stimbox <- plot(fit, type = "boxplot", groups = stim,
                 weights = weightList, ncol = 2,
                 target = infection)
 stimbox
-# save_plot("figures/hvtnStimBox.pdf", stimbox,
+# save_plot("figures/hvtnStimBox2.pdf", stimbox,
 #           base_width = 9, base_height = 6)
 parentbox <- plot(fit, type = "boxplot", groups = parent,
                   weights = weightList, ncol = 2,
                   target = infection)
 parentbox
-# save_plot("figures/hvtnParentBox.pdf", parentbox,
+# save_plot("figures/hvtnParentBox2.pdf", parentbox,
 #           base_width = 9, base_height = 5)
+
 parentstimbox <- plot(fit, type = "boxplot", groups = stimparent,
                       weights = weightList, ncol = 3, target = infection)
 parentstimbox
-# save_plot("figures/hvtnParentStimBox.pdf", parentstimbox,
+# save_plot("figures/hvtnParentStimBox2.pdf", parentstimbox,
 #           base_width = 10, base_height = 8)
 
-all <- list()
-all[[1]] <- names(fit$posteriors)[-1]
-poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weightList[[1]]))
-allpval <- summary(glm(hiv ~ poly, family = "binomial"))$coefficients[2, 4] / 2
-names(all) <- paste("All Subsets, p-value:", round(allpval, 4))
-allboxplot <- plot(fit, target = infection, type = "boxplot", groups = all)
+allbox <- plot(fit, type = "boxplot", groups = "all", target = hiv,
+               test = "logistic", weights = weightList, one_sided = TRUE)
+allbox
+# save_plot("figures/hvtnAllBox.pdf", parentstimbox,
+#           base_width = 10, base_height = 8)
+
+
+# all <- list()
+# all[[1]] <- names(fit$posteriors)[-1]
+# poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weightList[[1]]))
+# allpval <- summary(glm(hiv ~ poly, family = "binomial"))$coefficients[2, 4] / 2
+# names(all) <- paste("All Subsets, p-value:", round(allpval, 4))
+# allboxplot <- plot(fit, target = hiv, type = "boxplot", groups = all)
 # save_plot("figures/HVTNallboxplot.pdf", allboxplot)
 
 # Stability selection for graphical model ------------------------

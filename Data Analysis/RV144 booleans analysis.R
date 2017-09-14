@@ -116,7 +116,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 # load(file = "data analysis/results/RV144cluster7.Robj")
 # load(file = "data analysis/results/RV144cluster12LessDisp.Robj")
 # load(file = "data analysis/results/boolean robust maxAssign 06 1.Robj")
-# load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
+load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
 # load(file = "data analysis/results/RV144cluster14gradAssign25.Robj")
 # load(file = "data analysis/results/RV144cluster15gradAssign50.Robj")
 

@@ -87,20 +87,20 @@ control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 1,
                              lastSample = round(40 / npost), isingInit = -log(99),
                              initMethod = "sparse")
 
-# tempdat$stim <- tempdat$stimtemp
-# tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
-# tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
-# fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
-#                  subject_id = ptid,
-#                  cell_type = subset,
-#                  cluster_variable = stim,
-#                  data = tempdat,
-#                  covariance = "sparse",
-#                  ising_model = "sparse",
-#                  regression_method = "sparse",
-#                  iterations = 25,
-#                  parallel = TRUE,
-#                  verbose = TRUE, control = control)
+tempdat$stim <- tempdat$stimtemp
+tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
+tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
+fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+                 subject_id = ptid,
+                 cell_type = subset,
+                 cluster_variable = stim,
+                 data = tempdat,
+                 covariance = "sparse",
+                 ising_model = "sparse",
+                 regression_method = "sparse",
+                 iterations = 25,
+                 parallel = TRUE,
+                 verbose = TRUE, control = control)
 # load(file = "data analysis/results/TBsep5.Robj")
 # load(file = "data analysis/results/TBsep7robust.Robj")
 # load(file = "data analysis/results/TBsep8robust.Robj")

@@ -52,14 +52,14 @@ tempdat$visitInter <- tempdat$visitno
 tempdat$trtTime <- tempdat$visitno
 tempdat$stimInd <- as.numeric(tempdat$stim == "stim")
 
-tempdat <- subset(tempdat, parent == "4+")
+tempdat <- subset(tempdat, parent == "4+" & stimgroup == "RBC")
 tempdat$subset <- factor(as.character(tempdat$subset))
 
 # a <- model.matrix(cbind(count, parentcount - count) ~ visitno + stimInd:trtTime,
 #              data = tempdat)
 # colnames(a)
 
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ visitno + stimInd:trtTime,
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stimInd + stimInd:trtTime,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = trtTime,
@@ -106,9 +106,13 @@ infection <- outcome[, 2]
 rocResult <- rocTable(fit, target = infection, pvalue = "wilcoxon")
 select <- apply(fit$posteriors[, -1], 2, function(x) max(x) >= 1 - 1)
 select <- sapply(fit$coefficients, function(x) x[7] > 0)
+select <- rep(TRUE, length(fit$coefficients))
 rocResult$qvalue <- NA
 rocResult$qvalue[select] <- p.adjust(rocResult$pvalue[select], method = "BH")
 head(rocResult[order(rocResult$auc, decreasing = TRUE), ])
+
+# Plotting raw graphs ------------------
+plot(fit, type = "graph", graph = "ising", threshold = 0.75)
 
 # Boxplots ---------------------------
 weights <- list()
