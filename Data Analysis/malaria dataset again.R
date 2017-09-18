@@ -2,14 +2,14 @@ library(flowReMix)
 # Malaria dataset ----------------------------
 data(malaria)
 names(malaria)
-table(malaria$experiment)
-unique(malaria$ptid)
-unique(malaria$population)
+# table(malaria$experiment)
+# unique(malaria$ptid)
+# unique(malaria$population)
 populations <- unique(malaria$population)
 parents <- unique(malaria$parent)
 leaves <- populations[!(populations %in% parents) ]
 malaria <- subset(malaria, population %in% leaves)
-unique(malaria$stim)
+# unique(malaria$stim)
 malaria$stimgroup[malaria$stim %in% c("PfRBC", "uRBC")] <- "RBC"
 malaria$stimgroup[!(malaria$stim %in% c("PfRBC", "uRBC"))] <- "SPZ"
 malaria$stim[malaria$stim == "uRBC"] <- "control"
@@ -17,7 +17,8 @@ malaria$stim[malaria$stim != "control"] <- "stim"
 malaria$stim <- factor(malaria$stim, levels = c("control", "stim"))
 isCytokine <- substring(malaria$population, nchar(malaria$population)) == "+"
 malaria <- subset(malaria, isCytokine)
-malaria$subset <- paste(malaria$visitno, "/", malaria$stimgroup, "/", malaria$population, sep = "")
+# malaria$subset <- paste(malaria$visitno, "/", malaria$stimgroup, "/", malaria$population, sep = "")
+malaria$subset <- paste(malaria$stimgroup, "/", malaria$population, sep = "")
 malaria$visitno <- factor(malaria$visitno)
 
 malaria$infection <- TRUE
@@ -34,168 +35,134 @@ malaria <- malaria[order(malaria$ptid, malaria$stimgroup), ]
 
 # Analysis -----------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 4, keepEach = 5, nsamp = 30, initMHcoef = 2,
-                             nPosteriors = 6, centerCovariance = TRUE,
-                             maxDispersion = 500, minDispersion = 10^6,
+control <- flowReMix_control(updateLag = 7, keepEach = 5, nsamp = 50, initMHcoef = 2,
+                             nPosteriors = 10, centerCovariance = TRUE,
+                             maxDispersion = 500, minDispersion = 10^8,
                              randomAssignProb = 10^-8, intSampSize = 100,
-                             lastSample = 40, isingInit = -log(1),
-                             initMethod = "firth")
+                             lastSample = 10, isingInit = -log(95),
+                             initMethod = "robust")
 
-tempdat <- subset(malaria, parent %in% c("4+"))
+tempdat <- subset(malaria, TRUE)
 tempdat$time <- tempdat$visitno
 tempdat$subset <- factor(as.character(tempdat$subs))
 tempdat$stim[tempdat$stim]
 tempdat$trt <- 1
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~
-                               stim,
+tempdat$visitno <- factor(as.character(tempdat$visitno), levels = c("Day 0", "Day 9", "pos", "Day 28", "Day 56", "Day 168"))
+tempdat$visitInter <- tempdat$visitno
+tempdat$trtTime <- tempdat$visitno
+tempdat$stimInd <- as.numeric(tempdat$stim == "stim")
+
+tempdat <- subset(tempdat, parent == "4+" & stimgroup == "RBC")
+tempdat$subset <- factor(as.character(tempdat$subset))
+
+# a <- model.matrix(cbind(count, parentcount - count) ~ visitno + stimInd:trtTime,
+#              data = tempdat)
+# colnames(a)
+
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stimInd + stimInd:trtTime,
                  subject_id = ptid,
                  cell_type = subset,
-                 cluster_variable = stim,
+                 cluster_variable = trtTime,
                  data = tempdat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "firth",
-                 iterations = 7,
-                 parallel = FALSE,
+                 regression_method = "robust",
+                 iterations = 11,
+                 parallel = TRUE,
                  verbose = TRUE, control = control))
-#save(fit, file = "data analysis/results/new malaria 4+ 4+CXCR5+ 8+ E.Robj")
+# save(fit, file = "data analysis/results/malaria1 cd4.Robj")
+# load(file = "data analysis/results/malaria3iterations30post10.Robj")
+# load(file = "data analysis/results/malaria4iterations40post10.Robj")
+# load(file = "data analysis/results/malaria5iterations20post10.Robj")
+# load(file = "data analysis/results/malaria6iterations20post20.Robj")
+# load(file = "data analysis/results/malaria7iterations30post20.Robj")
+# load(file = "data analysis/results/malaria8iterations40post20.Robj")
+# load(file = "data analysis/results/malaria9iterations20post30.Robj")
+# load(file = "data analysis/results/malaria10iterations30post30.Robj")
 
-# ROC analysis for infection -----------------
-posteriors <- fit$posteriors
-posteriors <- merge(posteriors, unique(malaria[, c(9, 14)]), all.x = TRUE)
-infect <- posteriors[, ncol(posteriors)]
-posteriors <- posteriors[, -c(1, ncol(posteriors))]
-subsets <- colnames(posteriors)
-aucs <- numeric(ncol(posteriors))
-for(i in 1:ncol(posteriors)) {
-  post <- posteriors[, i]
-  rocfit <- roc(infect ~ post)
-  aucs[i] <- rocfit$auc
-}
-n0 <- sum(infect)
-n1 <- length(infect) - n0
-pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
-qvals <- p.adjust(pvals, method = "BH")
-rocResults <- data.frame(subset = subsets, auc = aucs,
-                         prob = fit$levelProbs,
-                         pval = pvals, qval = qvals)
-rocResults[order(rocResults$auc, decreasing = TRUE), ]
+load(file = "data analysis/results/malaria1_2_npost5niter20maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_3_npost10niter20maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_4_npost10niter20maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_5_npost20niter20maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_6_npost20niter20maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_7_npost40niter20maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_8_npost40niter20maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_9_npost5niter30maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_11_npost10niter30maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_12_npost10niter30maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_13_npost20niter30maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_14_npost20niter30maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_15_npost40niter30maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_16_npost40niter30maxDisp100.Robj")
+load(file = "data analysis/results/malaria1_17_npost5niter40maxDisp1000.Robj")
+load(file = "data analysis/results/malaria1_18_npost5niter40maxDisp100.Robj")
 
-# Stability selection for graphical model --------------
-assignments <- fit$assignmentList
-names(assignments) <- substr(names(assignments), 1, 5)
-assignments <- lapply(unique(names(assignments)), function(x) {
-  do.call("rbind", assignments[names(assignments) == x])
-})
 
-reps <- 50
-modelList <- list()
-nsubsets <- ncol(assignments[[1]])
-countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
-for(i in 1:reps) {
-  mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
-  colnames(mat) <- subsets
-  keep <- apply(mat, 2, function(x) any(x != x[1]))
-  mat <- mat[, keep]
-  system.time(model <- IsingFit::IsingFit(mat, AND = FALSE, plot = FALSE,
-                                          gamma = 0))
-  #coefs <- raIsing(mat, AND = TRUE, gamma = 0.9, method = "sparse")
-  #plot(model)
-  countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
-  #countCovar[keep, keep] <- countCovar[keep, keep] + (coefs != 0) * sign(coefs)
-  print(i)
-}
+# ROC table -------------------------------
+outcome <- by(tempdat, tempdat$ptid, function(x) x$infection[1])
+outcome <- data.frame(ptid = names(outcome), infection = as.numeric(outcome))
+infection <- outcome[, 2]
 
-threshold <- 0.5
-props <- countCovar / reps
-#save(props, file = "data analysis/results/new malaria graph 4+ only.Robj")
-table(props) / 2
-which(props > threshold, arr.ind = TRUE)
-props[props <= threshold] <- 0
-sum(props != 0) / 2
+rocResult <- rocTable(fit, target = infection, pvalue = "wilcoxon")
+select <- apply(fit$posteriors[, -1], 2, function(x) max(x) >= 1 - 1)
+select <- sapply(fit$coefficients, function(x) x[7] > 0)
+select <- rep(TRUE, length(fit$coefficients))
+rocResult$qvalue <- NA
+rocResult$qvalue[select] <- p.adjust(rocResult$pvalue[select], method = "BH")
+head(rocResult[order(rocResult$auc, decreasing = TRUE), ])
 
-# Plotting graph ---------------------
-require(GGally)
-library(network)
-library(sna)
-#threshold <- 0.4
-network <- props
-colnames(props) <- subsets
-rownames(props) <- subsets
-diag(network) <- 0
+# Plotting raw graphs ------------------
+plot(fit, type = "graph", graph = "ising", threshold = 0.75)
 
-# network <- fit$isingCov
-# diag(network) <- 0
-# threshold <- quantile(abs(network)[abs(network) > 0], 0.9)
+# Boxplots ---------------------------
+weights <- list()
+weights$select <- select
+weights$select <- rep(1, length(select))
+boxall <- plot(fit, type = "boxplot", target = infection, groups = "all",
+     test = "wilcoxon", one_sided = TRUE, jitter = TRUE)
+boxall
+# save_plot(boxall, filename = "figures/malariaBoxAll.pdf",
+#           base_height = 4, base_width = 5)
 
-keep <- apply(network, 1, function(x) any(abs(x) > threshold))
-#keep <-  (result$qvals <= 0.05)
-network <- network[keep, keep]
-net <- network(props)
-subsets <- names(fit$posteriors)[-1]
-nodes <- ggnet2(network, label = subsets[keep])$data
-edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
-p <- nrow(network)
-row <- 1
-for(j in 2:p) {
-  for(i in 1:(j-1)) {
-    if(network[i, j] != 0) {
-      edges[row, ] <- unlist(c(nodes[i, 6:7], nodes[j, 6:7], network[i, j]))
-      row <- row + 1
-    }
-  }
-}
+subsets <- colnames(fit$posteriors)[-1]
+stims <- sapply(subsets, function(x) strsplit(x, "/")[[1]][1])
+stimnames <- unique(stims)
+stimgroups <- lapply(stimnames, function(x) subsets[stims == x])
+names(stimgroups) <- stimnames
+boxstim <- plot(fit, type = "boxplot", target = infection,
+     groups = stimgroups, weights = weights,
+     test = "wilcoxon", one_sided = TRUE, jitter = TRUE)
+boxstim
+# save_plot(boxstim, filename = "figures/malariaBoxStim.pdf",
+#           base_height = 4, base_width = 7)
 
-edges <- data.frame(edges)
-names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
-aucs <- result$auc
-nodes$auc <- rocResults$auc[keep]
-nodes$qvals <- rocResults$qvals[keep]
 
-names(edges)[5] <- "Dependence"
-lims <- max(abs(props))
-library(ggplot2)
-ggplot() +
-  scale_colour_gradient2(limits=c(-lims, lims), low="dark red", high = "dark green") +
-  geom_segment(data = edges, aes(x = xstart, y = ystart,
-                                 xend = xend, yend = yend,
-                                 col = Dependence,
-                                 alpha = abs(Dependence)),
-               size = 1) +
-  #scale_fill_gradient2(low = "white", high = "red", limits = c(0.7, 1)) +
-  scale_fill_gradientn(colours = rainbow(4))+
-  geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
-             size = 8, col = "grey") +
-  scale_shape(solid = FALSE) +
-  geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
-  theme(axis.line=element_blank(),axis.text.x=element_blank(),
-        axis.text.y=element_blank(),axis.ticks=element_blank(),
-        axis.title.x=element_blank(),
-        axis.title.y=element_blank(),
-        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.background=element_blank())
+parents <- sapply(subsets, function(x) strsplit(x, "/")[[1]][2])
+parentnames <- unique(parents)
+parentgroups <- lapply(parentnames, function(x) subsets[parents == x])
+names(parentgroups) <- parentnames
+parentbox <- plot(fit, type = "boxplot", target = infection,
+     groups = parentgroups,
+     test = "wilcoxon", one_sided = TRUE, ncol = 3)
+parentbox
+# save_plot(parentbox, filename = "figures/malariaBoxParent.pdf",
+#           base_height = 6, base_width = 7)
 
-# Inference with connected components ----------------------
-library(igraph)
-network[network > 0.05] <- 1
-network[network <= 0.05] <- 0
-graph <- graph.adjacency(network)
-comp <- components(graph)
+sc <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
+scnames <- unique(sc)
+scgroups <- lapply(scnames, function(x) subsets[sc == x])
+names(scgroups) <- scnames
+scbox <- plot(fit, type = "boxplot", target = infection,
+     groups = scgroups,
+     test = "wilcoxon", one_sided = TRUE, ncol = 4)
+scbox
+# save_plot(scbox, filename = "figures/malariaSCbox.pdf",
+#           base_height = 6, base_width = 10)
 
-# ROCs for vaccination
-n0 <- sum(infect == 0)
-n1 <- sum(infect == 1)
-par(mfrow = c(2, 2))
-pvals <- c()
-for(i in 1:sum(comp$csize >= 2)) {
-  group <- which(comp$csize >= 2)[i]
-  group <- subsets[keep][which(comp$membership == group)]
-  cols <- which(names(fit$posteriors) %in% group)
-  score <- rowMeans(fit$posteriors[, cols])
-  rocfit <- roc(infect ~ score)
-  auc <- rocfit$auc
-  pval <- pwilcox(auc * n0 * n1, n0, n1, lower.tail = FALSE)
-  pvals <- c(pvals, pval)
-  plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 4), "pval", round(pval, 3)))
-}
+# Graphical Models --------------------------
+load(file = "data analysis/results/malariaIsing10.Robj")
+plot(stability, threshold = 0)
+
+load(file = "data analysis/results/malariaRand10.Robj")
+plot(rand, threshold = 0.5, fill = rocResult$auc)
 
