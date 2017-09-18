@@ -73,12 +73,13 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 4, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 15, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
-                             initMethod = "robust")
+                             initMethod = "robust",
+                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 11)))
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -90,11 +91,11 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 8,
-                 # cluster_assignment = preAssignment,
-                 parallel = FALSE,
+                 iterations = 30,
+                 cluster_assignment = preAssignment,
+                 parallel = TRUE,
                  verbose = TRUE, control = control)
-# save(fit, file = "data analysis/results/boolean robust15.Robj")
+# save(fit, file = "data analysis/results/boolean robust maxAssign 05 2.Robj")
 # load(file = "data analysis/results/boolean robust15.Robj")
 # load(file = "data analysis/results/boolean robust14.Robj")
 # load(file = "data analysis/results/boolean robust11 strong assign.Robj")
@@ -114,8 +115,10 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 # load(file = "data analysis/results/RV144cluster11moreDisp.Robj")
 # load(file = "data analysis/results/RV144cluster7.Robj")
 # load(file = "data analysis/results/RV144cluster12LessDisp.Robj")
-
-
+# load(file = "data analysis/results/boolean robust maxAssign 06 1.Robj")
+load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
+# load(file = "data analysis/results/RV144cluster14gradAssign25.Robj")
+# load(file = "data analysis/results/RV144cluster15gradAssign50.Robj")
 
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
@@ -127,6 +130,8 @@ for(i in 1:length(subjects)) {
   index <- which(assign[matching, 3] == 0) + 1
   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
 }
+
+plot(fit, type = "scatter")
 
 # ROC for vaccinations -----------------------------
 # sink("data analysis/results/RV144logisticSummary.txt")
@@ -149,6 +154,8 @@ rocplot <- plot(fit, target = vaccination, type = "ROC", ncols = 6,
 rocResults <- rocTable(fit, vaccination, direction = ">", adjust = "BH",
                        sortAUC = FALSE)
 rocResults[order(rocResults$auc, decreasing = TRUE), ]
+
+plot(fit, type = "graph", threshold = 0.94, fill = rocResults$auc)
 
 # ROC for infection status -------------------
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
