@@ -733,7 +733,7 @@ flowReMix <- function(formula,
                                                             offset = popDat[[1]]$randomOffset),
                                    timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
-            eta <- predict(fit, newx = X, offset = popdat[[1]]$randomOffset, s = "lambda.min")
+            eta <- predict(fit, newx = X, offset = popDat[[1]]$randomOffset, s = "lambda.min")
             mu <- 1 / (1 + exp(-eta))
             N <- popDat[[1]]$N
             y <- popDat[[1]]$y

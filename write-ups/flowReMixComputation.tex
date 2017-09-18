@@ -8,7 +8,7 @@ Let $i=1,...,n$ denote subjects, $j=1,...,p$ cell subsets and $l=1,...,L_{ij}$ t
 $$
 \nu \sim \text{N}_p(0, \Sigma), \qquad z\in\{0, 1\} \sim \text{Ising}(\Theta),
 $$$$
-\text{logit}(\mu_{ijl}) = X_{ijl}\beta_{j} + z_{ij} T_{ijl} \tau_{j} + \nu_j
+\text{logit}(\mu_{ijl}) = X_{ijl}\beta_{j} + z_{ij} T_{ijl} \tau_{j} + \nu_j,
 $$$$
 p_{ijl} \sim \text{Beta}(M_j\mu_{ijl},M_j(1 - \mu_{ijl})), \qquad
 y_{ijl} \sim \text{Binom}(N_{il}, \mu_{ijl}).
@@ -22,7 +22,7 @@ E(y_{ijl} / N_{il} | \nu_i, z_i) = \mu_{ijl},
 $$$$
 Var(y_{ijl} / N_{il}| \nu_i, z_i) = \frac{\mu_{ijl}(1 - \mu_{ijl})}{N_{il}} + \frac{\mu_{ijl}(1 - \mu_{ijl})}{M_j + 1}.
 $$
-And so, the beta-binomial model captures the fact that regardless of how many cells we get to see ($N_{il}$), we cannot obtain perfect information regarding the data generating process based on a singe blood sample.  
+And so, the beta-binomial model captures the fact that regardless of how many cells we get to see ($N_{il}$), we cannot obtain perfect information regarding the data generating process based on a single blood sample.  
 
 
 
@@ -36,12 +36,12 @@ $$
 \right\}.
 $$
 
-A common method for maximizing such complex likelihood is the EM algorithm. In the EM algorithm we maximize the complete-information log-likelihood where we replace the unknown quantities with their expectation conditional on the observed data as dictated by the current parameter estimates. 
+A common method for maximizing such complex likelihood functions is the EM algorithm. In the EM algorithm we maximize the complete-information log-likelihood where we replace the unknown quantities with their expectation conditional on the observed data as dictated by the current parameter estimates. 
 $$
 Q\left(\{\beta,\tau,\Sigma,\Theta\}^{t} \mid| \{\beta,\tau,\Sigma,\Theta\}^{t-1}
 \right) =\sum_{i=1}^{n} E(\log f(y, z, \nu) | y)
 $$$$
-= \sum_{i=1}^{n}\sum_{z\in\{0,1\}^{p}}P(z|y) E\left[(\log f(y,\nu, z) \mid| z, y \right]
+= \sum_{i=1}^{n}\sum_{z\in\{0,1\}^{p}}P(z|y) E\left[\log f(y,\nu, z) | z, y \right]
 $$$$
 = \sum_{i=1}^{n}\sum_{z\in\{0,1\}^{p}}P(z|y) \int_{\mathcal{R}^{p}} f(\nu | y, z) \log f(y, \nu, z) d\nu.
 $$
@@ -58,16 +58,115 @@ $$
 Replacing the expectation step with a posterior sampling step yields a Stochastic-EM  (SEM) algorithm. We discuss the implementation of the SEM algorithm in our setting next. 
 
 
-\section{Posterior Sampling for the Stochastic-EM}
+\subsection{Posterior Sampling for the Stochastic-EM}
 We sample from the posterior joint distribution of $\nu_i$ and $z_i$ in two stages. First, we sample from the marginal posterior distribution of $z_i$ and then sample $\nu_i | z_i$. We start by describing a Gibbs sampler for sampling $z_i$. For an arbitrary index $j\in\{1,...,p\}$, the posterior probability of response in the $j$th subset can be written as:
+$$
+P(z_{j} =1 | z_{-j} ) = \frac{P(z_j = 1 | z_{-j}) \int f(y, \nu | z_{-j}, z_{j} = 1) \varphi(\nu;\Sigma)d\nu}
+{\sum_{k=0}^{1}P(z_j = k| z_{-j}) \int f(y, \nu | z_{-j}, z_{j} = k) \varphi(\nu;\Sigma)d\nu}
+$$
+we perform numerical integration using importance sampling. 
+
+Conditionally on $z_i$, we sample $\nu_i$ using a Metropolis-Hastings, sampling a proposal $r_{ij}$ for $\nu_{ij}$ from:
+$$
+r_{ij} \sim N(\nu_{ij}, c_j\Sigma_{j,j})
+$$
+and keep the proposal with probability:
+$$
+P(r_{ij}) = \min\left\{
+\frac{f(y_{ij} | z_i, r_{ij}) \varphi(r_{ij} | \nu_{i, -j})}{f(y_{ij}| z_i, \nu_{ij}) \varphi(\nu_{ij} | \nu_{i,-j})}
+, 1\right\}.
+$$
+in the proposal, $c_j$ is tuned on the fly to obtain an acceptance rate of about $0.234$. 
+
+\break
+\subsection{M-Step}
+\subsubsection{Regression Model}
+With posterior samples on hand, it is straightforward to obtain updated parameter estimates for $\{\beta, \tau, \Sigma, \Theta\}$. We estimate $\beta$ and $\tau$ using standard regression analysis, our implementation includes the following options:
+\begin{itemize}
+\item Binomial regression using the \textbf{glm} functions.
+\item Firth regression for data with separation using the \textbf{brglm2} package.
+\item Sparse regression using the \textbf{glmnet} package. 
+\item Robust regression using the \textbf{robustbase} package.
+\end{itemize}
+In practice, robust regression seems to work best for flow-cytometry data. 
+
+\subsubsection{Ising Model}
+We estimate the parameters of the Ising model $\Theta$ using neighborhood selection, using  a similar methodology as in the \textbf{IsingFit} package with some adjustments for handling cell-subsets with very low response. Specifically, for each cell-subset separately we estimate the model:
+$$
+\text{logit}(P(z_j = 1 |z_{-j}))= 
+\theta_0 + \sum_{t \neq j} \theta_t z_t,
+$$
+By maximizing the $\ell_1$ penalized log-likelihood:
+$$
+\hat\theta_j(\lambda) = \arg\max_{\theta_j} \ell(\theta_j)  - 
+\lambda \|\theta_j\|_1
+$$
+where $\lambda$ is selected in such a way as to maximize the EBIC:
 \begin{align*}
-P(z_j = 1 | z_{-j}, y) &\propto P(z_j = 1 | z_{-j}) \prod_{j=1}^{p} f(y_{ij} 
-&= P(z_j = 1| z_{-j}) f(y_j, \nu_j | z_j = 1) f(y_{-j}, \nu_{-j} | z_{-j}, \nu_{j}).
+\lambda^* &= \arg\max_\lambda EBIC(\lambda) \\
+&=\arg\max_\lambda \ell(\hat\theta_j(\lambda)) - 
+\frac{1}{2}\|\hat\theta_j(\lambda)\|_0 \log n -
+2\gamma \|\hat\theta_j(\lambda)\|_0\log (p - 1), \qquad \gamma \in [0,1].
 \end{align*}
-Because $f(y_{-j}, \nu_{-j} | z_{-j}, \nu_{j})$ is independent of the realization of $z_j$,
+Once a neighborhood model was estimated for each cell-subset, we use an AND or an OR rule to decide which off-diagonal elements of $\Theta$ should be set to non-zero values and average the non-diagonal elements to obtain a symmetric adjacency matrix. 
+
+\subsubsection{Covariance of Random Effects} 
+We provide three methods for estimating the covariance of the random effects. 
+\begin{itemize}
+\item Estimating a diagonal covariance (independence model).
+\item Estimating a (naive) dense covariance matrix.
+\item Estimating a sparse covariance using the \textbf{PDSCE} package. 
+\end{itemize}
+
+
+
+
+
+\subsection{Technicalities}
+\subsubsection{Initialization}
+The regression coefficients are initialized based on fitting a naive regression model which assumes that all subjects are responders and that there are no random effects. So, 
 $$
-P(z_j = 1 | z_{-j}) = \frac{
+\text{logit}(\mu^0_{ijl}) = X_{ijl}\beta_j^0 + T_{ijl}\tau_j^0.
 $$
+
+An initial estimate for $\Sigma$ is obtained from 
+
+\subsubsection{Averaging Parameter Estimates}
+Given that our fitting algorithm is a stochastic one, it makes sense to average our final parameter estimates across iterations. Let $T\geq1$ be the total number of SEM iterations we perform and $0\leq D < T$ be a pre-specified parameter. Further, let $\{\tilde\beta,\tilde\tau,\tilde\Theta,\tilde\Sigma\}^{t}$ be the parameter estimates obtained from the M-step at  the $t$th iteration. Define $w^{t} = \max(1, T-D)^{-1}$. At the $t$th iteration we set:
+$$
+\{\hat\beta,\hat\tau,\hat\Theta,\hat\Sigma\}^{t} = 
+(1 - w^t)\{\hat\beta,\hat\tau,\hat\Theta,\hat\Sigma\}^{t-1} +
+w^t\{\tilde\beta,\tilde\tau,\tilde\Theta,\tilde\Sigma\}^{t}
+$$
+The rationale behind only averaging the last $T - D$ iterations is that the EM algorithm may take several iterations before converging to the vicinity of a local a maxima.  
+
+
+Similarly, we maintain estimates of the posterior probabilities for of response for each subject. Let $p_{ij} = P(z_{ij} = 1)$. Our estimate for the the posterior response probability of for the $i$th subject is:
+$$
+\hat{p}_i = \frac{1}{T-D}\sum_{t=D+1}^{T}\frac{1}{M}\sum_{m=1}^{M}z_{im}^t.
+$$
+We maintain a running average of the random effect estimates in a similar manner. 
+
+\subsubsection{Gradual Tuning of the Dispersion Parameters}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
