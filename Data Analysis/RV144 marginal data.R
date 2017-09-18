@@ -1,16 +1,16 @@
 preAssign <- function(dat) {
-    subsets <- unique(dat$population)
-    nSubsets <- length(subsets)
-    preAssign <- numeric(nSubsets)
-    prop <- dat$count / dat$parentcount
-    for(j in 1:nSubsets) {
-      negctrl <- prop[dat$stim == "negctrl" & dat$population == subsets[j]]
-      env <- prop[dat$stim == "env" & dat$population == subsets[j]]
-      preAssign[j] <- ifelse(env > negctrl, -1, 0)
-    }
-    result <- data.frame(id = dat$ptid[1], subset = subsets, assign = preAssign)
-    return(result)
+  subsets <- unique(dat$population)
+  nSubsets <- length(subsets)
+  preAssign <- numeric(nSubsets)
+  prop <- dat$count / dat$parentcount
+  for(j in 1:nSubsets) {
+    negctrl <- prop[dat$stim == "negctrl" & dat$population == subsets[j]]
+    env <- prop[dat$stim == "env" & dat$population == subsets[j]]
+    preAssign[j] <- ifelse(env >= negctrl, -1, 0)
   }
+  result <- data.frame(id = dat$ptid[1], subset = subsets, assign = preAssign)
+  return(result)
+}
 
   library(flowReMix)
   library(pROC)
@@ -41,9 +41,11 @@ preAssign <- function(dat) {
                                nPosteriors = 1, centerCovariance = TRUE,
                                maxDispersion = 10^3, minDispersion = 10^7,
                                randomAssignProb = 10^-6, intSampSize = 50,
-                               initMethod = "robust", ncores = NULL)
+                               initMethod = "robust", ncores = NULL,
+                               preAssignCoefs = seq(from = 0, to = 0.9, length.out = 10))
 
   data$stim <- factor(data$stim, levels = c("negctrl", "env"))
+  assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))
   system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                    subject_id = ptid,
                    cell_type = population,
@@ -52,107 +54,40 @@ preAssign <- function(dat) {
                    covariance = "sparse",
                    ising_model = "sparse",
                    regression_method = "robust",
-                   iterations = 20, parallel = TRUE,
+                   iterations = 14, parallel = TRUE,
+                   cluster_assignment = assignmentMat,
                    verbose = TRUE, control = control))
-#save(fit, file = "Data Analysis/results/RV144 marginals dispersed model robust 2.Robj")
+# save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
+# save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
+# save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo random.Robj")
+# save(fit, file = "Data Analysis/results/RV144 marginals dispersed indepdent.Robj")
 
+# Scatter plots -----------------
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
 plot(fit, type = "scatter", target = vaccine)
 
-## ROC ------------------
-require(pROC)
-vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
-ids <- factor(unique(data$ptid), levels = fit$posteriors$ptid)
-posteriors <- fit$posteriors
-vaccine <- vaccine[order(ids)]
-par(mfrow = c(3, 3), mar = rep(3, 4))
-aucs <- numeric(ncol(posteriors) - 1)
-for(i in 2:ncol(posteriors)) {
-  rocfit <- roc(vaccine ~ posteriors[, i])
-  print(plot(rocfit, main = paste(colnames(posteriors)[i], "- AUC", round(rocfit$auc, 3))))
-  aucs[i - 1] <- rocfit$auc
-}
-n0 <- sum(vaccine == 0)
-n1 <- sum(vaccine == 1)
-pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
-qvals <- p.adjust(pvals, method = "BY")
+# ROC table -----------------
+roctab <- summary(fit, type = "ROC", target = vaccine)
+roctab[order(roctab$auc, decreasing = TRUE), ]
 
-# Scatter plots --------------------------
-forplot <- list()
-vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
-ids <- factor(unique(data$ptid), levels = fit$posteriors$ptid)
-posteriors <- fit$posteriors
-posteriors$ptid <- as.numeric(as.character(fit$posteriors$ptid))
-posteriors <- posteriors[order(posteriors$ptid), ]
-pops <- names(fit$posteriors)[-1]
-for(i in 1:length(selected_populations)) {
-  post <- posteriors[, i + 1]
-  negprop <- log(data$count / data$parentcount)[data$population == pops[i] & data$stim == "negctrl"]
-  envprop <- log(data$count / data$parentcount)[data$population == pops[i] & data$stim == "env"]
-  forplot[[i]] <- data.frame(subset = pops[i],
-                             negprop = negprop, envprop = envprop,
-                             posterior = 1 - post, vaccine = vaccine)
-}
+# Plotting Ising --------
+plot(fit, type = "graph", threshold = 0, graph = "ising", fill = roctab$auc)
+plot(fit, type = "graph", threshold = 0, graph = "randomEffects" ,fill = roctab$auc)
 
-forplot <- do.call("rbind", forplot)
-require(ggplot2)
-ggplot(forplot) +
-  geom_point(aes(x = negprop, y = envprop, col = posterior, shape = vaccine),
-             alpha = 0.75) +
-  facet_wrap(~ subset, scales = 'free') +
-  geom_abline(slope = 1, intercept = 0) +
-  theme_bw() + scale_colour_gradientn(colours=rainbow(4))
+# ROC, FDR and boxplot figures ---------------
+plot(fit, type = "ROC", target = vaccine, ncol = 4)
+plot(fit, type = "FDR", target = vaccine)
+plot(fit, type = "boxplot", target = vaccine,
+     test = "wilcoxon", ncol = 4)
 
-# Infection status ---------------
-data("rv144_correlates_data")
-vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
-correlates <- rv144_correlates_data
-correlates <- correlates[order(correlates$PTID), ]
-infection <- correlates$infect.y
-posteriors <- fit$posteriors
-posteriors$ptid <- as.numeric(as.character(fit$posteriors$ptid))
-posteriors <- posteriors[order(posteriors$ptid), ]
-par(mfrow = c(4, 4), mar = rep(3, 4))
-aucs <- numeric(ncol(posteriors) - 1)
-par(mfrow = c(3, 3), mar = rep(3, 4))
-for(i in 2:ncol(posteriors)) {
-  rocfit <- roc(infection[vaccine] ~ posteriors[vaccine, i])
-  print(plot(rocfit, main = paste(colnames(posteriors)[i], "- AUC", round(rocfit$auc, 3))))
-  aucs[i - 1] <- rocfit$auc
-}
+# Graphical Models ----------------------
+stability <- stabilityGraph(fit, type = "ising", cv = FALSE,
+                            reps = 100, cpus = 2)
+plot(stability, fill = roctab$auc)
 
-n0 <- sum(infect == "infected")
-n1 <- sum(infect == "non-infected")
-pvals <- pwilcox(aucs * n1 * n0, n0, n1, lower.tail = FALSE)
-
-# Testing Screening Procedure -------------------
-nSubsets <- length(fit$coefficients)
-nSubjects <- length(fit$assignmentList)
-likratios <- numeric(nSubsets)
-for(j in 1:nSubsets) {
-  counts <- sapply(fit$assignmentList, function(x) sum(x[, j]))
-  N <- sapply(fit$assignmentList, function(x) length(x[, j]))
-  probs <- counts / N
-  nullprob <- mean(probs)
-  likratios[j] <- 2 * (sum(dbinom(counts, N, probs, log = TRUE)) - sum(dbinom(counts, N, nullprob, log = TRUE)))
-}
-pchisq(likratios, df = nSubjects - 1, lower.tail = FALSE)
-
-# Testing isotonic regression -----------
-assignments <- fit$assignmentList
-names(assignments) <- sapply(names(assignments), function(x) strsplit(x, "%%%")[[1]][[1]])
-assignments <- lapply(unique(names(assignments)), function(x) {
-  do.call("rbind", assignments[names(assignments) == x])
-})
-
-samp <- do.call("rbind", assignments)
-samp <- rowSums(samp)
-mle <- table(samp)
-mle <- mle / sum(mle)
-pone <- sort(mle, decreasing = TRUE)
-pone <- pone / sum(pone)
-plot(diff(log(pone)))
-
+random <- stabilityGraph(fit, type = "randomEffects", cv = FALSE,
+                            reps = 50, cpus = 2)
+plot(random, fill = roctab$auc, threshold = 0.01)
 
 
 
