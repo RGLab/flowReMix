@@ -4,4 +4,11 @@ data/rv144.rda
 data/malaria.rda
 data/*
 data-raw/*
+
+Data Analysis/results/*
+tables/*
+write-ups/*
+figures/*
+presentation/*
+
 .Rproj.user
