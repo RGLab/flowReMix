@@ -252,7 +252,7 @@ plotScatter <- function(obj, subsets = NULL,
 plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
                         test = c("none", "logistic", "t-test", "wilcoxon"),
-                        one_sided = FALSE,
+                        one_sided = FALSE, jitter = FALSE,
                         ncol = 5) {
   if(is.null(varname) & !is.null(target)) {
     varname <- as.character(match.call()$target)
@@ -361,10 +361,18 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
   if(is.null(target)) {
     figure <- figure + geom_boxplot(aes(x = measure, y = score)) +
       facet_wrap(~ group)
+    if(jitter) {
+      figure <- figure + geom_jitter(x = measure, y = score)
+    }
   } else {
     figure <- figure + geom_boxplot(aes(x = measure, y = score, col = factor(target))) +
       scale_color_discrete(name = varname)
+    if(jitter) {
+      figure <- figure + geom_jitter(aes(x = measure, y = score, col = factor(target),
+                                         group = factor(target)))
+    }
   }
+
   figure <- figure + facet_wrap(~ group, ncol = ncol) +
     theme_bw() + xlab("Type") + ylab("Posterior Aggregate")
 
