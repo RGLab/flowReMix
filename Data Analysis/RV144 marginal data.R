@@ -69,10 +69,31 @@ plot(fit, type = "scatter", target = vaccine)
 # ROC table -----------------
 roctab <- summary(fit, type = "ROC", target = vaccine)
 roctab[order(roctab$auc, decreasing = TRUE), ]
+<<<<<<< HEAD
 
 # Plotting Ising --------
 plot(fit, type = "graph", threshold = 0, graph = "ising", fill = roctab$auc)
 plot(fit, type = "graph", threshold = 0, graph = "randomEffects" ,fill = roctab$auc)
+=======
+
+# Plotting Ising --------
+plot(fit, type = "graph", threshold = 0, graph = "ising", fill = roctab$auc)
+plot(fit, type = "graph", threshold = 0, graph = "randomEffects" ,fill = roctab$auc)
+
+# ROC, FDR and boxplot figures ---------------
+plot(fit, type = "ROC", target = vaccine, ncol = 4)
+plot(fit, type = "FDR", target = vaccine)
+plot(fit, type = "boxplot", target = vaccine,
+     test = "wilcoxon", ncol = 4)
+
+# Graphical Models ----------------------
+stability <- stabilityGraph(fit, type = "ising", cv = FALSE,
+                            reps = 100, cpus = 2)
+plot(stability, fill = roctab$auc)
+
+random <- stabilityGraph(fit, type = "randomEffects", cv = FALSE,
+                            reps = 50, cpus = 2)
+plot(random, fill = roctab$auc, threshold = 0.01)
 
 # ROC, FDR and boxplot figures ---------------
 plot(fit, type = "ROC", target = vaccine, ncol = 4)
