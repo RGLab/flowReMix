@@ -15,7 +15,8 @@ Imports: Rcpp,
     PDSCE,
     brglm2,
     doParallel,
-    foreach
+    foreach,
+    robustbase
 Suggests: ggplot2,
     pROC,
     reshape2,
