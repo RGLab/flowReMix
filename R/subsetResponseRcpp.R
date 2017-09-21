@@ -308,6 +308,7 @@ flowReMix <- function(formula,
   isingInit <- control$isingInit
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
+  markovChainEM <- control$markovChainEM
 
   if(parallel) {
     if(is.null(ncores)) {
@@ -769,11 +770,35 @@ flowReMix <- function(formula,
           }
         }
       }
-      coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
-                                iter, updateLag, rate, flagEquation,
-                                SIMPLIFY = FALSE)
+
+      if(markovChainEM) {
+        coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
+                                  iter, Inf, rate, flagEquation,
+                                  SIMPLIFY = FALSE)
+      } else {
+        coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
+                                  iter, updateLag, rate, flagEquation,
+                                  SIMPLIFY = FALSE)
+
+      }
+
+      if(iter == updateLag) {
+        coefficientsOut <- coefficientList
+      } else if(iter > updateLag) {
+        coefficientsOut <- mapply(updateCoefs, coefficientList, glmFits,
+                                  iter, updateLag, rate, flagEquation,
+                                  SIMPLIFY = FALSE)
+      }
     }
-    M <- (1 - iterweight) * oldM + iterweight * M
+
+    # Updating dispersion ---------------
+    if(iter == maxIter) {
+      Mout <- (1 - iterweight) * oldM + iterweight * M
+    }
+
+    if(!markovChainEM) {
+      M <- (1 - iterweight) * oldM + iterweight * M
+    }
 
     # Updating Prediction
     for(j in 1:length(dataByPopulation)) {
@@ -801,7 +826,11 @@ flowReMix <- function(formula,
           nullEta <- 0
         }
 
-        dataByPopulation[[j]]$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
+        if(markovChainEM) {
+          dataByPopulation[[j]]$nullEta <- newNullEta
+        } else {
+          dataByPopulation[[j]]$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
+        }
         dataByPopulation[[j]]$treatmentvar <- dataByPopulation[[j]]$tempTreatment
       }
 
@@ -817,7 +846,12 @@ flowReMix <- function(formula,
       } else {
         altEta <- 0
       }
-      dataByPopulation[[j]]$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
+
+      if(markovChainEM) {
+        dataByPopulation[[j]]$altEta <- newAltEta
+      } else {
+        dataByPopulation[[j]]$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
+      }
     }
 
     databyid <- do.call("rbind", dataByPopulation)
@@ -983,9 +1017,13 @@ flowReMix <- function(formula,
         isingfit <- raIsing(assignmentList, AND = TRUE,
                             modelprobs = modelprobs,
                             minprob = 1 / nSubjects)
-        isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
         isingVar <- isingVar * (1 - iterweight) + isingfit^2 * iterweight
+        if(markovChainEM) {
+          isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
+        } else {
+          isingCoefs <- isingCoefs * (1 - iterweight) + isingfit * iterweight
+        }
       } else if(isingMethod == "dense") {
         for(j in 1:nSubsets) {
           firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
@@ -1059,7 +1097,7 @@ flowReMix <- function(formula,
   # Preparing flowReMix object --------------------
   result <- list()
   result$modelFrame <- dat
-  result$coefficients <- coefficientList
+  result$coefficients <- coefficientsOut
   names(result$coefficients) <- names(dataByPopulation)
   result$covariance <- covariance
   result$invCovAvg <- invCovAvg

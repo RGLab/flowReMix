@@ -54,140 +54,15 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ trt * stim,
                  iterations = 8,
                  parallel = FALSE,
                  verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/new malaria 4+ 4+CXCR5+.Robj")
+# save(fit, file = "data analysis/results/new malaria 4+ 4+CXCR5+.Robj")
+load(file = "data analysis/results/malaria2_5_npost20niter20maxDisp1000.Robj")
+load(file = "data analysis/results/malaria2_4_npost10niter20maxDisp100.Robj")
 
-# ROC analysis for infection -----------------
-posteriors <- fit$posteriors
-posteriors <- merge(posteriors, unique(malaria[, c(9, 14)]), all.x = TRUE)
-infect <- posteriors[, ncol(posteriors)]
-posteriors <- posteriors[, -c(1, ncol(posteriors))]
-subsets <- colnames(posteriors)
-aucs <- numeric(ncol(posteriors))
-for(i in 1:ncol(posteriors)) {
-  post <- posteriors[, i]
-  rocfit <- roc(infect ~ post)
-  aucs[i] <- rocfit$auc
-}
-n0 <- sum(infect)
-n1 <- length(infect) - n0
-pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
-qvals <- p.adjust(pvals, method = "BH")
-rocResults <- data.frame(subset = subsets, auc = aucs,
-                         pval = pvals, qval = qvals)
+# ROC results ------------------------
+infect <- by(malaria, malaria$ptid, function(x) unique(x$infection))
+infect <- data.frame(ptid = names(infect), status = as.vector(infect))
 
-# Stability selection for graphical model --------------
-assignments <- fit$assignmentList
-names(assignments) <- substr(names(assignments), 1, 5)
-assignments <- lapply(unique(names(assignments)), function(x) {
-  do.call("rbind", assignments[names(assignments) == x])
-})
-
-reps <- 100
-modelList <- list()
-nsubsets <- ncol(assignments[[1]])
-countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
-for(i in 1:reps) {
-  mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
-  colnames(mat) <- subsets
-  keep <- apply(mat, 2, function(x) any(x != x[1]))
-  mat <- mat[, keep]
-  system.time(model <- IsingFit::IsingFit(mat, AND = FALSE, plot = FALSE))
-  #coefs <- raIsing(mat, AND = TRUE, gamma = 0.9, method = "sparse")
-  #plot(model)
-  countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
-  #countCovar[keep, keep] <- countCovar[keep, keep] + (coefs != 0) * sign(coefs)
-  print(i)
-}
-
-threshold <- 0.45
-props <- countCovar / reps
-#save(props, file = "data analysis/results/new malaria graph 4+ only.Robj")
-table(props) / 2
-which(props > threshold, arr.ind = TRUE)
-props[abs(props) <= threshold] <- 0
-sum(props != 0) / 2
-
-# Plotting graph ---------------------
-require(GGally)
-library(network)
-library(sna)
-threshold <- 0.45
-network <- props
-colnames(props) <- subsets
-rownames(props) <- subsets
-diag(network) <- 0
-# Cutting network
-# network[6, 8] <- 0
-# network[8, 6] <- 0
-# network[6, 40] <- 0
-# network[40, 6] <- 0
-#######
-keep <- apply(network, 1, function(x) any(abs(x) > threshold))
-#keep <-  (result$qvals <= 0.05)
-network <- network[keep, keep]
-net <- network(props)
-subsets <- names(fit$posteriors)[-1]
-nodes <- ggnet2(network, label = subsets[keep])$data
-edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
-p <- nrow(network)
-row <- 1
-for(j in 2:p) {
-  for(i in 1:(j-1)) {
-    if(network[i, j] != 0) {
-      edges[row, ] <- unlist(c(nodes[i, 6:7], nodes[j, 6:7], network[i, j]))
-      row <- row + 1
-    }
-  }
-}
-
-edges <- data.frame(edges)
-names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
-aucs <- result$auc
-nodes$auc <- rocResults$auc[keep]
-nodes$qvals <- rocResults$qvals[keep]
-
-names(edges)[5] <- "Dependence"
-lims <- max(abs(props))
-library(ggplot2)
-ggplot() +
-  scale_colour_gradient2(limits=c(-lims, lims), low="dark red", high = "dark green") +
-  geom_segment(data = edges, aes(x = xstart, y = ystart,
-                                 xend = xend, yend = yend,
-                                 col = Dependence,
-                                 alpha = abs(Dependence)),
-               size = 1) +
-  #scale_fill_gradient2(low = "white", high = "red", limits = c(0.7, 1)) +
-  scale_fill_gradientn(colours = rainbow(4))+
-  geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
-             size = 8, col = "grey") +
-  scale_shape(solid = FALSE) +
-  geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
-  theme(axis.line=element_blank(),axis.text.x=element_blank(),
-        axis.text.y=element_blank(),axis.ticks=element_blank(),
-        axis.title.x=element_blank(),
-        axis.title.y=element_blank(),
-        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.background=element_blank())
-
-# Inference with connected components ----------------------
-library(igraph)
-network[network > 0.05] <- 1
-network[network <= 0.05] <- 0
-graph <- graph.adjacency(network)
-comp <- components(graph)
-
-# ROCs for vaccination
-n0 <- sum(infect == 0)
-n1 <- sum(infect == 1)
-par(mfrow = c(2, 2))
-for(i in 1:sum(comp$csize >= 2)) {
-  group <- which(comp$csize >= 2)[i]
-  group <- subsets[keep][which(comp$membership == group)]
-  cols <- which(names(fit$posteriors) %in% group)
-  score <- rowMeans(fit$posteriors[, cols])
-  rocfit <- roc(infect ~ score)
-  auc <- rocfit$auc
-  pval <- pwilcox(auc * n0 * n1, n0, n1, lower.tail = FALSE)
-  plot(rocfit, main = paste("Size", length(group), "AUC", round(auc, 4), "pval", round(pval, 3)))
-}
+plot(fit, type = "boxplot", target = infect[, 2], groups = "all",
+     test = "wilcoxon")
+rocs <- summary(fit, type = "ROC", target = )
 

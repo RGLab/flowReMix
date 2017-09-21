@@ -73,13 +73,13 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 15, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 5, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
                              initMethod = "robust",
-                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 11)))
+                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 10)))
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -91,7 +91,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 30,
+                 iterations = 10,
                  cluster_assignment = preAssignment,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
@@ -116,7 +116,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 # load(file = "data analysis/results/RV144cluster7.Robj")
 # load(file = "data analysis/results/RV144cluster12LessDisp.Robj")
 # load(file = "data analysis/results/boolean robust maxAssign 06 1.Robj")
-load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
+# load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
 # load(file = "data analysis/results/RV144cluster14gradAssign25.Robj")
 # load(file = "data analysis/results/RV144cluster15gradAssign50.Robj")
 
