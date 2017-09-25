@@ -72,7 +72,8 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
 }
 
 
-
+#'@importFrom dplyr cummean
+NULL
 
 
 

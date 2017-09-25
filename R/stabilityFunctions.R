@@ -60,7 +60,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
                          fill = NULL, fillName = NULL,
                          fillRange = NULL, fillPalette = NULL,
                          title = TRUE, normalize = FALSE,
-                         count = TRUE) {
+                         count = TRUE, label_size = 1.8) {
   if(graph == "ising") {
     ising <- obj$isingAvg
     if(count) {
@@ -108,7 +108,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
   figure <- plot.flowReMix_stability(network, threshold = threshold, plotAll = plotAll,
                                      fill = fill, fillRange = fillRange, fillPalette = fillPalette,
                                      fillName = fillName,
-                                     title = title)
+                                     title = title, label_size = label_size)
   return(figure)
 }
 
@@ -116,7 +116,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
                                      fill = NULL, fillName = NULL,
                                      fillRange = NULL, fillPalette = NULL,
-                                     title = TRUE) {
+                                     title = TRUE, label_size = 1.8) {
   require(ggplot2)
   measure <- fill
   props <- obj$network
@@ -191,7 +191,7 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
                                     fill = "sky blue")
     }
   figure <- figure + scale_shape(solid = FALSE) +
-    geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
+    geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = label_size) +
     theme(axis.line=element_blank(), axis.text.x=element_blank(),
           axis.text.y=element_blank(), axis.ticks=element_blank(),
           axis.title.x=element_blank(),

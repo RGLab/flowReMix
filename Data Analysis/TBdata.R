@@ -151,7 +151,7 @@ sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 isingThreshold <- 0.99
 isingplot <- plot(fit, type = "graph", graph = "ising",
                   fill = rocTable$auc, normalize = FALSE,
-                  threshold = isingThreshold, count = FALSE)
+                  threshold = isingThreshold, count = FALSE, label_size = 3)
 isingplot
 # save_plot(isingplot, filename = "figures/TBdatIsing4.pdf",
 #           base_height = 5.5, base_width = 6.6)
@@ -182,12 +182,13 @@ allbox
 # save_plot(allbox, filename = "figures/TBallboxplot2.pdf",
 #           base_height = 4, base_width = 8)
 
-
-group <- outcome
-stimgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[1]])
-stimnames <- unique(stimgroups)
-stimgroups <- lapply(stimnames, function(x) subsets[stimgroups == x])
-names(stimgroups) <- stimnames
+#
+# group <- outcome
+# stimgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[1]])
+# stimnames <- unique(stimgroups)
+# stimgroups <- lapply(stimnames, function(x) subsets[stimgroups == x])
+# names(stimgroups) <- stimnames
+stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
 stimbox <- plot(fit, type = "boxplot", weights = weights,
                 target = group,
                 test = "wilcoxon",
@@ -197,12 +198,14 @@ stimbox
 # save_plot(stimbox, filename = "figures/TBstimBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
 
-cellgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[2]])
-cellnames <- unique(cellgroups)
-cellgroups <- lapply(cellnames, function(x) subsets[cellgroups == x])
-names(cellgroups) <- cellnames
+# cellgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[2]])
+# cellnames <- unique(cellgroups)
+# cellgroups <- lapply(cellnames, function(x) subsets[cellgroups == x])
+# names(cellgroups) <- cellnames
+cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
+
 cellbox <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
-     groups = cellgroups, ncol = 3, weights = weights)
+     groups = cellgroups, ncol = 3, weights = weights, jitter=TRUE)
 cellbox
 # save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
@@ -213,9 +216,11 @@ scnames <- unique(stimcell)
 stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
 names(stimcell) <- scnames
 stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
+
+stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
+
 scboxplot <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
-     groups = stimcell, ncol = 4)
+     groups = stimcell, ncol = 4, jitter=TRUE)
 scboxplot
 # save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",
 #           base_height = 5, base_width = 10)
-

@@ -59,7 +59,7 @@ plotROC <- function(obj, target, direction = "auto",
 #' @export
 rocTable <- function(obj, target, direction = "auto", adjust = "BH",
                      pvalue = c("wilcoxon", "logistic", "ttest"),
-                     sortAUC = FALSE) {
+                     sortAUC = FALSE, ...) {
   notNA <- !is.na(target)
   post <- obj$posteriors[notNA, -1]
   colnames(post) <- names(obj$coefficients)
@@ -273,7 +273,10 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
     }
   } else {
     if(!is.list(weights)) {
-      stop("Weights must be a list or NULL!")
+      stop("Weights must be a named list or NULL!")
+    }
+    if(length(weights)>1){
+      stop("Weights must be a named list of length 1")
     }
     if(is.null(names(weights))) {
       names(weights) <- paste("Score", 1:length(weights))
@@ -359,22 +362,23 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
 
   figure <- ggplot(forplot)
   if(is.null(target)) {
-    figure <- figure + geom_boxplot(aes(x = measure, y = score)) +
+    figure <- figure + geom_boxplot(aes(x = measure, y = score),outlier.color = NA) +
       facet_wrap(~ group)
     if(jitter) {
-      figure <- figure + geom_point(aes(x = measure, y = score, position = position_jitterdodge()))
+      figure <- figure + geom_point(aes(x = measure, y = score),position = position_jitterdodge())
     }
   } else {
-    figure <- figure + geom_boxplot(aes(x = measure, y = score, col = factor(target))) +
+    figure <- figure + geom_boxplot(aes(x = measure, y = score, col = factor(target)),outlier.color = NA) +
       scale_color_discrete(name = varname)
     if(jitter) {
-      figure <- figure + geom_jitter(aes(x = measure, y = score, col = factor(target),
-                                         group = factor(target)))
+      figure <- figure + geom_point(aes(x = measure, y = score, col = factor(target),
+                                         group = factor(target)),position = position_jitterdodge())
     }
   }
 
   figure <- figure + facet_wrap(~ group, ncol = ncol) +
-    theme_bw() + xlab("Type") + ylab("Posterior Aggregate")
+    theme_bw() + scale_y_continuous(name = unique(forplot$measure)) + scale_x_discrete(name="",labels = "") + theme(axis.ticks.x = element_blank())
+
 
   return(figure)
 }

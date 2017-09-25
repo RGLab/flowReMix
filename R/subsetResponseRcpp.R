@@ -1121,10 +1121,10 @@ flowReMix <- function(formula,
     result$isingCount <- isingCount
   }
   class(result) <- "flowReMix"
-
   if(parallel) {
     doParallel::stopImplicitCluster()
   }
+  result$data <- data
   return(result)
 }
 

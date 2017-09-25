@@ -32,7 +32,12 @@ plot.flowReMix <- function(obj, target = NULL, varname = NULL,
 }
 
 #' @export
-summary.flowReMix <- function(obj, target = NULL, type = c("FDR", "ROC"), ...) {
+summary.flowReMix <- function(obj, ...) {
+  args = list(...)
+  target = args[["target"]]
+  type = args[["type"]]
+  type = match.arg(type,c("FDR","ROC"))
+  # some more error checking of target
   type <- type[1]
   if("ROC" == type) {
     return(rocTable(obj, target, ...))
