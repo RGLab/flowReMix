@@ -119,6 +119,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 # load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
 # load(file = "data analysis/results/RV144cluster14gradAssign25.Robj")
 # load(file = "data analysis/results/RV144cluster15gradAssign50.Robj")
+load(file = "data analysis/results/boolean robust maxAssign 05 3 w count.Robj")
 
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------

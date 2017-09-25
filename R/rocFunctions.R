@@ -362,7 +362,7 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
     figure <- figure + geom_boxplot(aes(x = measure, y = score)) +
       facet_wrap(~ group)
     if(jitter) {
-      figure <- figure + geom_jitter(x = measure, y = score)
+      figure <- figure + geom_point(aes(x = measure, y = score, position = position_jitterdodge()))
     }
   } else {
     figure <- figure + geom_boxplot(aes(x = measure, y = score, col = factor(target))) +

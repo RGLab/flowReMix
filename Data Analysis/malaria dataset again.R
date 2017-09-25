@@ -102,12 +102,14 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stimInd + stimI
 # load(file = "data analysis/results/malaria2_16_npost40niter30maxDisp100.Robj")
 # load(file = "data analysis/results/malaria2_10_npost5niter30maxDisp100.Robj")
 
-load(file = "data analysis/results/malaria3_8_npost40niter40maxDisp1000.Robj")
-load(file = "data analysis/results/malaria3_7_npost20niter40maxDisp1000.Robj")
 load(file = "data analysis/results/malaria3_6_npost10niter40maxDisp1000.Robj")
 load(file = "data analysis/results/malaria3_5_npost5niter40maxDisp1000.Robj")
 load(file = "data analysis/results/malaria3_4_npost40niter30maxDisp1000.Robj")
 load(file = "data analysis/results/malaria3_3_npost20niter30maxDisp1000.Robj")
+load(file = "data analysis/results/malaria3_2_npost5niter20maxDisp100.Robj")
+load(file = "data analysis/results/malaria3_8_npost40niter40maxDisp1000.Robj")
+load(file = "data analysis/results/malaria3_7_npost20niter40maxDisp1000.Robj")
+load(file = "data analysis/results/malaria4visitno_1_npost20niter30maxDisp1000.Robj")
 
 
 

@@ -118,9 +118,9 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 # load(file = "data analysis/results/TBsep14withPmedium.Robj")
 # load(file = "data analysis/results/TBsep13withPshort.Robj")
 # load(file = "data analysis/results/TBsep12withPlonger.Robj")
-load(file = "data analysis/results/TBdat1_npost20_niter30.Robj")
 load(file = "data analysis/results/TBdat1_npost10_niter30.Robj")
 load(file = "data analysis/results/TBdat1_npost10_niter20.Robj")
+load(file = "data analysis/results/TBdat1_npost20_niter30.Robj")
 
 
 # Scatter plots with posteriors ---------------
@@ -148,7 +148,7 @@ sum(rocTable$qvalue < 0.05, na.rm = TRUE)
 sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 
 # Graph -----------------
-isingThreshold <- 0.9825
+isingThreshold <- 0.99
 isingplot <- plot(fit, type = "graph", graph = "ising",
                   fill = rocTable$auc, normalize = FALSE,
                   threshold = isingThreshold, count = FALSE)
