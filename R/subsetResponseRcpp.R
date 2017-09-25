@@ -625,6 +625,7 @@ flowReMix <- function(formula,
   netFlags <- rep(FALSE, nSubsets)
   isingAvg <- isingCoefs
   isingVar <- isingCoefs^2
+  isingCount <- matrix(0, nrow = nrow(isingCoefs), ncol = ncol(isingCoefs))
 
   # Starting analysis -------------------------------
   if(verbose) print("Starting Stochastic EM")
@@ -1019,6 +1020,9 @@ flowReMix <- function(formula,
                             minprob = 1 / nSubjects)
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
         isingVar <- isingVar * (1 - iterweight) + isingfit^2 * iterweight
+        if(iter > updateLag) {
+          isingCount <- isingCount + (isingfit != 0)
+        }
         if(markovChainEM) {
           isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
         } else {
@@ -1114,6 +1118,7 @@ flowReMix <- function(formula,
     result$levelProbs <- levelProbs
     result$isingAvg <- isingAvg
     result$isingVar <- isingVar - isingAvg^2
+    result$isingCount <- isingCount
   }
   class(result) <- "flowReMix"
 

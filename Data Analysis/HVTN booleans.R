@@ -142,10 +142,14 @@ preAssign <- do.call("rbind", preAssign)
 # load(file = "Data Analysis/results/HVTN bool robust.Robj")
 #load(file = "Data Analysis/results/HVTNclust1.Robj")
 # load(file = "Data Analysis/results/HVTNclust2.Robj")
-# load(file = "Data Analysis/results/HVTNclust4.Robj")
-load(file = "Data Analysis/results/HVTNclust7npost1niter24.Robj")
-load(file = "Data Analysis/results/HVTNclust7npost10niter24.Robj")
+# # load(file = "Data Analysis/results/HVTNclust4.Robj")
+# load(file = "Data Analysis/results/HVTNclust7npost1niter24.Robj")
+# load(file = "Data Analysis/results/HVTNclust7npost10niter24.Robj")
 # fit$posteriors[, -1] <- 1 - fit$posteriors[, -1]
+# load(file = "Data Analysis/results/HVTNclust7npost1niter36.Robj")
+# load(file = "Data Analysis/results/HVTNclust7npost1niter48.Robj")
+# load(file = "Data Analysis/results/HVTNclust7npost5niter48.Robj")
+
 
 # Post-hoc assignment -------------------
 # subjects <- unique(preAssign$ptid)
@@ -156,6 +160,12 @@ load(file = "Data Analysis/results/HVTNclust7npost10niter24.Robj")
 #   index <- which(assign[matching, 3] == 0) + 1
 #   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
 # }
+
+load(file = "data analysis/results/HVTNclust8npost5niter48.Robj")
+load(file = "data analysis/results/HVTNclust8npost1niter36.Robj")
+load(file = "data analysis/results/HVTNclust8npost1niter48.Robj")
+load(file = "data analysis/results/HVTNclust8npost10niter48.Robj")
+load(file = "data analysis/results/HVTNclust8npost10niter36.Robj")
 
 
 # ROC plots -----------------------------
@@ -173,9 +183,9 @@ infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 
 # Raw Graphical Models ---------------
-isingThreshold <- .945
+isingThreshold <- .985
 ising <- plot(fit, type = "graph", graph = "ising",
-     fill = rocResults$auc, normalize = FALSE,
+     fill = rocResults$auc, normalize = FALSE, count = FALSE,
      threshold = isingThreshold)
 ising
 library(cowplot)
@@ -220,8 +230,8 @@ for(i in 1:length(stim)) {
   group <- stim[[i]]
   sub <- which(names(fit$posteriors)[-1] %in% group)
   aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
-  stimpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
-  # stimpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
+  # stimpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
+  stimpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
 }
 names(stim) <- paste(names(stim), "pvalue:", round(stimpvals, 4))
 
@@ -235,8 +245,8 @@ for(i in 1:length(parent)) {
   group <- parent[[i]]
   sub <- which(names(fit$posteriors)[-1] %in% group)
   aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
-  parentpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
-  # parentpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
+  # parentpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
+  parentpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
 }
 names(parent) <- paste(names(parent), "pvalue:", round(parentpvals, 4))
 
@@ -249,8 +259,8 @@ for(i in 1:length(stimparent)) {
   group <- stimparent[[i]]
   sub <- which(names(fit$posteriors)[-1] %in% group)
   aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
-  sppvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
-  # sppvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
+  # sppvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
+  sppvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
 }
 names(stimparent) <- paste(names(stimparent), "pvalue:", round(sppvals, 4))
 

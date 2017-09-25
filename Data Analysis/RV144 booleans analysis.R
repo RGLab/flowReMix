@@ -73,7 +73,7 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 100, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 2.5,
                              nPosteriors = 1, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -91,11 +91,11 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 10,
+                 iterations = 20,
                  cluster_assignment = preAssignment,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
-# save(fit, file = "data analysis/results/boolean robust maxAssign 05 2.Robj")
+# save(fit, file = "data analysis/results/boolean robust maxAssign 05 3 w count.Robj")
 # load(file = "data analysis/results/boolean robust15.Robj")
 # load(file = "data analysis/results/boolean robust14.Robj")
 # load(file = "data analysis/results/boolean robust11 strong assign.Robj")
@@ -122,14 +122,14 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
-subjects <- unique(preAssignment$ptid)
-for(i in 1:length(subjects)) {
-  row <- which(fit$posteriors$ptid == subjects[i])
-  assign <- subset(preAssignment, ptid == subjects[i])
-  matching <- match(colnames(fit$posteriors[, -1]), assign[, 2])
-  index <- which(assign[matching, 3] == 0) + 1
-  fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
-}
+# subjects <- unique(preAssignment$ptid)
+# for(i in 1:length(subjects)) {
+#   row <- which(fit$posteriors$ptid == subjects[i])
+#   assign <- subset(preAssignment, ptid == subjects[i])
+#   matching <- match(colnames(fit$posteriors[, -1]), assign[, 2])
+#   index <- which(assign[matching, 3] == 0) + 1
+#   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
+# }
 
 plot(fit, type = "scatter")
 
@@ -155,7 +155,8 @@ rocResults <- rocTable(fit, vaccination, direction = ">", adjust = "BH",
                        sortAUC = FALSE)
 rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
-plot(fit, type = "graph", threshold = 0.94, fill = rocResults$auc)
+plot(fit, type = "graph", threshold = 0.95, fill = rocResults$auc,
+     count = FALSE)
 
 # ROC for infection status -------------------
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)

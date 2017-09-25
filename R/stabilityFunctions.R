@@ -59,10 +59,13 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FALSE,
                          fill = NULL, fillName = NULL,
                          fillRange = NULL, fillPalette = NULL,
-                         title = TRUE, normalize = TRUE) {
+                         title = TRUE, normalize = FALSE,
+                         count = TRUE) {
   if(graph == "ising") {
     ising <- obj$isingAvg
-    if(normalize) {
+    if(count) {
+      isingZ <- obj$isingCount
+    } else if(normalize) {
       isingZ <- ising / sqrt(obj$isingVar)
     } else {
       isingZ <- ising

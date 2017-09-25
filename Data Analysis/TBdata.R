@@ -1,7 +1,15 @@
+assign <- function(x) {
+  x$prop <- x$count / x$parentcount
+  assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != "aUNS"]) > min(y$prop[y$stim == "aUNS"])))
+  assign[assign == 1] <- -1
+  result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
+  return(result)
+}
+
 geomean <- function(x) exp(mean(log(x)))
 library(flowReMix)
 # Loading data -------------------------
-tbdat <- readRDS("data/tb_rozot_booleans.RDS")
+tbdat <- readRDS("data/tb_rozot_booleans.rds")
 names(tbdat) <- tolower(names(tbdat))
 tbdat$ptid <- sapply(strsplit(tbdat$samplename, "_"), function(x) x[[1]])
 tbdat$count[is.na(tbdat$count)] <- 0
@@ -27,31 +35,31 @@ for(i in 1:nrow(map)) {
 }
 
 # Defining subsets w stim ---------------------
-# tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
-# tbdat <- subset(tbdat, stim != "EBV")
-# tbdat$stimtemp <- tbdat$stim
-# tbdat$stim[tbdat$stim %in% c("P1", "P2", "P3")] <- "P"
-# datlist <- list()
-# stims <- unique(tbdat$stim)
-# stims <- stims[stims != "UNS"]
-# for(i in 1:length(stims)) {
-#   temp <- subset(tbdat, stim %in% c(stims[i], "UNS"))
-#   temp$stim[temp$stim == "UNS"] <- "ctrl"
-#   temp$stimgroup <- stims[i]
-#   datlist[[i]] <- temp
-# }
-# tbdat <- do.call("rbind", datlist)
-# tbdat$subset <- paste(tbdat$stimgroup, tbdat$subset, sep = "/")
-# nonzerocounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
-# nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocounts)))
-
-# Defining subsets wo stim --------------
 tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
 tbdat <- subset(tbdat, stim != "EBV")
-tbdat$stim[tbdat$stim == "UNS"] <- "ctrl"
-tbdat$stim <- factor(tbdat$stim, levels = c("ctrl", "MP", "Mtbaux", "P1", "P2", "P3"))
+tbdat$stimtemp <- tbdat$stim
+tbdat$stim[tbdat$stim %in% c("P1", "P2", "P3")] <- "MP"
+datlist <- list()
+stims <- unique(tbdat$stim)
+stims <- stims[stims != "UNS"]
+for(i in 1:length(stims)) {
+  temp <- subset(tbdat, stim %in% c(stims[i], "UNS"))
+  temp$stim[temp$stim == "UNS"] <- "ctrl"
+  temp$stimgroup <- stims[i]
+  datlist[[i]] <- temp
+}
+tbdat <- do.call("rbind", datlist)
+tbdat$subset <- paste(tbdat$stimgroup, tbdat$subset, sep = "/")
 nonzerocounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
 nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocounts)))
+
+# Defining subsets wo stim --------------
+# tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
+# tbdat <- subset(tbdat, stim != "EBV")
+# tbdat$stim[tbdat$stim == "UNS"] <- "ctrl"
+# tbdat$stim <- factor(tbdat$stim, levels = c("ctrl", "MP", "Mtbaux", "P1", "P2", "P3"))
+# nonzerocounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
+# nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocounts)))
 
 # Choosing subset of data for analysis -----------------
 countkeep <- nonzerocounts[nonzerocounts[, 2] >= 0.2, 1]
@@ -85,11 +93,13 @@ control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 1,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = round(40 / npost), isingInit = -log(99),
-                             initMethod = "sparse")
+                             initMethod = "sparse",
+                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 10)))
 
 tempdat$stim <- tempdat$stimtemp
 tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
 tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
+preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
@@ -98,6 +108,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "sparse",
+                 cluster_assignment = preAssign,
                  iterations = 25,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
@@ -107,6 +118,9 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 # load(file = "data analysis/results/TBsep14withPmedium.Robj")
 # load(file = "data analysis/results/TBsep13withPshort.Robj")
 # load(file = "data analysis/results/TBsep12withPlonger.Robj")
+load(file = "data analysis/results/TBdat1_npost20_niter30.Robj")
+load(file = "data analysis/results/TBdat1_npost10_niter30.Robj")
+load(file = "data analysis/results/TBdat1_npost10_niter20.Robj")
 
 
 # Scatter plots with posteriors ---------------
@@ -134,17 +148,18 @@ sum(rocTable$qvalue < 0.05, na.rm = TRUE)
 sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 
 # Graph -----------------
-load("data analysis/results/TBising14.Robj")
-isingplot <- plot(stability, fill = rocTable$auc,
-                  threshold = 0.5)
+isingThreshold <- 0.9825
+isingplot <- plot(fit, type = "graph", graph = "ising",
+                  fill = rocTable$auc, normalize = FALSE,
+                  threshold = isingThreshold, count = FALSE)
 isingplot
-# save_plot(isingplot, filename = "figures/TBdatIsing3.pdf",
+# save_plot(isingplot, filename = "figures/TBdatIsing4.pdf",
 #           base_height = 5.5, base_width = 6.6)
 
 # Boxplot by graph clusters -------------
-groups <- getGraphComponents(stability, threshold = 0.5, minsize = 3)
-plot(fit, type = "boxplot", target = outcome, groups = groups,
-     test = "logistic", ncol = 2)
+# groups <- getGraphComponents(stability, threshold = 0.5, minsize = 3)
+# plot(fit, type = "boxplot", target = outcome, groups = groups,
+#      test = "logistic", ncol = 2)
 
 # Boxplots by categories -----------
 subsets <- names(fit$posteriors)[-1]
@@ -158,6 +173,16 @@ weights <- list()
 # weights$polyfunctionality <- poly
 weights$Functionality <- rep(1, length(subsets))
 
+allbox <- plot(fit, type = "boxplot", weights = weights,
+                target = group,
+                test = "wilcoxon",
+                one_sided = TRUE,
+                groups = "all")
+allbox
+# save_plot(allbox, filename = "figures/TBallboxplot2.pdf",
+#           base_height = 4, base_width = 8)
+
+
 group <- outcome
 stimgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[1]])
 stimnames <- unique(stimgroups)
@@ -169,7 +194,7 @@ stimbox <- plot(fit, type = "boxplot", weights = weights,
                 one_sided = TRUE,
                 groups = stimgroups)
 stimbox
-# save_plot(stimbox, filename = "figures/TBstimBoxplots.pdf",
+# save_plot(stimbox, filename = "figures/TBstimBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
 
 cellgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[2]])
@@ -179,7 +204,7 @@ names(cellgroups) <- cellnames
 cellbox <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
      groups = cellgroups, ncol = 3, weights = weights)
 cellbox
-# save_plot(cellbox, filename = "figures/TBparentBoxplots.pdf",
+# save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
 
 
@@ -191,6 +216,6 @@ stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
 scboxplot <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
      groups = stimcell, ncol = 4)
 scboxplot
-# save_plot(scboxplot, filename = "figures/TBstimParentBoxplot.pdf",
+# save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",
 #           base_height = 5, base_width = 10)
 
