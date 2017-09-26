@@ -122,6 +122,17 @@ load(file = "data analysis/results/TBdat1_npost10_niter30.Robj")
 load(file = "data analysis/results/TBdat1_npost10_niter20.Robj")
 load(file = "data analysis/results/TBdat1_npost20_niter30.Robj")
 
+filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat1_*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
+
+post <- list()
+for(i in 1:length(filenames)) {
+  load(file = filenames[[i]])
+  post[[i]] <- fit$posteriors[, -1]
+}
+post <- Reduce("+", post) / length(filenames)
+fit$posteriors[, -1] <- post
+
 
 # Scatter plots with posteriors ---------------
 library(cowplot)
@@ -179,11 +190,11 @@ nfunctions <- sapply(subsets, function(x) strsplit(x, "/")[[1]][3])
 nfunctions <- sapply(nfunctions, function(x) length(strsplit(x, "+", fixed = TRUE)[[1]]))
 poly <- nfunctions / choose(rep(M, length(nfunctions)), nfunctions)
 weights <- list()
-weights$polyfunctionality <- poly
+# weights$polyfunctionality <- poly
 weights$Functionality <- rep(1, length(subsets))
 
-allbox <- plot(fit, type = "boxplot", weights = weights,
-                target = group,
+allbox <- plot(fit, type = "boxplot",
+                target = outcome,
                 test = "wilcoxon",
                 one_sided = TRUE,
                 groups = "all", jitter = TRUE)
@@ -199,7 +210,7 @@ allbox
 # names(stimgroups) <- stimnames
 stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
 stimbox <- plot(fit, type = "boxplot", weights = weights,
-                target = group,
+                target = outcome, test = "wilcoxon",
                 one_sided = TRUE,
                 jitter = TRUE,
                 groups = stimgroups)
@@ -213,22 +224,21 @@ stimbox
 # names(cellgroups) <- cellnames
 cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
 
-cellbox <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
+cellbox <- plot(fit, type = "boxplot", target = outcome, test = "wilcoxon",
      groups = cellgroups, ncol = 3, weights = weights, jitter=TRUE)
 cellbox
 # save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
 
-#
-# stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
-# scnames <- unique(stimcell)
-# stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
-# names(stimcell) <- scnames
-# stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
+stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
+scnames <- unique(stimcell)
+stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
+names(stimcell) <- scnames
+stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
 
 stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
 
-scboxplot <- plot(fit, type = "boxplot", target = group, test = "wilcoxon",
+scboxplot <- plot(fit, type = "boxplot", target = outcome, test = "wilcoxon",
      groups = stimcell, ncol = 4, jitter=TRUE)
 scboxplot
 # save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",

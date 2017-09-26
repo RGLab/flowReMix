@@ -70,47 +70,29 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stimInd + stimI
                  iterations = 11,
                  parallel = TRUE,
                  verbose = TRUE, control = control))
-# save(fit, file = "data analysis/results/malaria1 cd4.Robj")
-# load(file = "data analysis/results/malaria3iterations30post10.Robj")
-# load(file = "data analysis/results/malaria4iterations40post10.Robj")
-# load(file = "data analysis/results/malaria5iterations20post10.Robj")
-# load(file = "data analysis/results/malaria6iterations20post20.Robj")
-# load(file = "data analysis/results/malaria7iterations30post20.Robj")
-# load(file = "data analysis/results/malaria8iterations40post20.Robj")
-# load(file = "data analysis/results/malaria9iterations20post30.Robj")
-# load(file = "data analysis/results/malaria10iterations30post30.Robj")
 
-# load(file = "data analysis/results/malaria1_2_npost5niter20maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_3_npost10niter20maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_4_npost10niter20maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_5_npost20niter20maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_6_npost20niter20maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_7_npost40niter20maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_8_npost40niter20maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_9_npost5niter30maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_11_npost10niter30maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_12_npost10niter30maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_13_npost20niter30maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_14_npost20niter30maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_15_npost40niter30maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_16_npost40niter30maxDisp100.Robj")
-# load(file = "data analysis/results/malaria1_17_npost5niter40maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria1_18_npost5niter40maxDisp100.Robj")
+# load(file = "data analysis/results/malaria3_6_npost10niter40maxDisp1000.Robj")
+# load(file = "data analysis/results/malaria3_5_npost5niter40maxDisp1000.Robj")
+# load(file = "data analysis/results/malaria3_4_npost40niter30maxDisp1000.Robj")
+# load(file = "data analysis/results/malaria3_3_npost20niter30maxDisp1000.Robj")
+# load(file = "data analysis/results/malaria3_2_npost5niter20maxDisp100.Robj")
+# load(file = "data analysis/results/malaria3_8_npost40niter40maxDisp1000.Robj")
+# load(file = "data analysis/results/malaria3_7_npost20niter40maxDisp1000.Robj")
 
-# load(file = "data analysis/results/malaria2_3_npost10niter20maxDisp1000.Robj")
-# load(file = "data analysis/results/malaria2_4_npost10niter20maxDisp100.Robj")
-# load(file = "data analysis/results/malaria2_16_npost40niter30maxDisp100.Robj")
-# load(file = "data analysis/results/malaria2_10_npost5niter30maxDisp100.Robj")
+filenames <- as.list(dir(path = 'data analysis/results', pattern="malaria4visitno_*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
 
-load(file = "data analysis/results/malaria3_6_npost10niter40maxDisp1000.Robj")
-load(file = "data analysis/results/malaria3_5_npost5niter40maxDisp1000.Robj")
-load(file = "data analysis/results/malaria3_4_npost40niter30maxDisp1000.Robj")
-load(file = "data analysis/results/malaria3_3_npost20niter30maxDisp1000.Robj")
-load(file = "data analysis/results/malaria3_2_npost5niter20maxDisp100.Robj")
-load(file = "data analysis/results/malaria3_8_npost40niter40maxDisp1000.Robj")
-load(file = "data analysis/results/malaria3_7_npost20niter40maxDisp1000.Robj")
-load(file = "data analysis/results/malaria4visitno_1_npost20niter30maxDisp1000.Robj")
+filenames <- as.list(dir(path = 'data analysis/results', pattern="malaria3_*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
 
+
+post <- list()
+for(i in 1:length(filenames)) {
+  load(file = filenames[[i]])
+  post[[i]] <- fit$posteriors[, -1]
+}
+post <- Reduce("+", post) / length(filenames)
+fit$posteriors[, -1] <- post
 
 
 # ROC table -------------------------------
@@ -169,7 +151,7 @@ scgroups <- lapply(scnames, function(x) subsets[sc == x])
 names(scgroups) <- scnames
 scbox <- plot(fit, type = "boxplot", target = infection,
      groups = scgroups,
-     test = "wilcoxon", one_sided = TRUE, ncol = 4)
+     test = "wilcoxon", one_sided = TRUE, ncol = 4, jitter = TRUE)
 scbox
 # save_plot(scbox, filename = "figures/malariaSCbox.pdf",
 #           base_height = 6, base_width = 10)
