@@ -138,21 +138,30 @@ outcome <- post[, ncol(post)]
 # Fitting ROC curves -----------------
 rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
-level <- 1
+level <- 0.5
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
 select <- nresponders[1, ] < level
-rocTable$qvalue <- NA
-rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
-rocTable[order(rocTable$auc, decreasing = TRUE), ]
-sum(rocTable$qvalue < 0.05, na.rm = TRUE)
-sum(rocTable$qvalue < 0.1, na.rm = TRUE)
+# rocTable$qvalue <- NA
+# rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
+# rocTable[order(rocTable$auc, decreasing = TRUE), ]
+# sum(rocTable$qvalue < 0.05, na.rm = TRUE)
+# sum(rocTable$qvalue < 0.1, na.rm = TRUE)
+flowReMix:::summary.flowReMix(fit,target = outcome,type=c("ROC")) %>%
+  filter(subset %in% names(which(select))) %>%
+  arrange(-auc) %>% mutate(qvalue = p.adjust(pvalue,"BH")) %>% filter(responseProb>0.5,qvalue<0.1)
 
 # Graph -----------------
-isingThreshold <- 0.99
+isingThreshold <- 0.9975
 isingplot <- plot(fit, type = "graph", graph = "ising",
                   fill = rocTable$auc, normalize = FALSE,
                   threshold = isingThreshold, count = FALSE, label_size = 3)
 isingplot
+
+ising_stab = stabilityGraph(fit,type="ising",reps = 200, cpus = 4, cv = TRUE)
+
+flowReMix:::plot.flowReMix_stability(obj = ising_stab,threshold = 0.5,label_size = 4, fill = rocTable$auc)    +
+coord_cartesian(xlim=c(-0.2,1.1),ylim=c(-0.5,1.1))
+
 # save_plot(isingplot, filename = "figures/TBdatIsing4.pdf",
 #           base_height = 5.5, base_width = 6.6)
 
@@ -177,7 +186,7 @@ allbox <- plot(fit, type = "boxplot", weights = weights,
                 target = group,
                 test = "wilcoxon",
                 one_sided = TRUE,
-                groups = "all")
+                groups = "all", jitter = TRUE)
 allbox
 # save_plot(allbox, filename = "figures/TBallboxplot2.pdf",
 #           base_height = 4, base_width = 8)
@@ -193,7 +202,7 @@ stimbox <- plot(fit, type = "boxplot", weights = weights,
                 target = group,
                 test = "wilcoxon",
                 one_sided = TRUE,
-                groups = stimgroups)
+                groups = stimgroups, jitter = TRUE)
 stimbox
 # save_plot(stimbox, filename = "figures/TBstimBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
@@ -210,12 +219,12 @@ cellbox
 # save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
 
-
-stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
-scnames <- unique(stimcell)
-stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
-names(stimcell) <- scnames
-stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
+#
+# stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
+# scnames <- unique(stimcell)
+# stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
+# names(stimcell) <- scnames
+# stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
 
 stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
 
