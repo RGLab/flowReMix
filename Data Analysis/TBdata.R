@@ -179,7 +179,7 @@ nfunctions <- sapply(subsets, function(x) strsplit(x, "/")[[1]][3])
 nfunctions <- sapply(nfunctions, function(x) length(strsplit(x, "+", fixed = TRUE)[[1]]))
 poly <- nfunctions / choose(rep(M, length(nfunctions)), nfunctions)
 weights <- list()
-# weights$polyfunctionality <- poly
+weights$polyfunctionality <- poly
 weights$Functionality <- rep(1, length(subsets))
 
 allbox <- plot(fit, type = "boxplot", weights = weights,
@@ -200,9 +200,9 @@ allbox
 stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
 stimbox <- plot(fit, type = "boxplot", weights = weights,
                 target = group,
-                test = "wilcoxon",
                 one_sided = TRUE,
-                groups = stimgroups, jitter = TRUE)
+                jitter = TRUE,
+                groups = stimgroups)
 stimbox
 # save_plot(stimbox, filename = "figures/TBstimBoxplots2.pdf",
 #           base_height = 4, base_width = 8)

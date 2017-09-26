@@ -156,7 +156,7 @@ rocResults <- rocTable(fit, vaccination, direction = ">", adjust = "BH",
                        sortAUC = FALSE)
 rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
-plot(fit, type = "graph", threshold = 0.95, fill = rocResults$auc,
+plot(fit, type = "graph", threshold = 0.9, fill = rocResults$auc,
      count = FALSE)
 
 # ROC for infection status -------------------
