@@ -183,7 +183,7 @@ infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 
 # Raw Graphical Models ---------------
-isingThreshold <- .985
+isingThreshold <- .99
 ising <- plot(fit, type = "graph", graph = "ising",
      fill = rocResults$auc, normalize = FALSE, count = FALSE,
      threshold = isingThreshold)
