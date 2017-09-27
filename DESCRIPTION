@@ -19,12 +19,10 @@ Imports: Rcpp,
     robustbase,
     dplyr,
     ggplot2,
-    igraph,
     network,
     GGally,
-    viridis
-Suggests: ggplot2,
-    pROC,
-    reshape2,
+    viridis,
     igraph
+Suggests: pROC,
+    reshape2,
 RoxygenNote: 6.0.1

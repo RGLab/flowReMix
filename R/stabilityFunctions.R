@@ -1,10 +1,10 @@
 #' @name stabilityGraph
 #' @title compute a stability graph for the Ising model from a flowReMix fit.
 #' @import ggplot2
-#' @import network
-#' @import igraph
-#' @import GGally
-#' @import viridis
+#' @importFrom network network
+#' @importFrom GGally ggnet2
+#' @importFrom viridis plasma
+#' @importFrom igraph graph.adjacency
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,

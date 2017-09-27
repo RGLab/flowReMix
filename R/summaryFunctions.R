@@ -33,6 +33,7 @@ plot.flowReMix <- function(obj, target = NULL, varname = NULL,
 
 
 #' @name summary
+#' @title summary of a flowReMix fit
 #' @description summarize the output of a flowReMix object into a rocTable
 #' Uses non-standard evaluation
 #' @param subject the name of the subject variable, as an unquoted variable
