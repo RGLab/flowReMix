@@ -17,7 +17,8 @@ Imports: Rcpp,
     doParallel,
     foreach,
     robustbase,
-    dplyr
+    dplyr,
+    ggplot2
 Suggests: ggplot2,
     pROC,
     reshape2,

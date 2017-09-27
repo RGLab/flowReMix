@@ -27,20 +27,25 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     doParallel::registerDoParallel(cores = cpus)
   }
 
-  perc <- 0.1
-  cat("Progress: ")
-  for(i in 1:reps) {
+  # perc <- 0.1
+  # requireNamespace("progress")
+  # pb = progress_bar$new(total=reps);
+  pb <- txtProgressBar(0, n, style = 2)
+  cluster_res = foreach(i = 1:reps) %dopar% {
+    setTxtProgressBar(pb,i)
     mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ]))
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
                      method = "sparse", cv = cv)
     countCovar <- countCovar + (coefs != 0) * sign(coefs)
-    if(i / reps > perc & perc < 1) {
-      cat(perc * 100, "% ", sep = "")
-      perc <- perc + 0.1
-    }
+    # if(i / reps > perc & perc < 1) {
+    #   cat(perc * 100, "% ", sep = "")
+    #   perc <- perc + 0.1
+    # }
+    return(countCovar)
   }
-  cat("100% \n")
+  countCovar = Reduce(x = cluster_res, f=function(x,y)x+y)
+  # cat("100% \n")
   doParallel::stopImplicitCluster()
 
   props <- countCovar / reps

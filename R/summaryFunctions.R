@@ -31,18 +31,33 @@ plot.flowReMix <- function(obj, target = NULL, varname = NULL,
   }
 }
 
+
+#' @name summary
+#' @description summarize the output of a flowReMix object into a rocTable
+#' Uses non-standard evaluation
+#' @param subject the name of the subject variable, as an unquoted variable
+#' @param target the name of the outcome variable as an unquoted variable. Default is outcome.
+#'
 #' @export
-summary.flowReMix <- function(obj, ...) {
-  args = list(...)
-  target = args[["target"]]
-  type = args[["type"]]
+summary.flowReMix <- function(obj, subject = ptid, target = outcome,type="ROC",...) {
   type = match.arg(type,c("FDR","ROC"))
+  target = enquo(target)
+  subject = enquo(subject)
+  if(!exists("data",fit)){
+    stop("modify the fit object to contain the input data as element `fit$data`")
+  }
+  outcome = obj$data %>% group_by(!!subject) %>% summarize(outcome=unique(!!target))
+  #ensure the order of outcome is as in posteriors.
+  #NOTE Code should be changed to leverage merge etc throughout and not rely on rownames.
+  outcome = as.data.frame(outcome)
+  rownames(outcome) = outcome[,1]
+  outcome = outcome[obj$posteriors[,1],]
   # some more error checking of target
   type <- type[1]
   if("ROC" == type) {
-    return(rocTable(obj, target, ...))
+    return(rocTable(obj, outcome$outcome, ...))
   } else if(type == "FDR") {
-    return(fdrTable(obj, target))
+    return(fdrTable(obj, outcome$outcome))
   } else {
     stop("Unknown summary method!")
   }

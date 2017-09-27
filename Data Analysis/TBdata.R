@@ -1,3 +1,7 @@
+library(dplyr)
+library(flowReMix)
+library(ggplot2)
+
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
   assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != "aUNS"]) > min(y$prop[y$stim == "aUNS"])))
@@ -7,7 +11,6 @@ assign <- function(x) {
 }
 
 geomean <- function(x) exp(mean(log(x)))
-library(flowReMix)
 # Loading data -------------------------
 tbdat <- readRDS("data/tb_rozot_booleans.rds")
 names(tbdat) <- tolower(names(tbdat))
@@ -72,7 +75,6 @@ tempdat$subset <- factor(tempdat$subset)
 rm(tbdat)
 
 # Visuaizations ------------------------------
-library(ggplot2)
 tempdat$prop <- tempdat$count / tempdat$parentcount #+ 1 / tempdat$parentcount
 subctrl <- subset(tempdat, stim == "ctrl")
 substim <- subset(tempdat, stim != "ctrl")
@@ -185,7 +187,7 @@ isingplot <- plot(fit, type = "graph", graph = "ising",
                   threshold = isingThreshold, count = FALSE, label_size = 3)
 isingplot
 
-ising_stab = stabilityGraph(fit,type="ising",reps = 200, cpus = 4, cv = TRUE)
+ising_stab = stabilityGraph(fit,type="ising",reps = 200, cpus = 7, cv = TRUE)
 
 flowReMix:::plot.flowReMix_stability(obj = ising_stab,threshold = 0.5,label_size = 4, fill = rocTable$auc)    +
 coord_cartesian(xlim=c(-0.2,1.1),ylim=c(-0.5,1.1))

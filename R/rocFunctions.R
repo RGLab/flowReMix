@@ -365,14 +365,14 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
     figure <- figure + geom_boxplot(aes(x = measure, y = score),outlier.color = NA) +
       facet_wrap(~ group)
     if(jitter) {
-      figure <- figure + geom_point(aes(x = measure, y = score),position = position_jitterdodge())
+      figure <- figure + geom_point(aes(x = measure, y = score),position = position_jitterdodge(jitter.height = 0))
     }
   } else {
     figure <- figure + geom_boxplot(aes(x = measure, y = score, col = factor(target)),outlier.color = NA) +
       scale_color_discrete(name = varname)
     if(jitter) {
       figure <- figure + geom_point(aes(x = measure, y = score, col = factor(target),
-                                         group = factor(target)),position = position_jitterdodge())
+                                         group = factor(target)),position = position_jitterdodge(jitter.height = 0))
     }
   }
 
