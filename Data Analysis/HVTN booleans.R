@@ -139,16 +139,6 @@ preAssign <- do.call("rbind", preAssign)
 #                  iterations = 20,
 #                  parallel = FALSE,
 #                  verbose = TRUE, control = control)
-# load(file = "Data Analysis/results/HVTN bool robust.Robj")
-#load(file = "Data Analysis/results/HVTNclust1.Robj")
-# load(file = "Data Analysis/results/HVTNclust2.Robj")
-# # load(file = "Data Analysis/results/HVTNclust4.Robj")
-# load(file = "Data Analysis/results/HVTNclust7npost1niter24.Robj")
-# load(file = "Data Analysis/results/HVTNclust7npost10niter24.Robj")
-# fit$posteriors[, -1] <- 1 - fit$posteriors[, -1]
-# load(file = "Data Analysis/results/HVTNclust7npost1niter36.Robj")
-# load(file = "Data Analysis/results/HVTNclust7npost1niter48.Robj")
-# load(file = "Data Analysis/results/HVTNclust7npost5niter48.Robj")
 
 
 # Post-hoc assignment -------------------
@@ -171,12 +161,21 @@ filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust8_*")
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
 post <- list()
+random <- list()
+assign <-list()
 for(i in 1:length(filenames)) {
   load(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
+  random[[i]] <- fit$randomEffectSamp
+  assign[[i]] <- fit$assignmentList
 }
 post <- Reduce("+", post) / length(filenames)
+assign <- do.call("c", assign)
+random <- do.call("c", random)
+fit$data <- subsetDat
 fit$posteriors[, -1] <- post
+fit$randomEffectSamp <- random
+fit$assignmentList <- assign
 
 # ROC plots -----------------------------
 require(pROC)
