@@ -149,17 +149,34 @@ outcome <- post[, ncol(post)]
 # Fitting ROC curves -----------------
 rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
-level <- 0.5
+level <- 0.99
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
 select <- nresponders[1, ] < level
-# rocTable$qvalue <- NA
-# rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
-# rocTable[order(rocTable$auc, decreasing = TRUE), ]
-# sum(rocTable$qvalue < 0.05, na.rm = TRUE)
-# sum(rocTable$qvalue < 0.1, na.rm = TRUE)
-flowReMix:::summary.flowReMix(fit,target = outcome,type=c("ROC")) %>%
-  filter(subset %in% names(which(select))) %>%
-  arrange(-auc) %>% mutate(qvalue = p.adjust(pvalue,"BH")) %>% filter(responseProb>0.5,qvalue<0.1)
+rocTable$qvalue <- NA
+rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
+rocTable[order(rocTable$auc, decreasing = TRUE), ]
+sum(rocTable$qvalue < 0.05, na.rm = TRUE)
+sum(rocTable$qvalue < 0.1, na.rm = TRUE)
+# flowReMix:::summary.flowReMix(fit,target = outcome,type=c("ROC")) %>%
+#   filter(subset %in% names(which(select))) %>%
+#   arrange(-auc) %>% mutate(qvalue = p.adjust(pvalue,"BH")) %>% filter(responseProb>0.5,qvalue<0.1)
+
+# Averge FDP contorl --------------------------
+avgLevel <- 0.1
+overall <- min(rocTable$qvalue, na.rm = TRUE)
+cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
+lapply(cellgroups, function(x) min(p.adjust(rocTable[(rocTable$subset %in% x) & select, ]$pvalue, method = "BH"), na.rm = TRUE))
+stimgroups  <- lapply(split(tempdat$subset, tempdat$stimgroup), unique)
+lapply(stimgroups, function(x) min(p.adjust(rocTable[(rocTable$subset %in% x) & select, ]$pvalue, method = "BH"), na.rm = TRUE))
+stimcell  <- lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
+scSimes <- unlist(lapply(stimcell, function(x) min(p.adjust(rocTable[(rocTable$subset %in% x) & select, ]$pvalue, method = "BH"), na.rm = TRUE)))
+mean(scSimes < avgLevel)
+mpSelect <- scSimes[seq(from = 1, to = 9, by = 2)] < 0.1
+mtSelect <- scSimes[seq(from = 2, to = 10, by = 2)] < 0.1
+MPlevel <- avgLevel * sum(scSimes[seq(from = 1, to = 9, by = 2)] < avgLevel) / sum(!is.infinite(scSimes[seq(from = 1, to = 9, by = 2)]))
+Mtlevel <- avgLevel * sum(scSimes[seq(from = 2, to = 10, by = 2)] < avgLevel) / sum(!is.infinite(scSimes[seq(from = 2, to = 10, by = 2)]))
+lapply(stimcell[seq(from = 1, to = 9, by = 2)[mpSelect]], function(x) as.character(x[which(p.adjust(rocTable$pvalue[rocTable$subset %in% x & select], method = "BH") < MPlevel)]))
+lapply(stimcell[seq(from = 2, to = 10, by = 2)[mtSelect]], function(x) as.character(x[which(p.adjust(rocTable$pvalue[rocTable$subset %in% x & select], method = "BH") < Mtlevel)]))
 
 # Graph -----------------
 isingThreshold <- 0.9975
@@ -191,10 +208,11 @@ nfunctions <- sapply(nfunctions, function(x) length(strsplit(x, "+", fixed = TRU
 poly <- nfunctions / choose(rep(M, length(nfunctions)), nfunctions)
 weights <- list()
 # weights$polyfunctionality <- poly
-weights$Functionality <- rep(1, length(subsets))
+# weights$Functionality <- rep(1, length(subsets))
+weights$weightedAvg <- apply(fit$posteriors[, -1], 2, sd)
 
 allbox <- plot(fit, type = "boxplot",
-                target = outcome,
+                target = outcome, #weights = weights,
                 test = "wilcoxon",
                 one_sided = TRUE,
                 groups = "all", jitter = TRUE)
@@ -209,7 +227,7 @@ allbox
 # stimgroups <- lapply(stimnames, function(x) subsets[stimgroups == x])
 # names(stimgroups) <- stimnames
 stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
-stimbox <- plot(fit, type = "boxplot", weights = weights,
+stimbox <- plot(fit, type = "boxplot", #weights = weights,
                 target = outcome, test = "wilcoxon",
                 one_sided = TRUE,
                 jitter = TRUE,
@@ -225,7 +243,8 @@ stimbox
 cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
 
 cellbox <- plot(fit, type = "boxplot", target = outcome, test = "wilcoxon",
-     groups = cellgroups, ncol = 3, weights = weights, jitter=TRUE)
+     groups = cellgroups, ncol = 3, #weights = weights,
+     jitter=TRUE)
 cellbox
 # save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
 #           base_height = 4, base_width = 8)
@@ -239,7 +258,8 @@ stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
 stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
 
 scboxplot <- plot(fit, type = "boxplot", target = outcome, test = "wilcoxon",
-     groups = stimcell, ncol = 4, jitter=TRUE)
+                  #weights = weights,
+                  groups = stimcell, ncol = 4, jitter=TRUE)
 scboxplot
 # save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",
 #           base_height = 5, base_width = 10)
