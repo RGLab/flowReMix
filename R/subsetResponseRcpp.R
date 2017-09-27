@@ -93,7 +93,10 @@ initializeModel <- function(dat, formula, method, mixed) {
     coef <- coef(fit)
     estProp <- predict(fit, type = "response")
   } else if(ncol(X) > 1 & method == "sparse") {
-    fit <- glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights)
+    fit <- try(glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights),silent=TRUE)
+    if(inherits(fit,"try-error")){
+      fit <- glmnet::cv.glmnet(X, y =  y[, 2:1], family = "binomial", weights = dat$weights,lambda = exp(seq(log(0.001), log(5), length.out=100)))
+    }
     coef <- glmnet::coef.cv.glmnet(fit, s = "lambda.min")[, 1]
     estProp <- glmnet::predict.cv.glmnet(fit, type = "response", newx = X, s = "lambda.min")
   } else if(method == "binom") {

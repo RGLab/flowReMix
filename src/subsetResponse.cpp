@@ -74,7 +74,7 @@ NumericVector computeBinomDensity(NumericVector subsetCount,
       prob = expit(prob) ;
       count = subsetCount[j] ;
       N = subsetN[j] ;
-      if(betaDispersion & M < 150000) {
+      if(betaDispersion & (M < 150000)) {
         density += betaBinomDens(count, N ,prob, M) ;
       } else {
         density += R::dbinom(count, N, prob, 1) / subsetSize ;
@@ -99,7 +99,7 @@ NumericVector computeIntegratedDensities(NumericMatrix logdens) {
 // [[Rcpp::export]]
 void setNumericVectorToZero(NumericVector x) {
   int length = x.length() ;
-  for(int i; i < length ; i++) {
+  for(int i = 0; i < length ; i++) {
     x[i] = 0 ;
   }
 }
