@@ -1,3 +1,10 @@
+#' @name stabilityGraph
+#' @title compute a stability graph for the Ising model from a flowReMix fit.
+#' @import ggplot2
+#' @import network
+#' @import igraph
+#' @import GGally
+#' @import viridis
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
@@ -30,9 +37,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   # perc <- 0.1
   # requireNamespace("progress")
   # pb = progress_bar$new(total=reps);
-  pb <- txtProgressBar(0, reps, style = 3)
   cluster_res = foreach(i = 1:reps) %dopar% {
-    setTxtProgressBar(pb,i)
     mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ]))
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
