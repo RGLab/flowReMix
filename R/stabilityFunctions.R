@@ -30,7 +30,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   # perc <- 0.1
   # requireNamespace("progress")
   # pb = progress_bar$new(total=reps);
-  pb <- txtProgressBar(0, n, style = 2)
+  pb <- txtProgressBar(0, reps, style = 3)
   cluster_res = foreach(i = 1:reps) %dopar% {
     setTxtProgressBar(pb,i)
     mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ]))

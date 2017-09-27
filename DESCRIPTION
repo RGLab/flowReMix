@@ -18,7 +18,11 @@ Imports: Rcpp,
     foreach,
     robustbase,
     dplyr,
-    ggplot2
+    ggplot2,
+    igraph,
+    network,
+    GGally,
+    viridis
 Suggests: ggplot2,
     pROC,
     reshape2,
