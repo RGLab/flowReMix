@@ -273,6 +273,9 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'   assignemnt sampled for each subject at the last iteration of the stochastic
 #'   EM algorithm.
 #'
+#'   * \code{data} the input data frame.
+#'
+#'   * \code{subject_id} the value of the subject_id argument used in the call.
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
@@ -1128,6 +1131,8 @@ flowReMix <- function(formula,
     doParallel::stopImplicitCluster()
   }
   result$data <- data
+  result$subject_id = subject_id
+  result$
   return(result)
 }
 

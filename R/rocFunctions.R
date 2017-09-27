@@ -1,5 +1,6 @@
 #' @export
 #' @import ggplot2
+#' @import dplyr
 plotROC <- function(obj, target, direction = "auto",
                     ncols = 5,
                     thresholdPalette = NULL,

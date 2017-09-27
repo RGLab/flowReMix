@@ -38,31 +38,45 @@ plot.flowReMix <- function(obj, target = NULL, varname = NULL,
 #' Uses non-standard evaluation
 #' @param subject the name of the subject variable, as an unquoted variable
 #' @param target the name of the outcome variable as an unquoted variable. Default is outcome.
-#'
+#' @param type either "ROC" or "FDR".
 #' @export
-summary.flowReMix <- function(obj, subject = ptid, target = outcome,type="ROC",...) {
+summary.flowReMix <- function(obj, ...) {
+  arglist = quos(...)
+  if(!("subject_id"%in%names(arglist))){
+    subject_id = fit$subject_id
+  }else{
+    subject_id = arglist[["subject_id"]]
+  }
+  if(!("target"%in%names(arglist))){
+    target = quo(outcome)
+  }else{
+    target = arglist[["target"]]
+  }
+  if(!("type"%in%names(arglist))){
+    type = "ROC"
+  }else{
+    type = quo_name(arglist[["type"]])
+  }
   type = match.arg(type,c("FDR","ROC"))
-  target = enquo(target)
-  subject = enquo(subject)
+  # target = enquo(target)
+  # subject_id = enquo(subject_id)
   if(!exists("data",fit)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }
-  outcome = obj$data %>% group_by(!!subject) %>% summarize(outcome=unique(!!target))
-  #ensure the order of outcome is as in posteriors.
-  #NOTE Code should be changed to leverage merge etc throughout and not rely on rownames.
-  outcome = as.data.frame(outcome)
-  rownames(outcome) = outcome[,1]
-  outcome = outcome[obj$posteriors[,1],]
-  # some more error checking of target
-  type <- type[1]
+  outcome = obj$data %>%
+    group_by(!!subject_id) %>%
+    summarize(outcome=unique(!!target))
+  #left join ensures order in posteriors is respected.
+  outcome = suppressWarnings(left_join(obj$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
-    return(rocTable(obj, outcome$outcome, ...))
+    return(rocTable(obj, outcome, type=type))
   } else if(type == "FDR") {
-    return(fdrTable(obj, outcome$outcome))
+    return(fdrTable(obj, ifelse(is.factor(outcome),outcome,factor(outcome))))
   } else {
     stop("Unknown summary method!")
   }
 }
+
 
 
 
