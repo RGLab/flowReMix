@@ -167,6 +167,16 @@ load(file = "data analysis/results/HVTNclust8npost1niter48.Robj")
 load(file = "data analysis/results/HVTNclust8npost10niter48.Robj")
 load(file = "data analysis/results/HVTNclust8npost10niter36.Robj")
 
+filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust8_*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
+
+post <- list()
+for(i in 1:length(filenames)) {
+  load(file = filenames[[i]])
+  post[[i]] <- fit$posteriors[, -1]
+}
+post <- Reduce("+", post) / length(filenames)
+fit$posteriors[, -1] <- post
 
 # ROC plots -----------------------------
 require(pROC)
@@ -180,6 +190,11 @@ hiv <- infect[, 2]
 hiv[vaccine == 0] <- NA
 infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
                       sortAUC = FALSE)
+level <- 0.99
+post <- fit$posteriors[, -1]
+nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
+select <- nresponders[1, ] < level
+
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 
 # Raw Graphical Models ---------------
