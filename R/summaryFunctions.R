@@ -48,7 +48,7 @@ summary.flowReMix <- function(obj, ...) {
     subject_id = arglist[["subject_id"]]
   }
   if(!("target"%in%names(arglist))){
-    target = quo(outcome)
+    stop("Please specify an argument for `target`. \n This should be the unquoted name of an outcome variable in the data. \n e.g.: summary(fit, target = outcome)")
   }else{
     target = arglist[["target"]]
   }
@@ -62,6 +62,22 @@ summary.flowReMix <- function(obj, ...) {
   # subject_id = enquo(subject_id)
   if(!exists("data",fit)){
     stop("modify the fit object to contain the input data as element `fit$data`")
+  }
+  #Check of the target variable is valid
+  isvalid = obj$data %>%
+    group_by(!!subject_id) %>% mutate(nlevels = length(unique(!!target)))
+  if(!all(isvalid$nlevels %in% 1)){
+    stop(
+      quo_name(target),
+      " must have one unique value per ",
+      quo_name(subject_id),
+      ". Found ",
+      ifelse(
+        length(unique(isvalid$nlevels)) == 1,
+        unique(isvalid$nlevels),
+        paste(range(unique(isvalid$nlevels)), collapse = " - ")
+      )
+    )
   }
   outcome = obj$data %>%
     group_by(!!subject_id) %>%
