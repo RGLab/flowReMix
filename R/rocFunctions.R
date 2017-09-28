@@ -254,7 +254,7 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
                         test = c("none", "logistic", "t-test", "wilcoxon"),
                         one_sided = FALSE, jitter = FALSE,
-                        ncol = 5) {
+                        ncol = 5, adjust = "BH",sigdigits=5) {
   if(is.null(varname) & !is.null(target)) {
     varname <- as.character(match.call()$target)
     varname <- varname[length(varname)]
@@ -349,13 +349,14 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
   if(test %in% c("t-test", "wilcoxon", "logistic")) {
     pvalues <- as.numeric(pvalues)
     if(one_sided) pvalues <- pvalues / 2
+    adjp = p.adjust(p = pvalues,method = adjust)
     slot <- 1
     forplot$group <- as.character(forplot$group)
     for(i in 1:length(weights)) {
       for(j in 1:length(groups)) {
         index <- forplot$group == names(groups)[j] & forplot$measure == names(weights)[i]
         forplot$group[index] <- paste(forplot$group[index], ", ", test,
-                                      ": ", round(pvalues[slot], 5), sep = "")
+                                      ": ", signif(adjp[slot], sigdigits), sep = "")
         slot <- slot + 1
       }
     }
