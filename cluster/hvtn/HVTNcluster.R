@@ -116,7 +116,7 @@ keep <- names(keep[sapply(keep, function(x) x)])
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
-config <- expand.grid(npost = c(1, 5, 10),
+config <- expand.grid(npost = c(15, 20, 25),
                       niter = c(36, 48))
 npost <- config[setting, 1]
 niter <- config[setting, 2]
@@ -149,5 +149,5 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
-filename <- paste("HVTNclust8", "npost", npost, "niter", niter, ".Robj", sep ="")
+filename <- paste("results/HVTNclust9", "npost", npost, "niter", niter, ".Robj", sep ="")
 save(fit, file = filename)

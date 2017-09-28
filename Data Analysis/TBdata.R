@@ -124,6 +124,11 @@ load(file = "data analysis/results/TBdat1_npost10_niter30.Robj")
 load(file = "data analysis/results/TBdat1_npost10_niter20.Robj")
 load(file = "data analysis/results/TBdat1_npost20_niter30.Robj")
 
+add_ptid <- function(x, subject_id) {
+  x$subject_id <- match.call()$subject_id
+  return(x)
+}
+
 filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat1_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
 
@@ -134,6 +139,8 @@ for(i in 1:length(filenames)) {
 }
 post <- Reduce("+", post) / length(filenames)
 fit$posteriors[, -1] <- post
+fit$data <- tempdat
+fit <- add_ptid(fit, ptid)
 
 
 # Scatter plots with posteriors ---------------
@@ -149,6 +156,8 @@ outcome <- post[, ncol(post)]
 #           base_width = 20, base_height = 20)
 
 # Fitting ROC curves -----------------
+rocTable <- summary(fit, type = "ROC", test = "wilcoxon",
+                    target = type)
 rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
 level <- 0.99
@@ -163,37 +172,10 @@ sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 #   filter(subset %in% names(which(select))) %>%
 #   arrange(-auc) %>% mutate(qvalue = p.adjust(pvalue,"BH")) %>% filter(responseProb>0.5,qvalue<0.1)
 
-# Averge FDP contorl --------------------------
-avgLevel <- 0.1
-overall <- min(rocTable$qvalue, na.rm = TRUE)
-cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
-lapply(cellgroups, function(x) min(p.adjust(rocTable[(rocTable$subset %in% x) & select, ]$pvalue, method = "BH"), na.rm = TRUE))
-stimgroups  <- lapply(split(tempdat$subset, tempdat$stimgroup), unique)
-lapply(stimgroups, function(x) min(p.adjust(rocTable[(rocTable$subset %in% x) & select, ]$pvalue, method = "BH"), na.rm = TRUE))
-stimcell  <- lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
-scSimes <- unlist(lapply(stimcell, function(x) min(p.adjust(rocTable[(rocTable$subset %in% x) & select, ]$pvalue, method = "BH"), na.rm = TRUE)))
-mean(scSimes < avgLevel)
-mpSelect <- scSimes[seq(from = 1, to = 9, by = 2)] < 0.1
-mtSelect <- scSimes[seq(from = 2, to = 10, by = 2)] < 0.1
-MPlevel <- avgLevel * sum(scSimes[seq(from = 1, to = 9, by = 2)] < avgLevel) / sum(!is.infinite(scSimes[seq(from = 1, to = 9, by = 2)]))
-Mtlevel <- avgLevel * sum(scSimes[seq(from = 2, to = 10, by = 2)] < avgLevel) / sum(!is.infinite(scSimes[seq(from = 2, to = 10, by = 2)]))
-lapply(stimcell[seq(from = 1, to = 9, by = 2)[mpSelect]], function(x) as.character(x[which(p.adjust(rocTable$pvalue[rocTable$subset %in% x & select], method = "BH") < MPlevel)]))
-lapply(stimcell[seq(from = 2, to = 10, by = 2)[mtSelect]], function(x) as.character(x[which(p.adjust(rocTable$pvalue[rocTable$subset %in% x & select], method = "BH") < Mtlevel)]))
-
 # Graph -----------------
-isingThreshold <- 0.9975
-isingplot <- plot(fit, type = "graph", graph = "ising",
-                  fill = rocTable$auc, normalize = FALSE,
-                  threshold = isingThreshold, count = FALSE, label_size = 3)
-isingplot
-
-ising_stab = stabilityGraph(fit,type="ising",reps = 200, cpus = 7, cv = TRUE)
-
-flowReMix:::plot.flowReMix_stability(obj = ising_stab,threshold = 0.5,label_size = 4, fill = rocTable$auc)    +
-coord_cartesian(xlim=c(-0.2,1.1),ylim=c(-0.5,1.1))
-
-# save_plot(isingplot, filename = "figures/TBdatIsing4.pdf",
-#           base_height = 5.5, base_width = 6.6)
+load(file = "data analysis/results/tbAggreageStability1.Robj")
+stab <- stability
+plot(stab, threshold = 0.5, fill = rocTable$auc)
 
 # Boxplot by graph clusters -------------
 # groups <- getGraphComponents(stability, threshold = 0.5, minsize = 3)
