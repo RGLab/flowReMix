@@ -789,7 +789,7 @@ flowReMix <- function(formula,
 
       }
 
-      if(iter == updateLag) {
+      if(iter == min(updateLag, iterations)) {
         coefficientsOut <- coefficientList
       } else if(iter > updateLag) {
         coefficientsOut <- mapply(updateCoefs, coefficientList, glmFits,
@@ -1131,8 +1131,7 @@ flowReMix <- function(formula,
     doParallel::stopImplicitCluster()
   }
   result$data <- data
-  result$subject_id = subject_id
-  result$
+  result$subject_id <- match.call()$subject_id
   return(result)
 }
 

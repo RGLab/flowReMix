@@ -114,6 +114,10 @@ keep <- names(keep[sapply(keep, function(x) x)])
 #result$subsets[result$qvals < 0.1] %in% keep
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
+subsetDat <- merge(subsetDat, treatmentdat)
+subsetDat <- merge(subsetDat, infect)
+subsetDat$hiv <- subsetDat$status
+subsetDat$hiv[subsetDat$control == 1] <- NA
 
 # Fitting the model ------------------------------
 library(flowReMix)
@@ -151,11 +155,17 @@ preAssign <- do.call("rbind", preAssign)
 #   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
 # }
 
+
 load(file = "data analysis/results/HVTNclust8npost5niter48.Robj")
 load(file = "data analysis/results/HVTNclust8npost1niter36.Robj")
 load(file = "data analysis/results/HVTNclust8npost1niter48.Robj")
 load(file = "data analysis/results/HVTNclust8npost10niter48.Robj")
 load(file = "data analysis/results/HVTNclust8npost10niter36.Robj")
+
+add_ptid <- function(x, subject_id) {
+  x$subject_id <- match.call()$subject_id
+  return(x)
+}
 
 filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust8_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
@@ -173,6 +183,7 @@ post <- Reduce("+", post) / length(filenames)
 assign <- do.call("c", assign)
 random <- do.call("c", random)
 fit$data <- subsetDat
+fit <- add_ptid(fit, ptid)
 fit$posteriors[, -1] <- post
 fit$randomEffectSamp <- random
 fit$assignmentList <- assign
@@ -180,8 +191,9 @@ fit$assignmentList <- assign
 # ROC plots -----------------------------
 require(pROC)
 outcome <- treatmentdat[, c(13, 15)]
-rocResults <- rocTable(fit, outcome[, 2], direction = ">", adjust = "BH",
-                       sortAUC = FALSE)
+rocResults <- summary(fit, type = "ROC",
+                      target = control, direction = ">", adjust = "BH",
+                      sortAUC = FALSE)
 rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
 vaccine <- outcome[, 2] == 0
@@ -196,23 +208,21 @@ select <- nresponders[1, ] < level
 
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 
-# Raw Graphical Models ---------------
-isingThreshold <- .99
-ising <- plot(fit, type = "graph", graph = "ising",
-     fill = rocResults$auc, normalize = FALSE, count = FALSE,
-     threshold = isingThreshold)
+# Stability Graphs ---------------
+load(file = "data analysis/results/hvtnAggreageStability1.Robj")
+stab <- stability
+ising <- plot(stab, threshold = 0.85, fill = rocResults$auc)
 ising
+ising <- plot(stab, threshold = 0.928, fill = infectROC$auc)
+
 library(cowplot)
 # save_plot(ising, filename = "figures/hvtnIsingRaw.pdf",
 #           base_width = 7, base_height = 6)
 
-plot(fit, type = "graph", graph = "ising",
-     fill = infectROC$auc, normalize = FALSE,
-     threshold = isingThreshold)
-
-plot(fit, type = "graph", graph = "randomEffects",
-     fill = rocResults$auc, normalize = FALSE,
-     threshold = 0.99)
+load(file = "data analysis/results/hvtnAggreageRandom1.Robj")
+rand <- stability
+random <- plot(rand, threshold = 0.7, fill = rocResults$auc)
+random
 
 
 # Scatter plots -----------------------
@@ -233,6 +243,8 @@ nfunctions <- sapply(strsplit(colnames(fit$posteriors)[-1], "+", fixed = TRUE), 
 weightList <- list()
 weightList$Polyfunctionality <- weights <- nfunctions / choose(5, nfunctions)
 # weightList$functionality <- rep(1, length(nfunctions))
+
+plot(fit, type = "boxplots", outcome = )
 
 subsets <- names(fit$posteriors[, -1])
 stim <- sapply(strsplit(subsets, "/"), function(x) x[1])

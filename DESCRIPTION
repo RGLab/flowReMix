@@ -22,6 +22,7 @@ Imports: Rcpp,
     network,
     GGally,
     viridis,
+    rlang,
     igraph
 Suggests: pROC,
     reshape2,

@@ -54,19 +54,21 @@ plot.flowReMix <- function(obj,...){
 #' @param subject the name of the subject variable, as an unquoted variable
 #' @param target the name of the outcome variable as an unquoted variable.
 #' @param type either "ROC" or "FDR".
+#' @importFrom rlang enquo
 #' @export
 summary.flowReMix <- function(obj, ...) {
   mc = match.call();
-  if(!is.null(mc$subject_id)){
+  if(is.null(mc$subject_id)){
     subject_id = fit$subject_id
     subject_id = enquo(subject_id)
-
   }else{
     subject_id = mc$subject_id
     subject_id = enquo(subject_id)
   }
   if(is.null(mc$target)){
-    stop("Please specify an argument for `target`. \n This should be the unquoted name of an outcome variable in the data. \n e.g.: summary(fit, target = outcome)")
+    stop("Please specify an argument for `target`. \n This should be the unquoted
+         name of an outcome variable in the data. \n
+         e.g.: summary(fit, target = outcome)")
   }else{
     target = mc$target
     target = enquo(target)
@@ -76,7 +78,7 @@ summary.flowReMix <- function(obj, ...) {
   }else{
     type = eval(mc$type,envir=parent.frame())
   }
-  type = match.arg(type,c("FDR","ROC"))
+  type = match.arg(type, c("FDR","ROC"))
   if(!exists("data",fit)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }
@@ -100,6 +102,9 @@ summary.flowReMix <- function(obj, ...) {
     group_by(!!subject_id) %>%
     summarize(outcome=unique(!!target))
   #left join ensures order in posteriors is respected.
+  outcome <- as.data.frame(outcome)
+  obj$posteriors[, 1] <- as.character(obj$posteriors[, 1])
+  outcome[, 1] <- as.character(outcome[, 1])
   outcome = suppressWarnings(left_join(obj$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
     mc$type = NULL
