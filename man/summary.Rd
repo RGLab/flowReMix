@@ -5,13 +5,14 @@
 \alias{summary.flowReMix}
 \title{summary of a flowReMix fit}
 \usage{
-\method{summary}{flowReMix}(obj, subject = ptid, target = outcome,
-  type = "ROC", ...)
+\method{summary}{flowReMix}(obj, ...)
 }
 \arguments{
 \item{subject}{the name of the subject variable, as an unquoted variable}
 
-\item{target}{the name of the outcome variable as an unquoted variable. Default is outcome.}
+\item{target}{the name of the outcome variable as an unquoted variable.}
+
+\item{type}{either "ROC" or "FDR".}
 }
 \description{
 summarize the output of a flowReMix object into a rocTable

@@ -75,6 +75,8 @@ constants.
 \item \code{assignmentList} a list of matrices containing the posterior cluster
 assignemnt sampled for each subject at the last iteration of the stochastic
 EM algorithm.
+\item \code{data} the input data frame.
+\item \code{subject_id} the value of the subject_id argument used in the call.
 }
 }
 \description{

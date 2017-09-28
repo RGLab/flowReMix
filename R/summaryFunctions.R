@@ -4,9 +4,9 @@
 #' "scatter", "boxplot", "FDR", "ROC", "ising"
 #' @param obj The model fit of class \code{flowReMix} returned by the fitting function.
 #' @param type the type of plot to make, one of c("scatter","boxplot","FDR","ROC","graph")
-#' @param ... additional arguments.
 #' @param target the name of the outcome variable as an unquoted variable.
 #' @param varname the variable name to appear in the legend
+#' @param ... additional arguments.
 #' @export
 plot.flowReMix <- function(obj,...){
   mc = match.call()
@@ -56,25 +56,27 @@ plot.flowReMix <- function(obj,...){
 #' @param type either "ROC" or "FDR".
 #' @export
 summary.flowReMix <- function(obj, ...) {
-  arglist = quos(...)
-  if(!("subject_id"%in%names(arglist))){
+  mc = match.call();
+  if(!is.null(mc$subject_id)){
     subject_id = fit$subject_id
+    subject_id = enquo(subject_id)
+
   }else{
-    subject_id = arglist[["subject_id"]]
+    subject_id = mc$subject_id
+    subject_id = enquo(subject_id)
   }
-  if(!("target"%in%names(arglist))){
+  if(is.null(mc$target)){
     stop("Please specify an argument for `target`. \n This should be the unquoted name of an outcome variable in the data. \n e.g.: summary(fit, target = outcome)")
   }else{
-    target = arglist[["target"]]
+    target = mc$target
+    target = enquo(target)
   }
-  if(!("type"%in%names(arglist))){
+  if(is.null(mc$type)){
     type = "ROC"
   }else{
-    type = quo_name(arglist[["type"]])
+    type = eval(mc$type)
   }
   type = match.arg(type,c("FDR","ROC"))
-  # target = enquo(target)
-  # subject_id = enquo(subject_id)
   if(!exists("data",fit)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }
@@ -100,7 +102,11 @@ summary.flowReMix <- function(obj, ...) {
   #left join ensures order in posteriors is respected.
   outcome = suppressWarnings(left_join(obj$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
-    return(rocTable(obj, outcome, type=type))
+    mc$type = NULL
+    mc[[1]]=as.name("rocTable")
+    mc$target = outcome
+    eval(mc)
+    # return(rocTable(obj, outcome, type=type,...))
   } else if(type == "FDR") {
     return(fdrTable(obj, ifelse(is.factor(outcome),outcome,factor(outcome))))
   } else {
