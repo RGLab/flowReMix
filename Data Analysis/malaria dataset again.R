@@ -86,6 +86,11 @@ filenames <- as.list(dir(path = 'data analysis/results', pattern="malaria3_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
 
 
+add_ptid <- function(x, subject_id) {
+  x$subject_id <- match.call()$subject_id
+  return(x)
+}
+
 post <- list()
 for(i in 1:length(filenames)) {
   load(file = filenames[[i]])
@@ -93,7 +98,8 @@ for(i in 1:length(filenames)) {
 }
 post <- Reduce("+", post) / length(filenames)
 fit$posteriors[, -1] <- post
-
+fit$data <- tempdat
+fit <- add_ptid(fit, ptid)
 
 # ROC table -------------------------------
 outcome <- by(tempdat, tempdat$ptid, function(x) x$infection[1])
@@ -106,7 +112,7 @@ select <- sapply(fit$coefficients, function(x) x[7] > 0)
 select <- rep(TRUE, length(fit$coefficients))
 rocResult$qvalue <- NA
 rocResult$qvalue[select] <- p.adjust(rocResult$pvalue[select], method = "BH")
-head(rocResult[order(rocResult$auc, decreasing = TRUE), ])
+(rocResult[order(rocResult$auc, decreasing = TRUE), ])
 
 # Plotting raw graphs ------------------
 plot(fit, type = "graph", graph = "ising", threshold = 0.75)
@@ -126,9 +132,9 @@ stims <- sapply(subsets, function(x) strsplit(x, "/")[[1]][1])
 stimnames <- unique(stims)
 stimgroups <- lapply(stimnames, function(x) subsets[stims == x])
 names(stimgroups) <- stimnames
-boxstim <- plot(fit, type = "boxplot", target = infection,
-     groups = stimgroups, weights = weights,
-     test = "wilcoxon", one_sided = TRUE, jitter = TRUE)
+boxstim <- plot(fit, type = "boxplot", target = infection, test = "wilcoxon",
+     groups = stimgroups, weights = weights, one_sided = TRUE, jitter = TRUE,
+     ncol = 2)
 boxstim
 # save_plot(boxstim, filename = "figures/malariaBoxStim.pdf",
 #           base_height = 4, base_width = 7)

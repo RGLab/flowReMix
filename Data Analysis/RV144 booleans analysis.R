@@ -58,6 +58,15 @@ data("rv144_correlates_data")
 correlates <- rv144_correlates_data
 correlates <- correlates[order(as.character(correlates$PTID)), ]
 infection <- correlates$infect.y
+names(correlates)[1] <- "ptid"
+vaccine <- correlates[, c(1, 62)]
+infect <- correlates[, c(1, 64)]
+booldata <- merge(booldata, vaccine)
+booldata <- merge(booldata, infect)
+booldata$hiv <- NA
+booldata$hiv[booldata$infect.y == "INFECTED"] <- TRUE
+booldata$hiv[booldata$infect.y == "NON-INFECTED"] <- FALSE
+
 
 # Converting low counts to booleans --------------
 countByPop <- by(booldata, booldata$subset, function(x) max(x$count / x$parentcount) < 10^-3 / 2)
@@ -95,32 +104,25 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  cluster_assignment = preAssignment,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
-# save(fit, file = "data analysis/results/boolean robust maxAssign 05 3 w count.Robj")
-# load(file = "data analysis/results/boolean robust15.Robj")
-# load(file = "data analysis/results/boolean robust14.Robj")
-# load(file = "data analysis/results/boolean robust11 strong assign.Robj")
-# load(file = "data analysis/results/boolean robust10 strong assign.Robj")
-# load(file = "data analysis/results/boolean robust7 Wassign Wdat.Robj")
-# load(file = "data analysis/results/boolean robust6 w assign.Robj")
-# load(file = "data analysis/results/boolean robust5 wrandom.Robj")
-# load(file = "data analysis/results/boolean robust4.Robj")
-# load(file = "data analysis/results/RV144cluster2.Robj")
-# load(file = "data analysis/results/RV144cluster3wassign.Robj")
-# load(file = "data analysis/results/RV144cluster4.Robj")
-# load(file = "data analysis/results/RV144cluster5.Robj")
-# load(file = "data analysis/results/RV144cluster6.Robj")
-# load(file = "data analysis/results/RV144cluster8wPre.Robj")
-# load(file = "data analysis/results/RV144cluster9weak.Robj")
-# load(file = "data analysis/results/RV144cluster10.Robj")
-# load(file = "data analysis/results/RV144cluster11moreDisp.Robj")
-# load(file = "data analysis/results/RV144cluster7.Robj")
-# load(file = "data analysis/results/RV144cluster12LessDisp.Robj")
-# load(file = "data analysis/results/boolean robust maxAssign 06 1.Robj")
-# load(file = "data analysis/results/RV144cluster13gradAssign55.Robj")
-# load(file = "data analysis/results/RV144cluster14gradAssign25.Robj")
-# load(file = "data analysis/results/RV144cluster15gradAssign50.Robj")
-load(file = "data analysis/results/boolean robust maxAssign 05 3 w count.Robj")
+# plot(fit, type = "scatter")
 
+add_ptid <- function(x, subject_id) {
+  x$subject_id <- match.call()$subject_id
+  return(x)
+}
+
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_1_*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
+
+post <- list()
+for(i in 1:length(filenames)) {
+  load(file = filenames[[i]])
+  post[[i]] <- fit$posteriors[, -1]
+}
+post <- Reduce("+", post) / length(filenames)
+fit$data <- booldata
+fit <- add_ptid(fit, ptid)
+fit$posteriors[, -1] <- post
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
 # subjects <- unique(preAssignment$ptid)
@@ -145,19 +147,16 @@ ids <- merge(ids, vaccine, all.x = TRUE, all.y = FALSE,
                  by = "ptid", sort = FALSE)
 vaccination <- ids[, 3]
 
-rocplot <- plot(fit, target = vaccination, type = "ROC", ncols = 6,
-     direction = "auto", thresholdPalette = NULL,
-     subsets = NULL)
+rocplot <- plot(fit, target = vaccine, type = "ROC", ncols = 6,
+                direction = "auto", thresholdPalette = NULL,
+                subsets = NULL)
 # save_plot("figures/cowROCplot.pdf", rocplot,
 #           base_height = 6,
 #           base_width = 12)
 
-rocResults <- rocTable(fit, vaccination, direction = ">", adjust = "BH",
+rocResults <- summary(fit, target = vaccine, direction = ">", adjust = "BH",
                        sortAUC = FALSE)
 rocResults[order(rocResults$auc, decreasing = TRUE), ]
-
-plot(fit, type = "graph", threshold = 0.9, fill = rocResults$auc,
-     count = FALSE)
 
 # ROC for infection status -------------------
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
@@ -167,10 +166,11 @@ infectDat <- infectDat[infectID %in% datId, ]
 infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
 infectDat <- infectDat[order(infectDat$ptid), ]
 ids <- merge(ids, infectDat, sort = FALSE)
-infect <- ids[, 4]
+infect <- ids[, 5]
 infect[infect == "PLACEBO"] <- NA
+infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
-infectResults <- rocTable(fit, infect, direction = "auto", adjust = "BH",
+infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
                           sortAUC = FALSE, pvalue = "wilcoxon")
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
@@ -202,10 +202,10 @@ ids$poly <- poly
 ids$func <- func
 
 vaccines <- subset(correlates, infect.y != "PLACEBO")
-vaccines$PTID <- as.character(vaccines$PTID)
+vaccines$ptid <- as.character(vaccines$ptid)
 ids$ptid <- as.character(ids$ptid)
 vaccines <- merge(vaccines, ids, all.x = TRUE, all.y = TRUE,
-                  by.x = "PTID", by.y = "ptid")
+                  by.x = "ptid", by.y = "ptid")
 
 vaccines <- subset(vaccines, vaccines$infect != "PLACEBO")
 
@@ -244,7 +244,7 @@ for(i in 1:(ncol(fit$posteriors) - 1)) {
   vaccines$post <- NULL
   post <- fit$posteriors[!is.na(infect), c(1, i + 1)]
   names(post)[2] <- "post"
-  vaccines <- merge(vaccines, post, by.x = "PTID", by.y = "ptid", all.x = TRUE)
+  vaccines <- merge(vaccines, post, by.x = "ptid", by.y = "ptid", all.x = TRUE)
   resultList[[i]] <- summary(glm(infect.y ~ post + IgAprim + agecat + risk.medium + risk.high + sex,
                                  family = "binomial",
                                  data = vaccines))
@@ -264,6 +264,16 @@ regResult$auc <- sapply(adjRocList, function(x) x$auc)
 regResult$aucPval <- pwilcox(regResult$auc * n0 * n1, n0, n1, lower.tail = FALSE)
 regResult$aucQval <- p.adjust(regResult$aucPval, method = "BH")
 regResult[order(regResult[, 2], decreasing = FALSE), ]
+
+# Stability Graph --------------------------
+load(file = "data analysis/results/rv144AggreageStability1.Robj")
+stab <- stability
+stabPlot <- plot(stab, fill = rocResults$auc, threshold = .95)
+stabPlot
+plot(stab, fill = infectResults$auc, threshold = .95)
+save_plot(stabPlot, filename = "figures/rv144IsingStb1.pdf",
+          base_width = 7, base_height = 6)
+
 
 # FDR Curves -------------
 fdrTable <- fdrTable(fit, vaccination)
