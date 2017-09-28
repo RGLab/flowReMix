@@ -118,6 +118,7 @@ subsetDat <- merge(subsetDat, treatmentdat)
 subsetDat <- merge(subsetDat, infect)
 subsetDat$hiv <- subsetDat$status
 subsetDat$hiv[subsetDat$control == 1] <- NA
+subsetDat$vaccine <- 1 - subsetDat$control
 
 # Fitting the model ------------------------------
 library(flowReMix)
@@ -190,22 +191,23 @@ fit$assignmentList <- assign
 
 # ROC plots -----------------------------
 require(pROC)
-outcome <- treatmentdat[, c(13, 15)]
 rocResults <- summary(fit, type = "ROC",
-                      target = control, direction = ">", adjust = "BH",
+                      target = vaccine, direction = ">", adjust = "BH",
                       sortAUC = FALSE)
 rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
 vaccine <- outcome[, 2] == 0
 hiv <- infect[, 2]
 hiv[vaccine == 0] <- NA
-infectROC <- rocTable(fit, hiv, direction = ">", adjust = "BH",
-                      sortAUC = FALSE)
+infectROC <- summary(fit, type = "ROC",
+                     target = hiv, direction = ">", adjust = "BH",
+                     sortAUC = FALSE)
 level <- 0.99
 post <- fit$posteriors[, -1]
-nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
-select <- nresponders[1, ] < level
-
+nresponders <- t(apply(post, 2, function(x) cumsum(sort(1 - x))))
+select <- nresponders[, 1] < level
+infectROC$qvalue[!select] <- NA
+infectROC$qvalue[select] <- p.adjust(infectROC$pvalue[select], method = "BH")
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 
 # Stability Graphs ---------------
@@ -214,10 +216,11 @@ stab <- stability
 ising <- plot(stab, threshold = 0.85, fill = rocResults$auc)
 ising
 ising <- plot(stab, threshold = 0.928, fill = infectROC$auc)
+ising
 
 library(cowplot)
-# save_plot(ising, filename = "figures/hvtnIsingRaw.pdf",
-#           base_width = 7, base_height = 6)
+save_plot(ising, filename = "figures/hvtnIsingStb1.pdf",
+          base_width = 7, base_height = 6)
 
 load(file = "data analysis/results/hvtnAggreageRandom1.Robj")
 rand <- stability
@@ -232,8 +235,7 @@ scatter <- plot(fit, target = vaccine, type = "scatter", ncol = 11)
 #           base_width = 22, limitsize = FALSE)
 
 # FDR curves ----------------
-vaccination <- outcome[, 2] == 0
-fdrplot <- plot(fit, target = vaccination, type = "FDR")
+fdrplot <- plot(fit, target = vaccine, type = "FDR")
 # save_plot("figures/hvtnFDRplot.pdf", fdrplot,
 #           base_height = 20,
 #           base_width = 22, limitsize = FALSE)
@@ -244,110 +246,41 @@ weightList <- list()
 weightList$Polyfunctionality <- weights <- nfunctions / choose(5, nfunctions)
 # weightList$functionality <- rep(1, length(nfunctions))
 
-plot(fit, type = "boxplots", outcome = )
+# All
+allbox <- plot(fit, type = "boxplot", target = hiv,
+               groups = "all", weights = weightList,
+               one_sided = TRUE,
+               test = "wilcoxon", jitter = TRUE)
+allbox
+# save_plot("figures/HVTNallboxplot.pdf", allbox)
 
-subsets <- names(fit$posteriors[, -1])
-stim <- sapply(strsplit(subsets, "/"), function(x) x[1])
-stimnames <- unique(stim)
-stim <- lapply(stimnames, function(x) subsets[stim %in% x])
-names(stim) <- stimnames
-stimpvals <- numeric(length(stim))
-for(i in 1:length(stim)) {
-  group <- stim[[i]]
-  sub <- which(names(fit$posteriors)[-1] %in% group)
-  aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
-  # stimpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
-  stimpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
-}
-names(stim) <- paste(names(stim), "pvalue:", round(stimpvals, 4))
-
-
-parent <- sapply(strsplit(subsets, "/"), function(x) x[2])
-parentnames <- unique(parent)
-parent <- lapply(parentnames, function(x) subsets[parent %in% x])
-names(parent) <- parentnames
-parentpvals <- numeric(length(parent))
-for(i in 1:length(parent)) {
-  group <- parent[[i]]
-  sub <- which(names(fit$posteriors)[-1] %in% group)
-  aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
-  # parentpvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
-  parentpvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
-}
-names(parent) <- paste(names(parent), "pvalue:", round(parentpvals, 4))
-
-stimparent  <- sapply(strsplit(subsets, "/"), function(x) paste(x[1:2], collapse = "/"))
-stimparentnames <-unique(stimparent)
-stimparent <- lapply(stimparentnames, function(x) subsets[stimparent %in% x])
-names(stimparent) <- stimparentnames
-sppvals  <- numeric(length(stimparent))
-for(i in 1:length(stimparent)) {
-  group <- stimparent[[i]]
-  sub <- which(names(fit$posteriors)[-1] %in% group)
-  aggregate <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x[sub], weightList[[1]][sub]))
-  # sppvals[i] <- summary(glm(hiv ~ aggregate, family = "binomial"))$coefficients[2, 4] / 2
-  sppvals[i] <- wilcox.test(aggregate[hiv == 1], aggregate[hiv == 0], alternative = "less")$p.value
-}
-names(stimparent) <- paste(names(stimparent), "pvalue:", round(sppvals, 4))
-
-infection <- hiv
-infection[hiv == 0] <- "NON-INFECTED"
-infection[hiv == 1] <- "INFECTED"
-infection[is.na(hiv)] <- "PLACEBO"
-infection <- factor(infection, levels = c("PLACEBO", "INFECTED", "NON-INFECTED"))
-stimbox <- plot(fit, type = "boxplot", groups = stim,
-                weights = weightList, ncol = 2,
-                target = infection)
+stimgroups <- lapply(split(subsetDat$subset, subsetDat$stimGroup), unique)
+stimbox <- plot(fit, type = "boxplot", target = hiv,
+                groups = stimgroups, weights = weightList,
+                test = "wilcoxon", jitter = FALSE,
+                ncol = 2, one_sided = TRUE)
 stimbox
 # save_plot("figures/hvtnStimBox2.pdf", stimbox,
 #           base_width = 9, base_height = 6)
-parentbox <- plot(fit, type = "boxplot", groups = parent,
-                  weights = weightList, ncol = 2,
-                  target = infection)
+
+parents <- lapply(split(subsetDat$subset, subsetDat$parent), unique)[-1]
+parentbox <- plot(fit, type = "boxplot", target = hiv,
+                  groups = parents, weights = weightList,
+                  test = "wilcoxon", jitter = FALSE,
+                  ncol = 2)
 parentbox
 # save_plot("figures/hvtnParentBox2.pdf", parentbox,
 #           base_width = 9, base_height = 5)
 
-parentstimbox <- plot(fit, type = "boxplot", groups = stimparent,
-                      weights = weightList, ncol = 3, target = infection)
-parentstimbox
+stimparent <- lapply(split(subsetDat$subset, paste(subsetDat$stimGroup, subsetDat$parent, sep = "/")), unique)
+stimparentbox <- plot(fit, type = "boxplot", target = hiv,
+                      groups = stimparent, weights = weightList,
+                      test = "wilcoxon", jitter = FALSE,
+                      ncol = 2)
+stimparentbox
 # save_plot("figures/hvtnParentStimBox2.pdf", parentstimbox,
 #           base_width = 10, base_height = 8)
 
-allbox <- plot(fit, type = "boxplot", groups = "all", target = hiv,
-               test = "logistic", weights = weightList, one_sided = TRUE)
-allbox
-# save_plot("figures/hvtnAllBox.pdf", parentstimbox,
-#           base_width = 10, base_height = 8)
-
-
-# all <- list()
-# all[[1]] <- names(fit$posteriors)[-1]
-# poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weightList[[1]]))
-# allpval <- summary(glm(hiv ~ poly, family = "binomial"))$coefficients[2, 4] / 2
-# names(all) <- paste("All Subsets, p-value:", round(allpval, 4))
-# allboxplot <- plot(fit, target = hiv, type = "boxplot", groups = all)
-# save_plot("figures/HVTNallboxplot.pdf", allboxplot)
-
-# Stability selection for graphical model ------------------------
-# load("data analysis/results/HVTNising2.Robj")
-# stability <- stabilityGraph(fit, type = "ising", reps = 50, cpus = 2, gamma = 0.25)
-# save(stability, file = "data analysis/results/HVTN bool robust graph4.Robj")
-load("data analysis/results/HVTNising7setting3.Robj")
-colnames(stability$network) <- colnames(fit$posteriors)[-1]
-isingplot <- plot(stability,
-                  fill = rocResults$auc,
-                  threshold = 0.82)
-isingplot
-# save_plot("figures/HVTNising2.pdf", isingplot,
-#           base_width = 9, base_height = 5)
-
-load("data analysis/results/HVTNrand2.Robj")
-randplot <- plot(randStability, fill = rocResults$auc,
-                  threshold = 0.9)
-randplot
-# save_plot("figures/HVTNrand2.pdf", isingplot,
-#           base_width = 7, base_height = 5)
 
 # Boxplots for graph clusters -----------
 groups <- getGraphComponents(stability, threshold = 0.65, minsize = 4)
