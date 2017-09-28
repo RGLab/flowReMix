@@ -1,32 +1,47 @@
+#' @name plot
+#' @title plot a flowReMix fit object
+#' @description Generate a plot of a flowReMix model fit. Various plot types are supported.
+#' "scatter", "boxplot", "FDR", "ROC", "ising"
+#' @param obj The model fit of class \code{flowReMix} returned by the fitting function.
+#' @param type the type of plot to make, one of c("scatter","boxplot","FDR","ROC","graph")
+#' @param ... additional arguments.
+#' @param target the name of the outcome variable as an unquoted variable.
+#' @param varname the variable name to appear in the legend
 #' @export
-plot.flowReMix <- function(obj, target = NULL, varname = NULL,
-                           type = c("scatter", "boxplot", "FDR", "ROC", "ising"), ...) {
-  if(!is.null(target) & is.null(varname)) {
-    varname <- as.character(match.call()$target)
-    varname <- varname[length(varname)]
+plot.flowReMix <- function(obj,...){
+  mc = match.call()
+  if(!is.null(mc$target)){
+    target = mc$target
+    target = enquo(target)
+    subject_id = obj$subject_id
+    target = obj$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup%>%select(outcome)%>%unlist%>%factor
+    mc$target = target
   }
+  type = mc$type
+  mc$type = NULL
 
-  if(is.null(target)) {
-    target <- rep(1, nrow(obj$posteriors))
-  }
-
-  type <- type[1]
   if(type == "FDR") {
-    table <- fdrTable(obj, target)
-    return(plot(table, target = target, varname = varname, ...))
+    table <- fdrTable(obj, target = target)
+    mc[[1]] = as.name("plot")
+    mc$obj = table
+    mc$target = NULL
+    return(eval(mc))
   } else if(type == "ROC") {
-    return(plotROC(obj, target = target, varname = varname, ...))
+    mc[[1]] = as.name("plotROC")
+    eval(mc)
   } else if(type == "scatter") {
-    return(plotScatter(obj, target = target, varname = varname, ...))
+    mc[[1]] = as.name("plotScatter")
+    eval(mc)
   } else if(type == "boxplot") {
-    return(plotBoxplot(obj, target = target, varname = varname, ...))
+    mc[[1]] = as.name("plotBoxplot")
+    eval(mc)
   } else if(type == "graph") {
+    mc[[1]] = as.name("plotRawGraph")
+    mc$target=NULL
     if(!is.null(match.call()$fill) & is.null(match.call()$fillName)) {
-      fillName <- as.character(match.call()$fill)
-      fillName <- fillName[length(fillName)]
-      return(plotRawGraph(obj, fillName = fillName, ...))
+      eval(mc)
     } else {
-      return(plotRawGraph(obj, ...))
+      eval(mc)
     }
   }
 }
@@ -37,7 +52,7 @@ plot.flowReMix <- function(obj, target = NULL, varname = NULL,
 #' @description summarize the output of a flowReMix object into a rocTable
 #' Uses non-standard evaluation
 #' @param subject the name of the subject variable, as an unquoted variable
-#' @param target the name of the outcome variable as an unquoted variable. Default is outcome.
+#' @param target the name of the outcome variable as an unquoted variable.
 #' @param type either "ROC" or "FDR".
 #' @export
 summary.flowReMix <- function(obj, ...) {
