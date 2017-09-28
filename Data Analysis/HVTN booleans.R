@@ -215,7 +215,7 @@ load(file = "data analysis/results/hvtnAggreageStability1.Robj")
 stab <- stability
 ising <- plot(stab, threshold = 0.85, fill = rocResults$auc)
 ising
-ising <- plot(stab, threshold = 0.928, fill = infectROC$auc)
+ising <- plot(stab, threshold = 0.85, fill = infectROC$auc)
 ising
 
 library(cowplot)

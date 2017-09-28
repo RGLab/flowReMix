@@ -115,7 +115,8 @@ rocResult$qvalue[select] <- p.adjust(rocResult$pvalue[select], method = "BH")
 (rocResult[order(rocResult$auc, decreasing = TRUE), ])
 
 # Plotting raw graphs ------------------
-plot(fit, type = "graph", graph = "ising", threshold = 0.75)
+plot(fit, type = "graph", graph = "ising", threshold = 0.95,
+     count = FALSE, fill = rocResult$auc)
 
 # Boxplots ---------------------------
 weights <- list()
