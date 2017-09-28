@@ -25,23 +25,23 @@ plot.flowReMix <- function(obj,...){
     mc[[1]] = as.name("plot")
     mc$obj = table
     mc$target = NULL
-    return(eval(mc))
+    return(eval(mc,envir = parent.frame()))
   } else if(type == "ROC") {
     mc[[1]] = as.name("plotROC")
-    eval(mc)
+    return(eval(mc,envir = parent.frame()))
   } else if(type == "scatter") {
     mc[[1]] = as.name("plotScatter")
-    eval(mc)
+    return(eval(mc,envir = parent.frame()))
   } else if(type == "boxplot") {
     mc[[1]] = as.name("plotBoxplot")
-    eval(mc)
+    return(eval(mc,envir = parent.frame()))
   } else if(type == "graph") {
     mc[[1]] = as.name("plotRawGraph")
     mc$target=NULL
     if(!is.null(match.call()$fill) & is.null(match.call()$fillName)) {
-      eval(mc)
+      return(eval(mc,envir = parent.frame()))
     } else {
-      eval(mc)
+      return(eval(mc,envir = parent.frame()))
     }
   }
 }
@@ -74,7 +74,7 @@ summary.flowReMix <- function(obj, ...) {
   if(is.null(mc$type)){
     type = "ROC"
   }else{
-    type = eval(mc$type)
+    type = eval(mc$type,envir=parent.frame())
   }
   type = match.arg(type,c("FDR","ROC"))
   if(!exists("data",fit)){
@@ -105,7 +105,7 @@ summary.flowReMix <- function(obj, ...) {
     mc$type = NULL
     mc[[1]]=as.name("rocTable")
     mc$target = outcome
-    eval(mc)
+    eval(mc, envir=parent.frame())
     # return(rocTable(obj, outcome, type=type,...))
   } else if(type == "FDR") {
     return(fdrTable(obj, ifelse(is.factor(outcome),outcome,factor(outcome))))
