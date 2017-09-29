@@ -14,7 +14,13 @@ plot.flowReMix <- function(obj,...){
     target = mc$target
     target = enquo(target)
     subject_id = obj$subject_id
-    target = obj$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup%>%select(outcome)%>%unlist%>%factor
+    target = obj$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup#%>%select(outcome)%>%unlist%>%factor
+    target <- as.data.frame(target)
+    target[, 1] <- as.character(target[, 1])
+    post <- obj$posteriors[, 1:2]
+    post[, 1] <- as.character(post[, 1])
+    target <- merge(post, target)
+    target <- target[, 3]
     mc$target = target
   }
   type = mc$type
@@ -45,7 +51,6 @@ plot.flowReMix <- function(obj,...){
     }
   }
 }
-
 
 #' @name summary
 #' @title summary of a flowReMix fit

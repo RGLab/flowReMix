@@ -1,4 +1,4 @@
-cpus <- 15
+cpus <- 8
 print(cpus)
 
 args <- commandArgs(TRUE)

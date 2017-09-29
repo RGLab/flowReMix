@@ -96,7 +96,7 @@ control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 1,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = round(40 / npost), isingInit = -log(99),
                              initMethod = "sparse",
-                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 10)))
+                             preAssignCoefs = 0)
 
 tempdat$stim <- tempdat$stimtemp
 tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
@@ -109,7 +109,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  data = tempdat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "sparse",
+                 regression_method = "robust",
                  cluster_assignment = preAssign,
                  iterations = 25,
                  parallel = TRUE,
@@ -151,7 +151,7 @@ rocTable <- summary(fit, type = "ROC", test = "wilcoxon",
                     target = type)
 rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
-level <- 0.1
+level <- .99
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
 select <- nresponders[1, ] < level
 rocTable$qvalue <- NA

@@ -28,9 +28,9 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 booldata <- subset(booldata, !is.na(Subset))
 allsubset <- booldata
 booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
-booldata <- merge(booldata, data.frame(ptid = correlates$ptid,
-                                       IgAprim = correlates$IgAprim,
-                                       V2prim = correlates$V2prim))
+# booldata <- merge(booldata, data.frame(ptid = correlates$ptid,
+#                                        IgAprim = correlates$IgAprim,
+#                                        V2prim = correlates$V2prim))
 
 # Naming ------------------
 subsets <- unique(booldata$Subset)
@@ -114,7 +114,7 @@ add_ptid <- function(x, subject_id) {
   return(x)
 }
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_1_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_2_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
 post <- list()
@@ -137,7 +137,7 @@ fit$posteriors[, -1] <- post
 #   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
 # }
 
-plot(fit, type = "scatter", target = vaccine)
+scatter <- plot(fit, type = "scatter", target = vaccine)
 
 # ROC for vaccinations -----------------------------
 # sink("data analysis/results/RV144logisticSummary.txt")
@@ -169,7 +169,7 @@ infectDat <- infectDat[infectID %in% datId, ]
 infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
 infectDat <- infectDat[order(infectDat$ptid), ]
 ids <- merge(ids, infectDat, sort = FALSE)
-infect <- ids[, 5]
+infect <- ids[, 4]
 infect[infect == "PLACEBO"] <- NA
 infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
@@ -192,6 +192,9 @@ polyAUC <- roc(infect ~ poly)$auc
 n0 <- sum(infect == "INFECTED", na.rm = TRUE)
 n1 <- sum(infect == "NON-INFECTED", na.rm = TRUE)
 pwilcox(polyAUC * n0 * n1, n0, n1, lower.tail = FALSE)
+
+plot(fit, type = "boxplot", target = hiv, test = "wilcoxon",
+     one_sided = TRUE, groups = "all", jitter = TRUE)
 
 roc(vaccination ~ func)$auc
 roc(vaccination ~ poly)$auc
