@@ -82,7 +82,7 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
                              ncores = 2,
-                             preAssignCoefs = seq(from = 1, to = 0.05, length.out = 6),
+                             preAssignCoefs = seq(from = 1, to = .2, length.out = 6),
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -99,7 +99,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/local_rv144_5percent.Robj")
+save(fit, file = "data analysis/results/local_rv144_20percent.Robj")
 # plot(fit, type = "scatter")
 
 add_ptid <- function(x, subject_id) {
