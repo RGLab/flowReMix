@@ -90,12 +90,8 @@ wide <- merge(subctrl, substim, by = c("ptid", "subset"))
 #   theme_bw()
 # dev.off()
 
-configurations <- expand.grid(npost = c(10, 20, 40),
-                              niter = c(20, 30, 40))
-config <- configurations[setting, ]
-npost <- as.numeric(config[1])
-niter <- as.numeric(config[2])
-
+npost <- 40
+niter <- 40
 
 # Analysis ----------------------------------
 control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoef = 1,
@@ -104,7 +100,7 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = round(40 / npost), isingInit = -log(99),
                              initMethod = "robust",
-                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 10)),
+                             preAssignCoefs = 0,
                              ncores = ncores)
 
 tempdat$stim <- tempdat$stimtemp
@@ -124,7 +120,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/TBdat1_npost", npost, "_niter", niter, ".Robj", sep ="")
+file <- paste("results/TBdat2_seed", setting, ".Robj", sep ="")
 save(fit, file = file)
 
 

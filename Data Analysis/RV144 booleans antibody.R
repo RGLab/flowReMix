@@ -94,8 +94,9 @@ control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 2.5,
                              preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 10)))
 
 booldata$subset <- factor(booldata$subset)
-preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+booldata <- subset(booldata, !is.na(V2prim))
+# preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+fit <- flowReMix(cbind(count, parentcount - count) ~ stim + treatment * ,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = treatment,
@@ -104,7 +105,6 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  ising_model = "sparse",
                  regression_method = "robust",
                  iterations = 20,
-                 cluster_assignment = preAssignment,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 # plot(fit, type = "scatter")

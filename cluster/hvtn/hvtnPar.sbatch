@@ -8,7 +8,7 @@
 #SBATCH -e flowout.out
 #SBATCH --mail-type=ALL       # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=amitmeir@uw.edu # Email to which notifications will be sent
-#SBATCH --array=1-6
+#SBATCH --array=1-10
 
 module load R
 

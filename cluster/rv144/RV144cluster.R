@@ -52,11 +52,8 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
-configurations <- expand.grid(npost = c(10, 20, 40),
-                              niter = c(20, 35, 50))
-config <- configurations[setting, ]
-npost <- config[[1]]
-niter <- config[[2]]
+npost <- 20
+niter <- 40
 
 # Analysis -------------
 library(flowReMix)
@@ -66,7 +63,7 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
                              ncores = cpus,
-                             preAssignCoefs = c(1, 0.5, 0, seq(from = 0, to = 0.5, length.out = 15)),
+                             preAssignCoefs = 0,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -84,5 +81,5 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 
-file <- paste("results/rv144_1_npost", npost, "niter", niter, ".Robj", sep = "")
+file <- paste("results/rv144_2_setting", setting, ".Robj", sep = "")
 save(fit, file = file)

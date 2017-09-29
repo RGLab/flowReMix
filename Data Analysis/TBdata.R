@@ -114,22 +114,13 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  iterations = 25,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
-# load(file = "data analysis/results/TBsep5.Robj")
-# load(file = "data analysis/results/TBsep7robust.Robj")
-# load(file = "data analysis/results/TBsep8robust.Robj")
-# load(file = "data analysis/results/TBsep14withPmedium.Robj")
-# load(file = "data analysis/results/TBsep13withPshort.Robj")
-# load(file = "data analysis/results/TBsep12withPlonger.Robj")
-load(file = "data analysis/results/TBdat1_npost10_niter30.Robj")
-load(file = "data analysis/results/TBdat1_npost10_niter20.Robj")
-load(file = "data analysis/results/TBdat1_npost20_niter30.Robj")
 
 add_ptid <- function(x, subject_id) {
   x$subject_id <- match.call()$subject_id
   return(x)
 }
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat1_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat2_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
 
 post <- list()
@@ -160,7 +151,7 @@ rocTable <- summary(fit, type = "ROC", test = "wilcoxon",
                     target = type)
 rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
-level <- 0.99
+level <- 0.1
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
 select <- nresponders[1, ] < level
 rocTable$qvalue <- NA
@@ -196,7 +187,7 @@ weights <- list()
 weights$weightedAvg <- apply(fit$posteriors[, -1], 2, sd)
 
 allbox <- plot(fit, type = "boxplot",
-                target = outcome, #weights = weights,
+                target = type, #weights = weights,
                 test = "wilcoxon",
                 one_sided = TRUE,
                 groups = "all", jitter = TRUE)
@@ -212,7 +203,7 @@ allbox
 # names(stimgroups) <- stimnames
 stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
 stimbox <- plot(fit, type = "boxplot", #weights = weights,
-                target = outcome, test = "wilcoxon",
+                target = type, test = "wilcoxon",
                 one_sided = TRUE,
                 jitter = TRUE,
                 groups = stimgroups)
@@ -226,7 +217,8 @@ stimbox
 # names(cellgroups) <- cellnames
 cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
 
-cellbox <- plot(fit, type = "boxplot", target = outcome, test = "wilcoxon",
+cellbox <- plot(fit, type = "boxplot",
+                target = type, test = "wilcoxon",
      groups = cellgroups, ncol = 3, #weights = weights,
      jitter=TRUE)
 cellbox
@@ -241,7 +233,8 @@ stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
 
 stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
 
-scboxplot <- plot(fit, type = "boxplot", target = outcome, test = "wilcoxon",
+scboxplot <- plot(fit, type = "boxplot",
+                  target = type, test = "wilcoxon",
                   #weights = weights,
                   groups = stimcell, ncol = 4, jitter=TRUE)
 scboxplot

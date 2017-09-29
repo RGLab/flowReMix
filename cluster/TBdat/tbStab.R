@@ -1,7 +1,7 @@
 library(flowReMix)
 ncpus <- 15
 
-filenames <- as.list(dir(path = 'results', pattern="TBdat1_*"))
+filenames <- as.list(dir(path = 'results', pattern="TBdat2_*"))
 filenames <- lapply(filenames, function(x) paste0('results/', x))
 
 post <- list()
@@ -20,10 +20,12 @@ fit$posteriors[, -1] <- post
 fit$randomEffectSamp <- random
 fit$assignmentList <- assign
 
-stability <- stabilityGraph(fit, type = "ising", cv = TRUE, reps = 1000,
+stability <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 1000,
+                            gamma = 0.25,
                             cpus = ncpus, AND = TRUE)
-save(stability, file = "results/tbAggreageStability1.Robj")
+save(stability, file = "results/tbAggStab2.Robj")
 
-stability <- stabilityGraph(fit, type = "randomEffects", cv = TRUE, reps = 1000,
+stability <- stabilityGraph(fit, type = "randomEffects", cv = FALSE, reps = 1000,
+                            gamma = 0.25,
                             cpus = ncpus, AND = TRUE)
-save(stability, file = "results/tbAggreageRandom1.Robj")
+save(stability, file = "results/tbAggRand2.Robj")

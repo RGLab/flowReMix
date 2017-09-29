@@ -4,6 +4,7 @@ print(cpus)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
+set.seed(setting)
 
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
@@ -116,10 +117,8 @@ keep <- names(keep[sapply(keep, function(x) x)])
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
-config <- expand.grid(npost = c(15, 20, 25),
-                      niter = c(36, 48))
-npost <- config[setting, 1]
-niter <- config[setting, 2]
+npost <- 10
+niter <- 40
 updateLag <- round(niter / 2)
 
 # Fitting the model ------------------------------
@@ -130,7 +129,7 @@ control <- flowReMix_control(updateLag = updateLag, nsamp = 100, initMHcoef = 2.
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = round(50 / npost), isingInit = -log(99),
                              ncores = cpus,
-                             preAssignCoefs = c(1, 0.5, seq(from = 0, to = 0.6, length.out = updateLag - 3)),
+                             preAssignCoefs = 0,
                              initMethod = "robust")
 
 subsetDat$batch <- factor(subsetDat$batch..)
@@ -149,5 +148,5 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
-filename <- paste("results/HVTNclust9", "npost", npost, "niter", niter, ".Robj", sep ="")
+filename <- paste("results/HVTNclust10", "_", setting, ".Robj", sep ="")
 save(fit, file = filename)
