@@ -52,6 +52,51 @@ plot.flowReMix <- function(obj,...){
   }
 }
 
+#' @export
+plotflowReMix <- function(obj,...){
+  mc = match.call()
+  if(!is.null(mc$target)){
+    target = mc$target
+    target = enquo(target)
+    subject_id = obj$subject_id
+    target = obj$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup#%>%select(outcome)%>%unlist%>%factor
+    target <- as.data.frame(target)
+    target[, 1] <- as.character(target[, 1])
+    post <- obj$posteriors[, 1:2]
+    post[, 1] <- as.character(post[, 1])
+    target <- merge(post, target)
+    target <- target[, 3]
+    mc$target = target
+  }
+  type = mc$type
+  mc$type = NULL
+
+  if(type == "FDR") {
+    table <- fdrTable(obj, target = target)
+    mc[[1]] = as.name("plot")
+    mc$obj = table
+    mc$target = NULL
+    return(eval(mc,envir = parent.frame()))
+  } else if(type == "ROC") {
+    mc[[1]] = as.name("plotROC")
+    return(eval(mc,envir = parent.frame()))
+  } else if(type == "scatter") {
+    mc[[1]] = as.name("plotScatter")
+    return(eval(mc,envir = parent.frame()))
+  } else if(type == "boxplot") {
+    mc[[1]] = as.name("plotBoxplot")
+    return(eval(mc,envir = parent.frame()))
+  } else if(type == "graph") {
+    mc[[1]] = as.name("plotRawGraph")
+    mc$target=NULL
+    if(!is.null(match.call()$fill) & is.null(match.call()$fillName)) {
+      return(eval(mc,envir = parent.frame()))
+    } else {
+      return(eval(mc,envir = parent.frame()))
+    }
+  }
+}
+
 #' @name summary
 #' @title summary of a flowReMix fit
 #' @description summarize the output of a flowReMix object into a rocTable

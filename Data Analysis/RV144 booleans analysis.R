@@ -1,8 +1,3 @@
-cpus <- 7
-args <- commandArgs(TRUE)
-eval(parse(text=args[[1]]))
-setting <- as.numeric(setting)
-
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
   assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
@@ -68,26 +63,14 @@ correlates <- rv144_correlates_data
 correlates <- correlates[order(as.character(correlates$PTID)), ]
 infection <- correlates$infect.y
 names(correlates)[1] <- "ptid"
-vaccine <- correlates[, c(1, 62)]
-infect <- correlates[, c(1, 64)]
-booldata <- merge(booldata, vaccine)
-booldata <- merge(booldata, infect)
+vaccine <- correlates[, c(1, 62, 64)]
+vaccine$ptid <- factor(vaccine$ptid, levels = levels(booldata$ptid))
+booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE), ])
+booldata <- merge(booldata, vaccine, sort = FALSE)
 booldata$hiv <- NA
 booldata$hiv[booldata$infect.y == "INFECTED"] <- TRUE
 booldata$hiv[booldata$infect.y == "NON-INFECTED"] <- FALSE
-
-
-# Converting low counts to booleans --------------
-countByPop <- by(booldata, booldata$subset, function(x) max(x$count / x$parentcount) < 10^-3 / 2)
-countByPop <- by(booldata, booldata$subset, function(x) {
-  if(max(x$count / x$parentcount) < 10^-3 / 2) {
-    x$count <- as.numeric(x$count > 0)
-    x$parentcount <- 1
-  }
-  return(x)
-})
-# booldata <- do.call("rbind", countByPop)
-
+booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE), ])
 
 # Analysis -------------
 library(flowReMix)
@@ -99,12 +82,11 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
                              ncores = 2,
-                             preAssignCoefs = seq(from = 1, to = 0.01, length.out = 6),
+                             preAssignCoefs = seq(from = 1, to = 0.05, length.out = 6),
                              initMethod = "robust")
 
-# booldata$subset <- factor(booldata$subset)
-# preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-# preAssignment <- preAssignment[order(preAssignment$ptid, preAssignment$subset), ]
+booldata$subset <- factor(booldata$subset)
+preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              subject_id = ptid,
                              cell_type = subset,
@@ -117,7 +99,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/local_rv144_1percent.Robj")
+save(fit, file = "data analysis/results/local_rv144_5percent.Robj")
 # plot(fit, type = "scatter")
 
 add_ptid <- function(x, subject_id) {
@@ -150,7 +132,8 @@ fit$posteriors[, -1] <- post
 # }
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
-rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
+rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "auto")
+rocplot
 
 
 # ROC for vaccinations -----------------------------
