@@ -140,6 +140,8 @@ fit$posteriors[, -1] <- post
 # }
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
+rocplot <- plot(fit, type = "ROC", target = vaccine)
+
 
 # ROC for vaccinations -----------------------------
 # sink("data analysis/results/RV144logisticSummary.txt")
