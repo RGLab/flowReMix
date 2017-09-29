@@ -165,8 +165,9 @@ sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 
 # Graph -----------------
 load(file = "data analysis/results/tbAggreageStability1.Robj")
+load(file = "data analysis/results/tbAggStab2.Robj")
 stab <- stability
-plot(stab, threshold = 0.5, fill = rocTable$auc)
+plot(stab, threshold = 0.25, fill = rocTable$auc)
 
 # Boxplot by graph clusters -------------
 # groups <- getGraphComponents(stability, threshold = 0.5, minsize = 3)

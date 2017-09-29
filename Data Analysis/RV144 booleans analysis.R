@@ -1,3 +1,8 @@
+cpus <- 7
+args <- commandArgs(TRUE)
+eval(parse(text=args[[1]]))
+setting <- as.numeric(setting)
+
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
   assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
@@ -8,7 +13,7 @@ assign <- function(x) {
 
 require(pROC)
 require(reshape2)
-data("rv144_booleans")
+load("data/rv144_booleans.rda")
 bySubset <- by(data.frame(booleans$stim, booleans$nonstim), booleans$Subset, function(x) x)
 largerThanThershold <- sapply(bySubset, function(x) colSums(x >5))
 
@@ -28,9 +33,6 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 booldata <- subset(booldata, !is.na(Subset))
 allsubset <- booldata
 booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
-# booldata <- merge(booldata, data.frame(ptid = correlates$ptid,
-#                                        IgAprim = correlates$IgAprim,
-#                                        V2prim = correlates$V2prim))
 
 # Naming ------------------
 subsets <- unique(booldata$Subset)
@@ -39,7 +41,7 @@ nfunctions <- numeric(length(subsets))
 for(i in 1:length(subsets)) {
   split <- strsplit(as.character(subsets[i]), "&")[[1]]
   first <- substr(split, 1, 1)
-  nfunctionIg <- sum(first != "!")
+  nfunction <- sum(first != "!")
   nfunctions[i] <- nfunction
   name <- paste(split[first != "!"], collapse = ",")
   booldata$nfunction[booldata$Subset == subsets[[i]]] <- nfunction
@@ -47,7 +49,11 @@ for(i in 1:length(subsets)) {
 }
 subsets <- unique(booldata$Subset)
 booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
+# booldata <- merge(booldata, data.frame(ptid = correlates$ptid,
+#                                        IgAprim = correlates$IgAprim,
+#                                        V2prim = correlates$V2prim))
 names(booldata) <- tolower(names(booldata))
+
 
 # Getting vaccine information --------------------
 data("rv144")
@@ -85,17 +91,20 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
+npost <- 1
+niter <- 16
 control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
-                             ncores = cpus,
-                             preAssignCoefs = 0,
+                             ncores = 2,
+                             preAssignCoefs = seq(from = 1, to = 0.01, length.out = 6),
                              initMethod = "robust")
 
-booldata$subset <- factor(booldata$subset)
-preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+# booldata$subset <- factor(booldata$subset)
+# preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+# preAssignment <- preAssignment[order(preAssignment$ptid, preAssignment$subset), ]
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              subject_id = ptid,
                              cell_type = subset,
@@ -108,7 +117,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
-
+save(fit, file = "data analysis/results/local_rv144_1percent.Robj")
 # plot(fit, type = "scatter")
 
 add_ptid <- function(x, subject_id) {
@@ -141,7 +150,7 @@ fit$posteriors[, -1] <- post
 # }
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
-rocplot <- plot(fit, type = "ROC", target = vaccine)
+rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
 
 
 # ROC for vaccinations -----------------------------
@@ -277,12 +286,13 @@ regResult$aucQval <- p.adjust(regResult$aucPval, method = "BH")
 regResult[order(regResult[, 2], decreasing = FALSE), ]
 
 # Stability Graph --------------------------
-load(file = "data analysis/results/rv144AggreageStability1.Robj")
+load(file = "data analysis/results/rv144AggreageStability2.Robj")
+load(file = "data analysis/results/rv144AggStab2.Robj")
 stab <- stability
-stabPlot <- plot(stab, fill = rocResults$auc, threshold = .95)
+stabPlot <- plot(stab, fill = rocResults$auc, threshold = .9)
 stabPlot
 plot(stab, fill = infectResults$auc, threshold = .95)
-save_plot(stabPlot, filename = "figures/rv144IsingStb1.pdf",
+save_plot(stabPlot, filename = "figures/rv144IsingStb2hard.pdf",
           base_width = 7, base_height = 6)
 
 

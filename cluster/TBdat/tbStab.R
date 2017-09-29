@@ -1,7 +1,7 @@
 library(flowReMix)
 ncpus <- 15
 
-filenames <- as.list(dir(path = 'results', pattern="TBdat2_*"))
+filenames <- as.list(dir(path = 'results', pattern="TBdat1_*"))
 filenames <- lapply(filenames, function(x) paste0('results/', x))
 
 post <- list()
@@ -23,9 +23,9 @@ fit$assignmentList <- assign
 stability <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 1000,
                             gamma = 0.25,
                             cpus = ncpus, AND = TRUE)
-save(stability, file = "results/tbAggStab2.Robj")
+save(stability, file = "results/tbAggStab3soft.Robj")
 
 stability <- stabilityGraph(fit, type = "randomEffects", cv = FALSE, reps = 1000,
                             gamma = 0.25,
                             cpus = ncpus, AND = TRUE)
-save(stability, file = "results/tbAggRand2.Robj")
+save(stability, file = "results/tbAggRand3soft.Robj")
