@@ -117,6 +117,7 @@ add_ptid <- function(x, subject_id) {
 }
 
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_2_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_1_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
 post <- list()
