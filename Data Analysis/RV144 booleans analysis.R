@@ -85,28 +85,30 @@ countByPop <- by(booldata, booldata$subset, function(x) {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 6, nsamp = 100, initMHcoef = 2.5,
-                             nPosteriors = 1, centerCovariance = TRUE,
-                             maxDispersion = 10^3, minDispersion = 10^7,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoef = 2.5,
+                             nPosteriors = npost, centerCovariance = FALSE,
+                             maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
-                             initMethod = "robust",
-                             preAssignCoefs = c(0.95, 0.5, seq(from = 0, to = 0.5, length.out = 10)))
+                             ncores = cpus,
+                             preAssignCoefs = 0,
+                             initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
-                 subject_id = ptid,
-                 cell_type = subset,
-                 cluster_variable = treatment,
-                 data = booldata,
-                 covariance = "sparse",
-                 ising_model = "sparse",
-                 regression_method = "robust",
-                 iterations = 20,
-                 cluster_assignment = preAssignment,
-                 parallel = TRUE,
-                 verbose = TRUE, control = control)
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+                             subject_id = ptid,
+                             cell_type = subset,
+                             cluster_variable = treatment,
+                             data = booldata,
+                             covariance = "sparse",
+                             ising_model = "sparse",
+                             regression_method = "robust",
+                             iterations =  niter,
+                             cluster_assignment = preAssignment,
+                             parallel = TRUE,
+                             verbose = TRUE, control = control))
+
 # plot(fit, type = "scatter")
 
 add_ptid <- function(x, subject_id) {
