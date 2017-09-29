@@ -156,38 +156,23 @@ preAssign <- do.call("rbind", preAssign)
 #   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
 # }
 
-
-load(file = "data analysis/results/HVTNclust8npost5niter48.Robj")
-load(file = "data analysis/results/HVTNclust8npost1niter36.Robj")
-load(file = "data analysis/results/HVTNclust8npost1niter48.Robj")
-load(file = "data analysis/results/HVTNclust8npost10niter48.Robj")
-load(file = "data analysis/results/HVTNclust8npost10niter36.Robj")
-
 add_ptid <- function(x, subject_id) {
   x$subject_id <- match.call()$subject_id
   return(x)
 }
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust8_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust10_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
 post <- list()
-random <- list()
-assign <-list()
 for(i in 1:length(filenames)) {
   load(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
-  random[[i]] <- fit$randomEffectSamp
-  assign[[i]] <- fit$assignmentList
 }
 post <- Reduce("+", post) / length(filenames)
-assign <- do.call("c", assign)
-random <- do.call("c", random)
 fit$data <- subsetDat
 fit <- add_ptid(fit, ptid)
 fit$posteriors[, -1] <- post
-fit$randomEffectSamp <- random
-fit$assignmentList <- assign
 
 # ROC plots -----------------------------
 require(pROC)
