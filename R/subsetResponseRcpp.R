@@ -315,6 +315,9 @@ flowReMix <- function(formula,
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
   markovChainEM <- control$markovChainEM
+  if(!is.null(control$seed)){
+    set.seed(control$seed)
+  }
 
   if(parallel) {
     if(is.null(ncores)) {
