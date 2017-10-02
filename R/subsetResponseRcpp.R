@@ -1,5 +1,24 @@
 #' @useDynLib flowReMix
 #' @importFrom Rcpp sourceCpp
+#'
+
+# autoPreAssign <- function(x) {
+#   y <- x$y
+#   N <- x$N
+#   prop <- y / N
+#   stim <- y$treatment
+#   if(!is.factor(stim)) {
+#     assign <- as.numeric(by(x, x$subset, function(y) -1)
+#   } else {
+#     baseline <- levels(stim)[1]
+#     assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
+#   }
+#   assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
+#   assign[assign == 1] <- -1
+#   result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
+#   return(result)
+# }
+
 
 randomizeAssignments <- function(x, prob = 0.5) {
   if(runif(1) < prob) {
@@ -315,6 +334,8 @@ flowReMix <- function(formula,
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
   markovChainEM <- control$markovChainEM
+  prior <- control$prior
+
   if(!is.null(control$seed)){
     set.seed(control$seed)
   }
@@ -904,7 +925,8 @@ flowReMix <- function(formula,
                                            unifVec, normVec,
                                            M, betaDispersion,
                                            as.integer(subjectData$pre$assign),
-                                           randomAssignProb, modelprobs, iterAssignCoef)
+                                           randomAssignProb, modelprobs, iterAssignCoef,
+                                           prior)
       }
 
       unifVec <- runif(nsamp * nSubsets)
@@ -1137,5 +1159,8 @@ flowReMix <- function(formula,
   result$subject_id <- match.call()$subject_id
   return(result)
 }
+
+
+
 
 
