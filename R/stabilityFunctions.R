@@ -70,7 +70,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
                          fill = NULL, fillName = NULL,
                          fillRange = NULL, fillPalette = NULL,
                          title = TRUE, normalize = FALSE,
-                         count = TRUE, label_size = 1.8) {
+                         count = TRUE, label_size = 1.8,seed=100) {
   if(graph == "ising") {
     ising <- obj$isingAvg
     if(count) {
@@ -118,7 +118,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
   figure <- plot.flowReMix_stability(network, threshold = threshold, plotAll = plotAll,
                                      fill = fill, fillRange = fillRange, fillPalette = fillPalette,
                                      fillName = fillName,
-                                     title = title, label_size = label_size)
+                                     title = title, label_size = label_size, seed=seed)
   return(figure)
 }
 
@@ -126,7 +126,8 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
                                      fill = NULL, fillName = NULL,
                                      fillRange = NULL, fillPalette = NULL,
-                                     title = TRUE, label_size = 1.8) {
+                                     title = TRUE, label_size = 1.8,seed=100) {
+  set.seed(seed)
   require(ggplot2)
   measure <- fill
   props <- obj$network
