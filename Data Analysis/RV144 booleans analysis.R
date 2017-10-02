@@ -83,7 +83,7 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
                              lastSample = 20, isingInit = -log(99),
                              ncores = 2,
                              preAssignCoefs = c(1, 0, 0, 1),
-                             prior = 0,
+                             prior = 4.5,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)

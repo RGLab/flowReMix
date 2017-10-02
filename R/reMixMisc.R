@@ -67,7 +67,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  ncores = ncores,
                  preAssignCoefs = preAssignCoefs,
                  markovChainEM = markovChainEM,
-                 prior = prior)
+                 prior = abs(prior))
   class(object) <- "flowReMix_control"
   return(object)
 }

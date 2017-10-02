@@ -116,7 +116,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector dispersion, bool betaDispersion,
                                 IntegerVector preAssignment,
                                 double randomAssignProb,
-                                NumericVector mprobs, double preAssignCoef) {
+                                NumericVector mprobs, double preAssignCoef,
+                                double prior) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -134,7 +135,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
   NumericVector assignment(nSubsets) ;
 
-  double prior = 4.5 ; // TEMPORARY MAGIC NUMBER
   int unifPosition = 0 ;
   double isingOffset = 0 ;
   for(m = 0; m < nsamp ; m++) {
