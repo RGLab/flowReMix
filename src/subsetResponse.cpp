@@ -134,12 +134,20 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
   NumericVector assignment(nSubsets) ;
 
+  double prior = 4.5 ; // TEMPORARY MAGIC NUMBER
   int unifPosition = 0 ;
+  double isingOffset = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
       if(preAssignment[j] != -1 & preAssignCoef < 10e-4) {
         assignment[j] = preAssignment[j] ;
         continue ;
+      } else if(preAssignment[j] == 0) {
+        isingOffset = -prior ;
+      } else if(preAssignment[j] == 1) {
+        isingOffset = prior ;
+      } else {
+        isingOffset = 0 ;
       }
 
       subsetNullEta = nullEta[popInd == (j + 1)] ;
@@ -179,8 +187,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       if(m >= 0) {
         assignment[j] = 1 ;
         int nRespond = sum(assignment) ;
-        double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
-        priorProb = expit(sum(isingCoefs(j, _) * assignment) + multiadjust) ;
+        // double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
+        priorProb = expit(sum(isingCoefs(j, _) * assignment) + isingOffset) ;
       } else {
         priorProb = 0.5 ;
       }

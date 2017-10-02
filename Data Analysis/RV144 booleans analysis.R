@@ -75,14 +75,15 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 # Analysis -------------
 library(flowReMix)
 npost <- 1
-niter <- 16
+niter <- 20
 control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
                              ncores = 2,
-                             preAssignCoefs = seq(from = 1, to = .2, length.out = 6),
+                             preAssignCoefs = c(1, 0, 0, 1),
+                             prior = 0,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -99,7 +100,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
-save(fit, file = "data analysis/results/local_rv144_20percent.Robj")
+# save(fit, file = "data analysis/results/local_rv144_prior.Robj")
 # plot(fit, type = "scatter")
 
 add_ptid <- function(x, subject_id) {
@@ -132,8 +133,9 @@ fit$posteriors[, -1] <- post
 # }
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
-rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "auto")
+rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
 rocplot
+scatter
 
 
 # ROC for vaccinations -----------------------------
