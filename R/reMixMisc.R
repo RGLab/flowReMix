@@ -49,7 +49,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               maxDispersion = 10^3, minDispersion = 10^8, isingInit = -4,
                               keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
                               initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
-                              markovChainEM = TRUE,seed=NULL) {
+                              markovChainEM = TRUE, seed=NULL, prior = 0) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
@@ -66,7 +66,8 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  initMethod = initMethod,
                  ncores = ncores,
                  preAssignCoefs = preAssignCoefs,
-                 markovChainEM = markovChainEM)
+                 markovChainEM = markovChainEM,
+                 prior = prior)
   class(object) <- "flowReMix_control"
   return(object)
 }
