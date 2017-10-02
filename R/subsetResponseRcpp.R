@@ -2,22 +2,21 @@
 #' @importFrom Rcpp sourceCpp
 #'
 
-# autoPreAssign <- function(x) {
-#   y <- x$y
-#   N <- x$N
-#   prop <- y / N
-#   stim <- y$treatment
-#   if(!is.factor(stim)) {
-#     assign <- as.numeric(by(x, x$subset, function(y) -1)
-#   } else {
-#     baseline <- levels(stim)[1]
-#     assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
-#   }
-#   assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
-#   assign[assign == 1] <- -1
-#   result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
-#   return(result)
-# }
+autoPreAssign <- function(x) {
+  y <- x$y
+  N <- x$N
+  x$prop <- y / N
+  stim <- x$treatmentvar
+  if(!is.factor(stim)) {
+    baseline <- 0
+  } else {
+    baseline <- levels(x$treatmentvar)[1]
+  }
+  assign <- as.numeric(by(x, x$sub.population, function(y) min(y$prop[y$treatmentvar == baseline]) < max(y$prop[y$treatmentvar != baseline])))
+  assign[assign == 1] <- -1
+  result <- data.frame(ptid = x$id[1], subset = unique(x$sub.population), assign = assign)
+  return(result)
+}
 
 
 randomizeAssignments <- function(x, prob = 0.5) {
@@ -599,11 +598,17 @@ flowReMix <- function(formula,
   isingfit <- NULL
 
   # Setting up preAssignment ----------------------
-  if(is.null(cluster_assignment)) {
-    preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
-    preAssignment$assign <- rep(-1, nrow(preAssignment))
-    if(mixed) {
-      preAssignment$assign <- 1
+  if(length(cluster_assignment) == 1) {
+    if(cluster_assignment & !mixed) {
+      preAssignment <- by(dat, dat$id, autoPreAssign)
+      preAssignment <- do.call("rbind", preAssignment)
+      names(preAssignment) <- c("id", "subset", "assign")
+    } else {
+      preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
+      preAssignment$assign <- rep(-1, nrow(preAssignment))
+      if(mixed) {
+        preAssignment$assign <- 1
+      }
     }
   } else {
     preAssignment <- cluster_assignment

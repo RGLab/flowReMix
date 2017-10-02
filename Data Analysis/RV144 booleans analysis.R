@@ -88,16 +88,17 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                              subject_id = ptid,
                              cell_type = subset,
-                             cluster_variable = treatment,
+                             cluster_variable = stim,
                              data = booldata,
                              covariance = "sparse",
                              ising_model = "sparse",
                              regression_method = "robust",
                              iterations =  niter,
-                             cluster_assignment = preAssignment,
+                             cluster_assignment = TRUE,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 # save(fit, file = "data analysis/results/local_rv144_prior.Robj")

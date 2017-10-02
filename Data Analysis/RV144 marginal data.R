@@ -56,7 +56,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  ising_model = "sparse",
                  regression_method = "robust",
                  iterations = 8, parallel = TRUE,
-                 cluster_assignment = assignmentMat,
+                 cluster_assignment = TRUE,
                  verbose = TRUE, control = control))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
