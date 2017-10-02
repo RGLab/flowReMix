@@ -52,8 +52,11 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
-npost <- 20
-niter <- 40
+configurations <- expand.grid(niters = c(30, 60),
+                              npost = c(5, 10))
+config <- configurations[setting, ]
+niter <- config[[1]]
+npost <- config[[2]]
 
 # Analysis -------------
 library(flowReMix)
@@ -63,11 +66,13 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 20, isingInit = -log(99),
                              ncores = cpus,
-                             preAssignCoefs = 0,
+                             preAssignCoefs = c(seq(from = 1, to = 0.01, length.out = 11), 1),
+                             prior = 0,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+set.seed(1)
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              subject_id = ptid,
                              cell_type = subset,
@@ -81,5 +86,15 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 
-file <- paste("results/rv144_2_setting", setting, ".Robj", sep = "")
+file <- paste("results/rv144_4_niter", niter, "npost", npost, "_pre.Robj", sep = "")
 save(fit, file = file)
+
+stab <- stabilityGraph(fit, reps = 500, cpus = cpus, type = "ising",
+                       cv = FALSE, gamma = 0.25, AND = TRUE)
+file <- paste("results/rv144_4_niter", niter, "npost", npost, "_pre_stab.Robj", sep = "")
+save(stab, file = file)
+
+
+
+
+

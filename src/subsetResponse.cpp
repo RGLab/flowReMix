@@ -186,7 +186,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       integratedDensities = computeIntegratedDensities(clusterDensities) ;
       if(m >= 0) {
         assignment[j] = 1 ;
-        int nRespond = sum(assignment) ;
+        // int nRespond = sum(assignment) ;
         // double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
         priorProb = expit(sum(isingCoefs(j, _) * assignment) + isingOffset) ;
       } else {

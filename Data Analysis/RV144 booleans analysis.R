@@ -122,6 +122,14 @@ fit$data <- booldata
 fit <- add_ptid(fit, ptid)
 fit$posteriors[, -1] <- post
 
+load(file = "data analysis/results/rv144_3_niter60npost5_prior.Robj")
+load(file = "data analysis/results/rv144_3_niter30npost5_prior.Robj")
+load(file = "data analysis/results/rv144_3_niter30npost10_prior.Robj")
+load(file = "data analysis/results/rv144_4_niter30npost10_pre.Robj")
+load(file = "data analysis/results/rv144_4_niter30npost5_pre.Robj")
+load(file = "data analysis/results/rv144_4_niter60npost5_pre.Robj")
+fit$data <- booldata
+
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
 # subjects <- unique(preAssignment$ptid)
 # for(i in 1:length(subjects)) {
@@ -134,8 +142,8 @@ fit$posteriors[, -1] <- post
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
 rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
-rocplot
-scatter
+# rocplot
+# scatter
 
 
 # ROC for vaccinations -----------------------------
@@ -176,6 +184,22 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
                           sortAUC = FALSE, pvalue = "wilcoxon")
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
+# Graph
+threshold <- 0.9
+load(file = "data analysis/results/rv144_3_niter60npost5_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_3_niter30npost10_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_3_niter30npost5_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_4_niter60npost5_pre_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_4_niter30npost10_pre_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_4_niter30npost5_pre_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+
+#######################
 func <- rowSums(fit$posteriors[, -1])
 funcAUC <- roc(infect ~ func)$auc
 n0 <- sum(infect == "INFECTED", na.rm = TRUE)

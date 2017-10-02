@@ -1029,9 +1029,15 @@ flowReMix <- function(formula,
     # Updating Ising -----------------------
     if(!mixed) {
       print("Updating Ising!")
-      if(iter == maxIter) {
-        exportAssignment <- assignmentList
-        names(exportAssignment) <- names(databyid)
+      if(iter > updateLag) {
+        if(iter == updateLag + 1) {
+          exportAssignment <- assignmentList
+          names(exportAssignment) <- names(databyid)
+        } else {
+          tempAssignList <- assignmentList
+          names(tempAssignList) <- names(databyid)
+          exportAssignment <- c(exportAssignment, tempAssignList)
+        }
       }
       assignmentList <- do.call("rbind",assignmentList)
       # assignmentList <- t(sapply(assignmentList, function(x) x[nrow(x), ]))
