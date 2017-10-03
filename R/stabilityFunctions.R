@@ -10,7 +10,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
                            gamma = 0.9, AND = TRUE) {
   type <- type[1]
-
+  set.seed(100)
   if(type == "ising") {
     samples <- obj$assignmentList
     family <- "binomial"
