@@ -74,16 +74,17 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 
 # Analysis -------------
 library(flowReMix)
-npost <- 1
-niter <- 20
-control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoef = 2.5,
-                             nPosteriors = npost, centerCovariance = FALSE,
+npost <- 4
+niter <- 200
+control <- flowReMix_control(updateLag = 3, nsamp = 16, initMHcoef = 2.5,
+                             keepEach = 4,
+                             nPosteriors = npost, centerCovariance = TRUE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 20, isingInit = -log(99),
+                             lastSample = 4, isingInit = -log(99),
                              ncores = 2,
-                             preAssignCoefs = c(1, 0, 0, 1),
-                             prior = 4.5,
+                             preAssignCoefs = c(1, 0, 0, 0, 0, 0, 1),
+                             prior = 5,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -98,7 +99,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                              ising_model = "sparse",
                              regression_method = "robust",
                              iterations =  niter,
-                             cluster_assignment = TRUE,
+                             cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 # save(fit, file = "data analysis/results/local_rv144_prior.Robj")
@@ -129,6 +130,14 @@ load(file = "data analysis/results/rv144_3_niter30npost10_prior.Robj")
 load(file = "data analysis/results/rv144_4_niter30npost10_pre.Robj")
 load(file = "data analysis/results/rv144_4_niter30npost5_pre.Robj")
 load(file = "data analysis/results/rv144_4_niter60npost5_pre.Robj")
+load(file = "data analysis/results/rv144_4_niter60npost10_pre.Robj")
+load(file = "data analysis/results/rv144_3_niter60npost10_prior.Robj")
+load(file = "data analysis/results/rv144_10_niter30npost8_pre.Robj")
+load(file = "data analysis/results/rv144_10_niter30npost4_pre.Robj")
+load(file = "data analysis/results/rv144_11_niter30npost4_prior.Robj")
+load(file = "data analysis/results/rv144_11_niter30npost8_prior.Robj")
+load(file = "data analysis/results/rv144_11_niter60npost4_prior.Robj")
+load(file = "data analysis/results/rv144_11_niter60npost8_prior.Robj")
 fit$data <- booldata
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
@@ -186,12 +195,18 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 # Graph
-threshold <- 0.9
+threshold <- 0.85
+load(file = "data analysis/results/rv144_3_niter60npost10_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 load(file = "data analysis/results/rv144_3_niter60npost5_prior_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 load(file = "data analysis/results/rv144_3_niter30npost10_prior_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 load(file = "data analysis/results/rv144_3_niter30npost5_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+
+threshold <- 0.5
+load(file = "data analysis/results/rv144_4_niter60npost10_pre_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 load(file = "data analysis/results/rv144_4_niter60npost5_pre_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
@@ -199,6 +214,13 @@ load(file = "data analysis/results/rv144_4_niter30npost10_pre_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 load(file = "data analysis/results/rv144_4_niter30npost5_pre_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+
+threshold <- .98
+load(file = "data analysis/results/rv144_11_niter30npost8_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_11_niter60npost4_prior_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+
 
 #######################
 func <- rowSums(fit$posteriors[, -1])
