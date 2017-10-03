@@ -334,6 +334,7 @@ flowReMix <- function(formula,
   preAssignCoefs <- control$preAssignCoefs
   markovChainEM <- control$markovChainEM
   prior <- control$prior
+  isingWprior <- control$isingWprior
 
   if(!is.null(control$seed)){
     set.seed(control$seed)
@@ -623,8 +624,8 @@ flowReMix <- function(formula,
     if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
   }
 
-  preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
-  preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
+  preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
+  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) x)
 
   if(any(preAssignCoefs > 1) | any(preAssignCoefs < 0)) {
     warning("preAssignCoefs must be a numeric vector the coordinates of which must be between 0 and 1!")
@@ -1057,9 +1058,17 @@ flowReMix <- function(formula,
           #modelprobs <- 0.5 ^ (3 * 0:nSubsets)
           modelprobs <- modelprobs / sum(modelprobs)
         }
-        isingfit <- raIsing(assignmentList, AND = TRUE,
-                            modelprobs = modelprobs,
-                            minprob = 1 / nSubjects)
+        if(!isingWprior) {
+          isingfit <- raIsing(assignmentList, AND = TRUE,
+                              modelprobs = modelprobs,
+                              minprob = 1 / nSubjects)
+        } else {
+          # names(assignmentList) <- names(coefficientList)
+          isingfit <- pIsing(assignmentList, AND = TRUE,
+                              preAssignment = preAssignmentMat,
+                             prevfit = isingCoefs)
+        }
+
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
         isingVar <- isingVar * (1 - iterweight) + isingfit^2 * iterweight
         if(iter > updateLag) {

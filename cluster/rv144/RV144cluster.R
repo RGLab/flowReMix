@@ -1,4 +1,4 @@
-cpus <- 4
+cpus <- 8
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -52,32 +52,22 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
-configurations <- expand.grid(niters = c(150, 300),
-                              npost = c(2, 4),
-                              type = c("pre", "prior"))
+configurations <- expand.grid(niters = c(30, 45, 60),
+                              npost = c(2, 4, 6))
 config <- configurations[setting, ]
 niter <- config[[1]]
 npost <- config[[2]]
-type <- config[[3]]
-if(type == "pre") {
-  aCoefs <- c(seq(from = 1, to = 0, length.out = round(niter / 3)), 1)
-  prior <- 0
-} else {
-  aCoefs <- c(1, rep(0, 20), 1)
-  prior <- 5
-}
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 10,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50,
                              keepEach = 5, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 20, isingInit = -log(99),
-                             ncores = cpus,
-                             preAssignCoefs = aCoefs,
-                             prior = prior,
+                             isingInit = -log(99),
+                             ncores = cpus, preAssignCoefs = 1,
+                             prior = 1, isingWprior = TRUE,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -96,12 +86,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 
-file <- paste("results/rv144_14_niter", niter, "npost", npost, "_", type, ".Robj", sep = "")
+file <- paste("results/rv144_15_niter", niter, "npost", npost, ".Robj", sep = "")
 save(fit, file = file)
 
 stab <- stabilityGraph(fit, reps = 1000, cpus = cpus, type = "ising",
                        cv = FALSE, gamma = 0.25, AND = TRUE)
-file <- paste("results/rv144_14_niter", niter, "npost", npost, "_", type, "_stab.Robj", sep = "")
+file <- paste("results/rv144_15_niter", niter, "npost", npost, "_stab.Robj", sep = "")
 save(stab, file = file)
 
 

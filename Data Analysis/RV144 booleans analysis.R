@@ -74,17 +74,17 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 
 # Analysis -------------
 library(flowReMix)
-npost <- 4
-niter <- 200
-control <- flowReMix_control(updateLag = 3, nsamp = 16, initMHcoef = 2.5,
+npost <- 1
+niter <- 24
+control <- flowReMix_control(updateLag = 10, nsamp = 40, initMHcoef = 2.5,
                              keepEach = 4,
                              nPosteriors = npost, centerCovariance = TRUE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 4, isingInit = -log(99),
                              ncores = 2,
-                             preAssignCoefs = c(1, 0, 0, 0, 0, 0, 1),
-                             prior = 5,
+                             preAssignCoefs = 1,
+                             prior = 1, isingWprior = TRUE,
                              initMethod = "robust")
 
 booldata$subset <- factor(booldata$subset)
@@ -138,6 +138,7 @@ load(file = "data analysis/results/rv144_11_niter30npost4_prior.Robj")
 load(file = "data analysis/results/rv144_11_niter30npost8_prior.Robj")
 load(file = "data analysis/results/rv144_11_niter60npost4_prior.Robj")
 load(file = "data analysis/results/rv144_11_niter60npost8_prior.Robj")
+load(file = "data analysis/results/rv144_15_niter30npost2.Robj")
 fit$data <- booldata
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
@@ -195,6 +196,13 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 # Graph
+threshold <- 0.85
+load(file = "data analysis/results/rv144_15_niter30npost2_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_15_niter45npost2_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+
+
 threshold <- 0.85
 load(file = "data analysis/results/rv144_3_niter60npost10_prior_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)

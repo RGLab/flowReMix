@@ -119,13 +119,14 @@ plot(fit, type = "graph", graph = "ising", threshold = 0.95,
      count = FALSE, fill = rocResult$auc)
 
 # Boxplots ---------------------------
+library(cowplot)
 weights <- list()
 weights$select <- select
 weights$select <- rep(1, length(select))
 boxall <- plot(fit, type = "boxplot", target = infection, groups = "all",
      test = "wilcoxon", one_sided = TRUE, jitter = TRUE)
 boxall
-# save_plot(boxall, filename = "figures/malariaBoxAll.pdf",
+# save_plot(boxall, filename = "figures/malariaBoxAll2.pdf",
 #           base_height = 4, base_width = 5)
 
 subsets <- colnames(fit$posteriors)[-1]
@@ -137,7 +138,7 @@ boxstim <- plot(fit, type = "boxplot", target = infection, test = "wilcoxon",
      groups = stimgroups, weights = weights, one_sided = TRUE, jitter = TRUE,
      ncol = 2)
 boxstim
-# save_plot(boxstim, filename = "figures/malariaBoxStim.pdf",
+# save_plot(boxstim, filename = "figures/malariaBoxStim2.pdf",
 #           base_height = 4, base_width = 7)
 
 
@@ -147,9 +148,10 @@ parentgroups <- lapply(parentnames, function(x) subsets[parents == x])
 names(parentgroups) <- parentnames
 parentbox <- plot(fit, type = "boxplot", target = infection,
      groups = parentgroups,
-     test = "wilcoxon", one_sided = TRUE, ncol = 3)
+     test = "wilcoxon", one_sided = TRUE, ncol = 3,
+     jitter = TRUE)
 parentbox
-# save_plot(parentbox, filename = "figures/malariaBoxParent.pdf",
+# save_plot(parentbox, filename = "figures/malariaBoxParent2.pdf",
 #           base_height = 6, base_width = 7)
 
 sc <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
@@ -160,7 +162,7 @@ scbox <- plot(fit, type = "boxplot", target = infection,
      groups = scgroups,
      test = "wilcoxon", one_sided = TRUE, ncol = 4, jitter = TRUE)
 scbox
-# save_plot(scbox, filename = "figures/malariaSCbox.pdf",
+# save_plot(scbox, filename = "figures/malariaSCbox2.pdf",
 #           base_height = 6, base_width = 10)
 
 # Graphical Models --------------------------
