@@ -52,8 +52,8 @@ tempdat$visitInter <- tempdat$visitno
 tempdat$trtTime <- tempdat$visitno
 tempdat$stimInd <- as.numeric(tempdat$stim == "stim")
 
-tempdat <- subset(tempdat, parent == "4+" & stimgroup == "RBC")
-tempdat$subset <- factor(as.character(tempdat$subset))
+# tempdat <- subset(tempdat, parent == "4+" & stimgroup == "RBC")
+# tempdat$subset <- factor(as.character(tempdat$subset))
 
 # a <- model.matrix(cbind(count, parentcount - count) ~ visitno + stimInd:trtTime,
 #              data = tempdat)
@@ -171,4 +171,60 @@ plot(stability, threshold = 0)
 
 load(file = "data analysis/results/malariaRand10.Robj")
 plot(rand, threshold = 0.5, fill = rocResult$auc)
+
+
+# Plotting coefficients and proportions -----------------
+nplot <- 10
+tempdat$prop <- tempdat$count / tempdat$parentcount
+forplot <- tempdat[, c(9, 8, 10, 13, 14, 20)]
+control <- subset(forplot, stim == "control")
+control$stim <- NULL
+names(control)[ncol(control)] <- "control"
+stim <- subset(forplot, stim == "stim")
+stim$stim <- NULL
+names(stim)[ncol(stim)] <- "stim"
+forplot <- merge(control, stim)
+rocResult <- rocTable(fit, target = infection, pvalue = "wilcoxon",
+                      sort = TRUE)
+forplot <- subset(forplot, subset %in% rocResult$subset[1:nplot])
+coefs <- fit$coefficients[names(fit$coefficients) %in% rocResult$subset[1:nplot]]
+coefdat <- list()
+expit <- function(x) 1 / (1 + exp(-x))
+for(i in 1:length(coefs)) {
+  coef <- coefs[[i]]
+  dat <- data.frame(subset = names(coefs[i]),
+                    visitno = c("Day 0", "Day 9", "pos", "Day 28", "Day 56", "Day 168"),
+                    predcontrol = expit(sum(coef[1])),
+                    predstim = c(expit(sum(coef[1:2])),
+                                 expit(sum(coef[1:3])),
+                                 expit(sum(coef[c(1:2, 4)])),
+                                 expit(sum(coef[c(1:2, 5)])),
+                                 expit(sum(coef[c(1:2, 6)])),
+                                 expit(sum(coef[c(1:2, 7)]))))
+  datnonresp <- data.frame(subset = names(coefs[i]),
+                           visitno = c("Day 0", "Day 9", "pos", "Day 28", "Day 56", "Day 168"),
+                           predcontrolnonresp = expit(sum(coef[1])),
+                           predstimnonresp = c(expit(sum(coef[1:2])),
+                                               expit(sum(coef[1:2])),
+                                               expit(sum(coef[c(1:2)])),
+                                               expit(sum(coef[c(1:2)])),
+                                               expit(sum(coef[c(1:2)])),
+                                               expit(sum(coef[c(1:2)]))))
+  coefdat[[i]] <- merge(dat, datnonresp)
+}
+coefdat <- do.call("rbind", coefdat)
+forplot <- merge(forplot, coefdat)
+forplot <- subset(forplot, subset != "RBC/8+/IL21+")
+
+size <- 0.4
+ggplot(forplot, aes(x = as.numeric(visitno), y = stim - control, col = infection)) +
+  geom_point(size = 0.5) + facet_wrap(~ subset, scale = "free_y") +
+  geom_hline(yintercept = 0) + theme_bw() +
+  geom_line(aes(y = predstim - predcontrol), col = "blue", size = size) +
+  geom_line(aes(y = predstimnonresp - predcontrolnonresp), col = "red", linetype = 2, size = size)# +
+  scale_colour_manual(values = c("red", "blue"))
+
+
+
+
 
