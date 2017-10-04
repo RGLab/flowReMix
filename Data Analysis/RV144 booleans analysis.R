@@ -111,20 +111,38 @@ add_ptid <- function(x, subject_id) {
 }
 
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
+filenames2 <- as.list(dir(path = 'data analysis/results', pattern="rv144_17_*"))
+filenames3 <- as.list(dir(path = 'data analysis/results', pattern="rv144_16_*"))
 filenames <- filenames[-seq(from = 1, to = 17, by = 2)]
-# filenames <- filenames[c(1, 3, 5, 7, 9)]
-filenames <- filenames[c(2, 4, 6, 8)]
+filenames2 <- filenames2[-seq(from = 1, to = 17, by = 2)]
+filenames3 <- filenames3[-c(2, 4, 6, 8, 10, 13, 15)]
+filenames <- c(filenames, filenames2)
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
 post <- list()
+postList <- list()
 for(i in 1:length(filenames)) {
   load(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
+  postList[[i]] <- fit$posteriors[, -1]
 }
 post <- Reduce("+", post) / length(filenames)
 fit$data <- booldata
 fit <- add_ptid(fit, ptid)
 fit$posteriors[, -1] <- post
+
+# Quantifying inter-fit variability ---------------------
+reps <- 100
+aucs <- matrix(ncol = ncol(fit$posteriors) - 1, nrow = reps)
+rprob <- matrix(ncol = ncol(fit$posteriors) - 1, nrow = reps)
+for(i in 1:reps) {
+  samp <- postList[sample.int(length(postList), length(postList), replace = TRUE)]
+  post <- Reduce("+", samp) / length(samp)
+  aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
+  rprob[i, ] <- colMeans(post)
+}
+
+
 
 load(file = "data analysis/results/rv144_15_niter30npost2.Robj")
 load(file = "data analysis/results/rv144_15_niter45npost2.Robj")
@@ -262,6 +280,7 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
                           sortAUC = FALSE, pvalue = "wilcoxon")
+infectResults$responseProb <- colMeans(fit$posteriors[, -1])
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 # stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
