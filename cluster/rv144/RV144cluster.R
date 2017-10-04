@@ -63,7 +63,7 @@ seed <- config[[3]]
 # Analysis -------------
 library(flowReMix)
 control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50,
-                             keepEach = 25, initMHcoef = 2.5,
+                             keepEach = 10, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -89,12 +89,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 
-file <- paste("results/rv144_21_niter", niter, "npost", npost, "seed", seed, "c.Robj", sep = "")
+file <- paste("results/rv144_22_niter", niter, "npost", npost, "seed", seed, "c.Robj", sep = "")
 save(fit, file = file)
 
 stab <- stabilityGraph(fit, reps = 500, cpus = round(cpus / 2), type = "ising",
                        cv = FALSE, gamma = 0.25, AND = TRUE)
-file <- paste("results/rv144_stab_21_niter", niter, "npost", npost,  "seed", seed,"c.Robj", sep = "")
+file <- paste("results/rv144_stab_22_niter", niter, "npost", npost,  "seed", seed,"c.Robj", sep = "")
 save(stab, file = file)
 
 

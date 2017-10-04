@@ -114,7 +114,6 @@ add_ptid <- function(x, subject_id) {
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
 filenames <- c(filenames, filenames2)
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
-
 post <- list()
 postList <- list()
 for(i in 1:length(filenames)) {
@@ -148,6 +147,9 @@ load(file = "data analysis/results/rv144_18_niter200npost2.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost4.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost6.Robj")
 
+
+
+fit$data <- booldata
 # Plots -------------
 scatter <- plot(fit, type = "scatter", target = vaccine)
 rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")

@@ -67,18 +67,21 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 booldata$subset <- factor(booldata$subset)
 booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
 
-# Bootstrapping -------------------------
-fit$data <- booldata
-assign <- fit$assignmentList
-names(assign) <- sapply(names(assign), function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][1])
-subjList <- list()
-for(i in 1:nrow(fit$posteriors)) {
-  subject <- assign[names(assign) == fit$posteriors[i, 1]]
-  subject <- lapply(subject, colMeans)
-  subject <- do.call("rbind", subject)
-  subjList[[i]] <- subject
+# Getting result files --------------------------
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_20__*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
+post <- list()
+postList <- list()
+for(i in 1:length(filenames)) {
+  load(file = filenames[[i]])
+  post[[i]] <- fit$posteriors[, -1]
+  postList[[i]] <- fit$posteriors[, -1]
 }
+post <- Reduce("+", post) / length(filenames)
+fit$data <- booldata
+fit$posteriors[, -1] <- post
 
+# Setting up target variables -----------------
 ids <- fit$posteriors[, 1:2]
 vaccine[, 1] <- as.character(vaccine[, 1])
 vaccine[, 1] <- factor(vaccine[, 1], levels = levels(ids[, 1]))
@@ -98,6 +101,25 @@ infect <- ids[, 4]
 infect[infect == "PLACEBO"] <- NA
 infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
+
+# Bootstrapping -------------------------
+groups <- list(c(1:38), c(1:20), c(21:38))
+resList <- list()
+for(i in 1:length(groups)) {
+  temppost <- postList[groups[[i]]]
+  aucs <- matrix(nrow = length(temppost), ncol = ncol(fit$posteriors) - 1)
+  for(j in 1:length(temppost)) {
+    aucs[j, ] <- apply(temppost[[j]], 2, function(x) roc(infect ~ x)$auc)
+  }
+  means <- colMeans(aucs)
+  sds <- apply(aucs, 2, sd) /sqrt(nrow(aucs))
+  resList[[i]] <- data.frame(lci = means - 2 * sds, estimate = means, uci = means + 2 * sds)
+  rownames(resList[[i]]) <- colnames(fit$posteriors)[-1]
+  resList[[i]] <- resList[[i]][order(resList[[i]][, 2], decreasing = TRUE), ]
+}
+
+
+# Analysis for a single fit ----------------------
 reps <- 200
 aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
 rprob <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
