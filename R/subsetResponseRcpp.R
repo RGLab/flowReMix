@@ -124,7 +124,7 @@ initializeModel <- function(dat, formula, method, mixed) {
   } else if(method == "robust") {
     fit <- NULL
     try(capture.output(fit <- robustbase::glmrob(formula, data = dat, family = "binomial",
-                              weights = weights)))
+                              weights = weights)),silent=TRUE)
     if(is.null(fit)) {
       fit <- glm(formula, data = dat, family = "binomial", weights = weights)
     }
@@ -297,6 +297,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
+#' @import doRNG
 #' @md
 #' @export
 flowReMix <- function(formula,
@@ -336,19 +337,25 @@ flowReMix <- function(formula,
   prior <- control$prior
   isingWprior <- control$isingWprior
 
-  if(!is.null(control$seed)){
-    set.seed(control$seed)
-  }
-
   if(parallel) {
     if(is.null(ncores)) {
       doParallel::registerDoParallel()
+      if(!is.null(control$seed)){
+        set.seed(control$seed)
+      }
     } else {
       doParallel::registerDoParallel(ncores)
+      if(!is.null(control$seed)){
+        set.seed(control$seed)
+      }
     }
   } else {
     foreach::registerDoSEQ()
+    if(!is.null(control$seed)){
+      set.seed(control$seed)
+    }
   }
+
 
   ncores <- foreach::getDoParWorkers()
   if(ncores == 1) {
@@ -554,7 +561,7 @@ flowReMix <- function(formula,
   # Initializing covariates and random effects------------------
   if(verbose) print("Initializing Regression Equations")
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
-  initialization <- foreach(j = 1:length(dataByPopulation)) %dopar% {
+  initialization <- foreach(j = 1:length(dataByPopulation)) %dorng% {
     #print(unique(as.character(dataByPopulation[[j]]$sub.population)))
     initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
   }
@@ -686,8 +693,8 @@ flowReMix <- function(formula,
       popList <- lapply(1:nSubsets, function(j) list(dataByPopulation[[j]], separation[j], clusterAssignments[, j]))
       # Robust
       if(robustreg) {
-        # glmFits <- foreach(j = 1:nSubsets) %dopar% {
-        glmResult <- foreach(popDat = popList) %dopar% {
+        # glmFits <- foreach(j = 1:nSubsets) %dorng% {
+        glmResult <- foreach(popDat = popList) %dorng% {
           if(sum(popDat[[3]]) < 3) {
             return(NULL)
           }
@@ -703,7 +710,7 @@ flowReMix <- function(formula,
           try(capture.output(fit <- robustbase::glmrob(formula = glmformula,
                                         data = popDat[[1]],
                                         weights = weights,
-                                        family = "binomial"),silent=TRUE))
+                                        family = "binomial")),silent=TRUE)
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popDat[[1]],
                            weights = weights, family = "binomial"),silent=TRUE)
@@ -729,7 +736,7 @@ flowReMix <- function(formula,
         }
         # Beta-Binomial
       } else if(betaDispersion & !smallCounts) {
-        glmResult <- foreach(popDat = popList) %dopar% {
+        glmResult <- foreach(popDat = popList) %dorng% {
           if(sum(popDat[[3]]) < 3) {
             return(NULL)
           }
@@ -760,7 +767,7 @@ flowReMix <- function(formula,
         }
         # Sparse
       } else if(smallCounts) {
-        tempFits <- foreach(popDat = popList) %dopar% {
+        tempFits <- foreach(popDat = popList) %dorng% {
           if(sum(popDat[[3]]) < 3) {
             return(NULL)
           }
@@ -793,7 +800,7 @@ flowReMix <- function(formula,
         }
         # Binomial
       } else {
-        tempFits <- foreach(popDat = popList) %dopar% {
+        tempFits <- foreach(popDat = popList) %dorng% {
           if(sum(popDat[[3]]) < 3) {
             return(NULL)
           }
@@ -914,7 +921,7 @@ flowReMix <- function(formula,
                                                       index = i))
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
-    MHresult <- foreach(subjectData = listForMH) %dopar% {
+    MHresult <- foreach(subjectData = listForMH) %dorng% {
       # subjectData <- databyid[[i]]
       popInd <- subjectData$dat$subpopInd
       N <- subjectData$dat$N

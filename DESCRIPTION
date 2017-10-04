@@ -23,7 +23,8 @@ Imports: Rcpp,
     GGally,
     viridis,
     rlang,
-    igraph
+    igraph,
+    doRNG
 Suggests: pROC,
     reshape2,
 RoxygenNote: 6.0.1

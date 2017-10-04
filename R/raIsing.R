@@ -24,7 +24,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     minprob <- 1 / nrow(mat)
   }
 
-  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
+  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
     y <- as.vector(mat[, j])
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)
@@ -141,7 +141,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   }
   if(verbose) cat("\n")
 
-  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
+  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
     y <- as.vector(mat[, j])
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)
@@ -190,7 +190,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
-  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), ]
+  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]),,drop=FALSE ]
   if(length(nonzero) != 0) {
     nonzero <- t(apply(nonzero, 1, sort))
     nonzero <- unique(nonzero)
