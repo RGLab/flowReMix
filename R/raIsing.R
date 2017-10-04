@@ -5,7 +5,7 @@ expit <- function(x) 1 / (1 + exp(-x))
 raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
-                    family = "binomial") {
+                    family = "binomial",verbose=FALSE) {
   nvars <- ncol(mat)
   if(!is.null(modelprobs) & length(modelprobs) != (ncol(mat) + 1)) {
     warning("modelprobs must be of length ncol(mat) + 1 !")
@@ -111,7 +111,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 pIsing <- function(mat, AND = TRUE, gamma = 0.9,
                    method = "sparse", cv = FALSE,
                    empBayes = FALSE, preAssignment,
-                   family = "binomial", prevfit) {
+                   family = "binomial", prevfit,verbose=FALSE) {
   nvars <- ncol(mat)
 
   if(gamma < 0) gamma <- 0
@@ -134,11 +134,11 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
     coefs <- as.numeric(prevfit[i, -i])
     covs <- as.matrix(mat[, -i])
     eta <- as.numeric(covs %*% coefs)
-    # cat(pResp, " ")
+    if(verbose)cat(pResp, " ")
     isingOffset[i] <- uniroot(f = function(off) mean(expit(eta + off)) - pResp,
                               interval = c(-50, 50))$root
   }
-  # cat("\n")
+  if(verbose)cat("\n")
 
   isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
     y <- as.vector(mat[, j])

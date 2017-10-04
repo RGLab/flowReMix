@@ -675,10 +675,12 @@ flowReMix <- function(formula,
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
-
+    # create progress bar
+    pb <- txtProgressBar(min = 1, max = iterations, style = 3)
     # Updating Regression Equation -------------------
     if(iter > 1) {
-      print("Updating Regression")
+      setTxtProgressBar(pb, iter)
+      if(verbose)print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
       popList <- lapply(1:nSubsets, function(j) list(dataByPopulation[[j]], separation[j], clusterAssignments[, j]))
@@ -905,7 +907,7 @@ flowReMix <- function(formula,
     MHattempts <- rep(0, nSubsets)
     MHsuccess <- rep(0, nSubsets)
     # S-step ------------------------------
-    print("Sampling!")
+    if(verbose)print("Sampling!")
     listForMH <- lapply(1:nSubjects, function(i) list(dat = databyid[[i]],
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
@@ -1002,7 +1004,7 @@ flowReMix <- function(formula,
     rm(popInd)
 
     # Updating Covariance -------------------------
-    print("Estimating Covariance!")
+    if(verbose)print("Estimating Covariance!")
     if(iter == maxIter) {
       randomOutput <- randomList
       names(randomOutput) <- names(databyid)
@@ -1034,7 +1036,7 @@ flowReMix <- function(formula,
 
     # Updating Ising -----------------------
     if(!mixed) {
-      print("Updating Ising!")
+      if(verbose)print("Updating Ising!")
       if(iter > updateLag) {
         if(iter == updateLag + 1) {
           exportAssignment <- assignmentList
@@ -1061,15 +1063,15 @@ flowReMix <- function(formula,
         if(!isingWprior) {
           isingfit <- raIsing(assignmentList, AND = TRUE,
                               modelprobs = modelprobs,
-                              minprob = 1 / nSubjects)
+                              minprob = 1 / nSubjects,verbose=verbose)
         } else {
           # names(assignmentList) <- names(coefficientList)
           isingfit <- pIsing(assignmentList, AND = TRUE,
                               preAssignment = preAssignmentMat,
-                             prevfit = isingCoefs)
+                             prevfit = isingCoefs,verbose=verbose)
           isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,
-                             prevfit = isingfit)
+                             prevfit = isingfit,verbose=verbose)
         }
 
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
@@ -1180,6 +1182,7 @@ flowReMix <- function(formula,
   }
   result$data <- data
   result$subject_id <- match.call()$subject_id
+  close(pb)
   return(result)
 }
 
