@@ -676,11 +676,11 @@ flowReMix <- function(formula,
     dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     oldM <- M
     # create progress bar
-    pb <- txtProgressBar(min = 1, max = iterations, style = 3)
+    if(!verbose) pb <- txtProgressBar(min = 1, max = iterations, style = 3)
     # Updating Regression Equation -------------------
     if(iter > 1) {
-      setTxtProgressBar(pb, iter)
-      if(verbose)print("Updating Regression")
+      if(!verbose) setTxtProgressBar(pb, iter)
+      if(verbose) print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
       popList <- lapply(1:nSubsets, function(j) list(dataByPopulation[[j]], separation[j], clusterAssignments[, j]))
