@@ -86,23 +86,24 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
   nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), ]
-  nonzero <- t(apply(nonzero, 1, sort))
-  nonzero <- unique(nonzero)
-  for(i in 1:nrow(nonzero)) {
-    if(nrow(nonzero) == 0) break
-    u <- nonzero[i, 1]
-    v <- nonzero[i, 2]
-    first <- isingmat[u, v]
-    second <- isingmat[v, u]
-    if(AND & (first == 0 | second == 0)) {
-      isingmat[u, v] <- 0
-      isingmat[v, u] <- 0
-      next
-    }
+  if(length(nonzero) != 0) {
+    for(i in 1:nrow(nonzero)) {
+      nonzero <- t(apply(nonzero, 1, sort))
+      nonzero <- unique(nonzero)
+      u <- nonzero[i, 1]
+      v <- nonzero[i, 2]
+      first <- isingmat[u, v]
+      second <- isingmat[v, u]
+      if(AND & (first == 0 | second == 0)) {
+        isingmat[u, v] <- 0
+        isingmat[v, u] <- 0
+        next
+      }
 
-    meanval <- (first + second) / 2
-    isingmat[u, v] <- meanval
-    isingmat[v, u] <- meanval
+      meanval <- (first + second) / 2
+      isingmat[u, v] <- meanval
+      isingmat[v, u] <- meanval
+    }
   }
 
   return(isingmat)
@@ -190,12 +191,10 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
   nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), ]
-
   if(length(nonzero) != 0) {
     nonzero <- t(apply(nonzero, 1, sort))
     nonzero <- unique(nonzero)
     for(i in 1:nrow(nonzero)) {
-      if(nrow(nonzero) == 0) break
       u <- nonzero[i, 1]
       v <- nonzero[i, 2]
       first <- isingmat[u, v]
