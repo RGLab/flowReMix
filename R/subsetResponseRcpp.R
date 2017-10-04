@@ -662,6 +662,8 @@ flowReMix <- function(formula,
   isingAvg <- isingCoefs
   isingVar <- isingCoefs^2
   isingCount <- matrix(0, nrow = nrow(isingCoefs), ncol = ncol(isingCoefs))
+  accumList <- list()
+  randomOuput <- list()
 
   # Starting analysis -------------------------------
   if(verbose) print("Starting Stochastic EM")
@@ -673,7 +675,16 @@ flowReMix <- function(formula,
 
     # Refitting Model with current random effects/assignments
     dataByPopulation <- data.frame(data.table::rbindlist(databyid))
-    dataByPopulation <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
+    dataByPopulation$iteration <- iter
+    if(markovChainEM) {
+      accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
+    } else {
+      accumList[[max(1, iter - updateLag)]] <- dataByPopulation
+      accumDat <- data.table::rbindlist(accumList)
+      accumDat <- by(accumDat, accumDat$sub.population, function(x) x)
+    }
+    rm(dataByPopulation)
+
     oldM <- M
     # create progress bar
     if(!verbose) pb <- txtProgressBar(min = 1, max = iterations, style = 3)
@@ -683,7 +694,7 @@ flowReMix <- function(formula,
       if(verbose) print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
-      popList <- lapply(1:nSubsets, function(j) list(dataByPopulation[[j]], separation[j], clusterAssignments[, j]))
+      popList <- lapply(1:nSubsets, function(j) list(accumDat[[j]], separation[j], clusterAssignments[, j]))
       # Robust
       if(robustreg) {
         # glmFits <- foreach(j = 1:nSubsets) %dopar% {
@@ -840,60 +851,63 @@ flowReMix <- function(formula,
     }
 
     # Updating Prediction
-    for(j in 1:length(dataByPopulation)) {
+    for(j in 1:length(accumDat)) {
       coefs <- coefficientList[[j]]
       coefs <- coefs[!is.na(coefs)]
+      subsetDat <- subset(accumDat[[j]], iteration == iter)
 
       # Updating nullEta only if we are fitting a model w clustering
       if(!mixed) {
-        if(is.factor(dataByPopulation[[j]]$treatmentvar)) {
-          baseline <- levels(dataByPopulation[[j]]$tempTreatment)[1]
-          dataByPopulation[[j]]$treatmentvar <- factor(baseline, levels = levels(dataByPopulation[[j]]$tempTreatment))
+        if(is.factor(subsetDat$treatmentvar)) {
+          baseline <- levels(subsetDat$tempTreatment)[1]
+          subsetDat$treatmentvar <- factor(baseline, levels = levels(subsetDat$tempTreatment))
         } else {
-          dataByPopulation[[j]]$treatmentvar <- 0
+          subsetDat$treatmentvar <- 0
         }
 
         modelMat <- NULL
-        try(modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]]))
+        try(modelMat <- model.matrix(initFormula, data = subsetDat))
         if(!all(colnames(modelMat) %in% names(coefs))) {
           modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
         }
         newNullEta <- as.numeric(modelMat %*% coefs)
         if(iter > 1) {
-          nullEta <- dataByPopulation[[j]]$nullEta
+          nullEta <- subsetDat$nullEta
         } else {
           nullEta <- 0
         }
 
-        if(markovChainEM) {
-          dataByPopulation[[j]]$nullEta <- newNullEta
+        if(TRUE) {
+          subsetDat$nullEta <- newNullEta
         } else {
-          dataByPopulation[[j]]$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
+          subsetDat$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
         }
-        dataByPopulation[[j]]$treatmentvar <- dataByPopulation[[j]]$tempTreatment
+        subsetDat$treatmentvar <- subsetDat$tempTreatment
       }
 
 
-      modelMat <- model.matrix(initFormula, data = dataByPopulation[[j]])
+      modelMat <- model.matrix(initFormula, data = subsetDat)
       if(!all(colnames(modelMat) %in% names(coefs))) {
         modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
       }
       newAltEta <- as.numeric(modelMat %*% coefs)
 
       if(iter > 1) {
-        altEta <- dataByPopulation[[j]]$altEta
+        altEta <- subsetDat$altEta
       } else {
         altEta <- 0
       }
 
-      if(markovChainEM) {
-        dataByPopulation[[j]]$altEta <- newAltEta
+      if(TRUE) {
+        subsetDat$altEta <- newAltEta
       } else {
-        dataByPopulation[[j]]$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
+        subsetDat$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
       }
+
+      accumDat[[j]] <- subsetDat
     }
 
-    databyid <- do.call("rbind", dataByPopulation)
+    databyid <- do.call("rbind", accumDat)
     databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
     databyid <- by(databyid, databyid$id, function(x) x)
 
@@ -1005,9 +1019,17 @@ flowReMix <- function(formula,
 
     # Updating Covariance -------------------------
     if(verbose)print("Estimating Covariance!")
-    if(iter == maxIter) {
+    if(iter <= updateLag) {
+      randomOuput <- randomList
+    } else if (iter == updateLag + 1) {
+      names(randomList) <- names(databyid)
       randomOutput <- randomList
-      names(randomOutput) <- names(databyid)
+    } else {
+      names(randomList) <- names(databyid)
+      randomOutput <- c(randomOutput, randomList)
+    }
+    if(!markovChainEM) {
+      randomList <- randomOuput
     }
     randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
@@ -1037,20 +1059,24 @@ flowReMix <- function(formula,
     # Updating Ising -----------------------
     if(!mixed) {
       if(verbose)print("Updating Ising!")
-      if(iter > updateLag) {
-        if(iter == updateLag + 1) {
-          exportAssignment <- assignmentList
-          names(exportAssignment) <- names(databyid)
-        } else {
-          tempAssignList <- assignmentList
-          names(tempAssignList) <- names(databyid)
-          exportAssignment <- c(exportAssignment, tempAssignList)
-        }
+      if(iter <= updateLag) {
+        exportAssignment <- assignmentList
+      } else if(iter == updateLag + 1) {
+        exportAssignment <- assignmentList
+        names(exportAssignment) <- names(databyid)
+      } else {
+        names(assignmentList) <- names(databyid)
+        exportAssignment <- c(exportAssignment, assignmentList)
       }
+
+      if(!markovChainEM) {
+        assignmentList <- exportAssignment
+      }
+
       assignmentList <- do.call("rbind",assignmentList)
       # assignmentList <- t(sapply(assignmentList, function(x) x[nrow(x), ]))
       assignmentList <- data.frame(assignmentList)
-      names(assignmentList) <- names(dataByPopulation)
+      names(assignmentList) <- names(accumDat)
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
         if(isingMethod == "raIsing") {
@@ -1069,9 +1095,6 @@ flowReMix <- function(formula,
           isingfit <- pIsing(assignmentList, AND = TRUE,
                               preAssignment = preAssignmentMat,
                              prevfit = isingCoefs,verbose=verbose)
-          isingfit <- pIsing(assignmentList, AND = TRUE,
-                             preAssignment = preAssignmentMat,
-                             prevfit = isingfit,verbose=verbose)
         }
 
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
@@ -1079,11 +1102,8 @@ flowReMix <- function(formula,
         if(iter > updateLag) {
           isingCount <- isingCount + (isingfit != 0)
         }
-        if(markovChainEM) {
-          isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
-        } else {
-          isingCoefs <- isingCoefs * (1 - iterweight) + isingfit * iterweight
-        }
+
+        isingCoefs <- isingfit #isingCoefs * (1 - iterweight) + isingfit * iterweight
       } else if(isingMethod == "dense") {
         for(j in 1:nSubsets) {
           firth <- glm(assignmentList[, j] ~ assignmentList[, -j], family = "binomial",
@@ -1137,13 +1157,13 @@ flowReMix <- function(formula,
     posteriors <- data.frame(posteriors)
     if(dataReplicates <= 1) {
       posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
-      names(posteriors) <- c(as.character(call$subject_id), names(dataByPopulation))
+      names(posteriors) <- c(as.character(call$subject_id), names(accumDat))
     } else {
       realIDs <- gsub("\\%%%.*", "", uniqueIDs)
       post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
       postid <- names(post)
       posteriors <- data.frame(do.call("rbind", post))
-      names(posteriors) <- names(dataByPopulation)
+      names(posteriors) <- names(accumDat)
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)
     }
@@ -1158,7 +1178,7 @@ flowReMix <- function(formula,
   result <- list()
   result$modelFrame <- dat
   result$coefficients <- coefficientsOut
-  names(result$coefficients) <- names(dataByPopulation)
+  names(result$coefficients) <- names(accumDat)
   result$covariance <- covariance
   result$invCovAvg <- invCovAvg
   result$invCovVar <- invCovVar - invCovAvg^2
@@ -1182,7 +1202,7 @@ flowReMix <- function(formula,
   }
   result$data <- data
   result$subject_id <- match.call()$subject_id
-  close(pb)
+  if(!verbose) close(pb)
   return(result)
 }
 
