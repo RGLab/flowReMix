@@ -134,11 +134,11 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
     coefs <- as.numeric(prevfit[i, -i])
     covs <- as.matrix(mat[, -i])
     eta <- as.numeric(covs %*% coefs)
-    cat(pResp, " ")
+    # cat(pResp, " ")
     isingOffset[i] <- uniroot(f = function(off) mean(expit(eta + off)) - pResp,
                               interval = c(-50, 50))$root
   }
-  cat("\n")
+  # cat("\n")
 
   isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
     y <- as.vector(mat[, j])

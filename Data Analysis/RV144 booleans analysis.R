@@ -177,15 +177,33 @@ infect <- ids[, 4]
 infect[infect == "PLACEBO"] <- NA
 infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
-reps <- 100
+reps <- 200
 aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
+rprob <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
 niters <- nrow(subjList[[1]])
 for(i in 1:reps) {
   samp <- sample.int(niters, niters, replace = TRUE)
   post <- t(sapply(subjList, function(x) colMeans(x[samp, ])))
   aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
+  rprob[i, ] <- colMeans(post)
   cat(i, " ")
 }
+
+centerAUC <- apply(fit$posteriors[, -1], 2, function(x) roc(infect ~ x)$auc)
+centerRprob <- colMeans(fit$posteriors[, -1])
+CI <- matrix(ncol = 2, nrow = length(centerAUC))
+probCI <- matrix(ncol = 2, nrow = length(centerAUC))
+for(i in 1:length(centerAUC)) {
+  CI[i, ] <- quantile(centerAUC[i] - (aucs[, i] - mean(aucs[, i])), probs = c(0.025, 0.975))
+  probCI[i, ] <- quantile(centerRprob[i] - (rprob[, i] - mean(rprob[, i])), probs = c(0.025, 0.975))
+}
+CI <- cbind(CI[, 1], centerAUC, CI[, 2])
+probCI <- cbind(probCI[, 1], centerRprob, probCI[, 2])
+CI <- data.frame(CI)
+probCI <- data.frame(probCI)
+names(CI) <- c("lowerCI", "estimate", "upperCI")
+names(probCI) <- c("lowerCI", "estimate", "upperCI")
+
 colMeans(aucs)
 max(colMeans(aucs))
 sds <- apply(aucs, 2, sd)
