@@ -31,15 +31,15 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     foreach::registerDoSEQ()
   } else {
     doParallel::registerDoParallel(cores = cpus)
-    require(doRNG)
-    doRNGseed(100)
+    registerDoRNG()
   }
+  set.seed(100)
 
   # perc <- 0.1
   # requireNamespace("progress")
   # pb = progress_bar$new(total=reps);
   cluster_res = foreach(i = 1:reps) %dorng% {
-    mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ]))
+    mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
                      method = "sparse", cv = cv)
