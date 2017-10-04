@@ -701,10 +701,10 @@ flowReMix <- function(formula,
           try(capture.output(fit <- robustbase::glmrob(formula = glmformula,
                                         data = popDat[[1]],
                                         weights = weights,
-                                        family = "binomial")))
+                                        family = "binomial"),silent=TRUE))
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popDat[[1]],
-                           weights = weights, family = "binomial"))
+                           weights = weights, family = "binomial"),silent=TRUE)
             if(is.null(fit)) {
               return(NULL)
             }
@@ -740,9 +740,9 @@ flowReMix <- function(formula,
           }
 
           tempfit <- NULL
-          try(tempfit <- BBreg(popDat[[1]], glmformula, weights))
+          try(tempfit <- BBreg(popDat[[1]], glmformula, weights),silent=TRUE)
           if(is.null(tempfit)) {
-            try(fit <- glm(glmformula, family = "binomial", data = popDat[[1]], weights = weights))
+            try(fit <- glm(glmformula, family = "binomial", data = popDat[[1]], weights = weights),silent=TRUE)
           } else {
             fit <- tempfit
           }
