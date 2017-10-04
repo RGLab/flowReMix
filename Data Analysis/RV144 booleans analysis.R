@@ -112,11 +112,6 @@ add_ptid <- function(x, subject_id) {
 }
 
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
-filenames2 <- as.list(dir(path = 'data analysis/results', pattern="rv144_17_*"))
-filenames3 <- as.list(dir(path = 'data analysis/results', pattern="rv144_16_*"))
-filenames <- filenames[-seq(from = 1, to = 17, by = 2)]
-filenames2 <- filenames2[-seq(from = 1, to = 17, by = 2)]
-filenames3 <- filenames3[-c(2, 4, 6, 8, 10, 13, 15)]
 filenames <- c(filenames, filenames2)
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
@@ -131,19 +126,6 @@ post <- Reduce("+", post) / length(filenames)
 fit$data <- booldata
 fit <- add_ptid(fit, ptid)
 fit$posteriors[, -1] <- post
-
-# Quantifying inter-fit variability ---------------------
-reps <- 100
-aucs <- matrix(ncol = ncol(fit$posteriors) - 1, nrow = reps)
-rprob <- matrix(ncol = ncol(fit$posteriors) - 1, nrow = reps)
-for(i in 1:reps) {
-  samp <- postList[sample.int(length(postList), length(postList), replace = TRUE)]
-  post <- Reduce("+", samp) / length(samp)
-  aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
-  rprob[i, ] <- colMeans(post)
-}
-
-
 
 load(file = "data analysis/results/rv144_15_niter30npost2.Robj")
 load(file = "data analysis/results/rv144_15_niter45npost2.Robj")
@@ -166,84 +148,12 @@ load(file = "data analysis/results/rv144_18_niter200npost2.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost4.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost6.Robj")
 
-fit$data <- booldata
-assign <- fit$assignmentList
-names(assign) <- sapply(names(assign), function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][1])
-subjList <- list()
-for(i in 1:nrow(fit$posteriors)) {
-  subject <- assign[names(assign) == fit$posteriors[i, 1]]
-  subject <- lapply(subject, colMeans)
-  subject <- do.call("rbind", subject)
-  subjList[[i]] <- subject
-}
-
-ids <- fit$posteriors[, 1:2]
-vaccine[, 1] <- as.character(vaccine[, 1])
-vaccine[, 1] <- factor(vaccine[, 1], levels = levels(ids[, 1]))
-vaccine <- vaccine[!is.na(vaccine[, 1]), ]
-vaccine <- vaccine[order(vaccine[, 1]), ]
-ids <- merge(ids, vaccine, all.x = TRUE, all.y = FALSE,
-             by = "ptid", sort = FALSE)
-vaccination <- ids[, 3]
-infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
-datId <- as.character(fit$posteriors$ptid)
-infectID <- as.character(infectDat$ptid)
-infectDat <- infectDat[infectID %in% datId, ]
-infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
-infectDat <- infectDat[order(infectDat$ptid), ]
-ids <- merge(ids, infectDat, sort = FALSE)
-infect <- ids[, 4]
-infect[infect == "PLACEBO"] <- NA
-infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
-
-reps <- 200
-aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
-rprob <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
-niters <- nrow(subjList[[1]])
-for(i in 1:reps) {
-  samp <- sample.int(niters, niters, replace = TRUE)
-  post <- t(sapply(subjList, function(x) colMeans(x[samp, ])))
-  aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
-  rprob[i, ] <- colMeans(post)
-  cat(i, " ")
-}
-
-centerAUC <- apply(fit$posteriors[, -1], 2, function(x) roc(infect ~ x)$auc)
-centerRprob <- colMeans(fit$posteriors[, -1])
-CI <- matrix(ncol = 2, nrow = length(centerAUC))
-probCI <- matrix(ncol = 2, nrow = length(centerAUC))
-for(i in 1:length(centerAUC)) {
-  CI[i, ] <- quantile(centerAUC[i] - (aucs[, i] - mean(aucs[, i])), probs = c(0.025, 0.975))
-  probCI[i, ] <- quantile(centerRprob[i] - (rprob[, i] - mean(rprob[, i])), probs = c(0.025, 0.975))
-}
-CI <- cbind(CI[, 1], centerAUC, CI[, 2])
-probCI <- cbind(probCI[, 1], centerRprob, probCI[, 2])
-CI <- data.frame(CI)
-probCI <- data.frame(probCI)
-names(CI) <- c("lowerCI", "estimate", "upperCI")
-names(probCI) <- c("lowerCI", "estimate", "upperCI")
-
-colMeans(aucs)
-max(colMeans(aucs))
-sds <- apply(aucs, 2, sd)
-names(sds) <- names(fit$posteriors)[-1]
-
-# Adjusting posteriors post-hoc using pre-assignment rule --------------
-# subjects <- unique(preAssignment$ptid)
-# for(i in 1:length(subjects)) {
-#   row <- which(fit$posteriors$ptid == subjects[i])
-#   assign <- subset(preAssignment, ptid == subjects[i])
-#   matching <- match(colnames(fit$posteriors[, -1]), assign[, 2])
-#   index <- which(assign[matching, 3] == 0) + 1
-#   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
-# }
-
+# Plots -------------
 scatter <- plot(fit, type = "scatter", target = vaccine)
 rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
 fdrplot <- plot(fit, type = "FDR", target = vaccine)
 # rocplot
 # scatter
-
 
 # ROC for vaccinations -----------------------------
 # sink("data analysis/results/RV144logisticSummary.txt")
