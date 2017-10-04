@@ -110,8 +110,10 @@ add_ptid <- function(x, subject_id) {
   return(x)
 }
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_2_*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_1_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
+filenames <- filenames[-seq(from = 1, to = 17, by = 2)]
+# filenames <- filenames[c(1, 3, 5, 7, 9)]
+filenames <- filenames[c(2, 4, 6, 8)]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 
 post <- list()
@@ -124,22 +126,70 @@ fit$data <- booldata
 fit <- add_ptid(fit, ptid)
 fit$posteriors[, -1] <- post
 
-load(file = "data analysis/results/rv144_3_niter60npost5_prior.Robj")
-load(file = "data analysis/results/rv144_3_niter30npost5_prior.Robj")
-load(file = "data analysis/results/rv144_3_niter30npost10_prior.Robj")
-load(file = "data analysis/results/rv144_4_niter30npost10_pre.Robj")
-load(file = "data analysis/results/rv144_4_niter30npost5_pre.Robj")
-load(file = "data analysis/results/rv144_4_niter60npost5_pre.Robj")
-load(file = "data analysis/results/rv144_4_niter60npost10_pre.Robj")
-load(file = "data analysis/results/rv144_3_niter60npost10_prior.Robj")
-load(file = "data analysis/results/rv144_10_niter30npost8_pre.Robj")
-load(file = "data analysis/results/rv144_10_niter30npost4_pre.Robj")
-load(file = "data analysis/results/rv144_11_niter30npost4_prior.Robj")
-load(file = "data analysis/results/rv144_11_niter30npost8_prior.Robj")
-load(file = "data analysis/results/rv144_11_niter60npost4_prior.Robj")
-load(file = "data analysis/results/rv144_11_niter60npost8_prior.Robj")
 load(file = "data analysis/results/rv144_15_niter30npost2.Robj")
+load(file = "data analysis/results/rv144_15_niter45npost2.Robj")
+load(file = "data analysis/results/rv144_15_niter60npost2.Robj")
+load(file = "data analysis/results/rv144_15_niter45npost4.Robj")
+load(file = "data analysis/results/rv144_15_niter60npost4.Robj")
+load(file = "data analysis/results/rv144_15_niter30npost6.Robj")
+load(file = "data analysis/results/rv144_16_niter30npost4.Robj")
+load(file = "data analysis/results/rv144_16_niter30npost6.Robj")
+load(file = "data analysis/results/rv144_16_niter45npost2.Robj")
+load(file = "data analysis/results/rv144_16_niter60npost4.Robj")
+load(file = "data analysis/results/rv144_16_niter60npost6.Robj")
+load(file = "data analysis/results/rv144_18_niter50npost2.Robj")
+load(file = "data analysis/results/rv144_18_niter50npost4.Robj")
+load(file = "data analysis/results/rv144_18_niter50npost6.Robj")
+load(file = "data analysis/results/rv144_18_niter100npost2.Robj")
+load(file = "data analysis/results/rv144_18_niter100npost4.Robj")
+load(file = "data analysis/results/rv144_18_niter100npost6.Robj")
+load(file = "data analysis/results/rv144_18_niter200npost2.Robj")
+load(file = "data analysis/results/rv144_18_niter200npost4.Robj")
+load(file = "data analysis/results/rv144_18_niter200npost6.Robj")
+
 fit$data <- booldata
+assign <- fit$assignmentList
+names(assign) <- sapply(names(assign), function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][1])
+subjList <- list()
+for(i in 1:nrow(fit$posteriors)) {
+  subject <- assign[names(assign) == fit$posteriors[i, 1]]
+  subject <- lapply(subject, colMeans)
+  subject <- do.call("rbind", subject)
+  subjList[[i]] <- subject
+}
+
+ids <- fit$posteriors[, 1:2]
+vaccine[, 1] <- as.character(vaccine[, 1])
+vaccine[, 1] <- factor(vaccine[, 1], levels = levels(ids[, 1]))
+vaccine <- vaccine[!is.na(vaccine[, 1]), ]
+vaccine <- vaccine[order(vaccine[, 1]), ]
+ids <- merge(ids, vaccine, all.x = TRUE, all.y = FALSE,
+             by = "ptid", sort = FALSE)
+vaccination <- ids[, 3]
+infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
+datId <- as.character(fit$posteriors$ptid)
+infectID <- as.character(infectDat$ptid)
+infectDat <- infectDat[infectID %in% datId, ]
+infectDat$ptid <- factor(as.character(infectDat$ptid), levels = levels(booldata$ptid))
+infectDat <- infectDat[order(infectDat$ptid), ]
+ids <- merge(ids, infectDat, sort = FALSE)
+infect <- ids[, 4]
+infect[infect == "PLACEBO"] <- NA
+infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
+
+reps <- 100
+aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
+niters <- nrow(subjList[[1]])
+for(i in 1:reps) {
+  samp <- sample.int(niters, niters, replace = TRUE)
+  post <- t(sapply(subjList, function(x) colMeans(x[samp, ])))
+  aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
+  cat(i, " ")
+}
+colMeans(aucs)
+max(colMeans(aucs))
+sds <- apply(aucs, 2, sd)
+names(sds) <- names(fit$posteriors)[-1]
 
 # Adjusting posteriors post-hoc using pre-assignment rule --------------
 # subjects <- unique(preAssignment$ptid)
@@ -153,6 +203,7 @@ fit$data <- booldata
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
 rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
+fdrplot <- plot(fit, type = "FDR", target = vaccine)
 # rocplot
 # scatter
 
@@ -195,39 +246,47 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
                           sortAUC = FALSE, pvalue = "wilcoxon")
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
+# stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
+#                        gamma = 0.25, AND = TRUE)
+# save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
 threshold <- 0.85
 load(file = "data analysis/results/rv144_15_niter30npost2_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 load(file = "data analysis/results/rv144_15_niter45npost2_stab.Robj")
 plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_15_niter60npost2_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_15_niter45npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_15_niter60npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
+load(file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.9, seed = 1)
+load(file = "data analysis/results/rv144_16_niter30npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
+load(file = "data analysis/results/rv144_16_niter30npost6_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.82, seed = 1)
+load(file = "data analysis/results/rv144_16_niter60npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
 
+load(file = "data analysis/results/rv144_18_niter50npost2_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
+load(file = "data analysis/results/rv144_18_niter50npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
+load(file = "data analysis/results/rv144_18_niter50npost6_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
+load(file = "data analysis/results/rv144_18_niter100npost2_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.92, seed = 1)
+load(file = "data analysis/results/rv144_18_niter100npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.92, seed = 1)
+load(file = "data analysis/results/rv144_18_niter100npost6_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
+load(file = "data analysis/results/rv144_18_niter200npost2_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
+load(file = "data analysis/results/rv144_18_niter200npost4_stab.Robj")
+plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
 
-threshold <- 0.85
-load(file = "data analysis/results/rv144_3_niter60npost10_prior_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_3_niter60npost5_prior_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_3_niter30npost10_prior_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_3_niter30npost5_prior_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-
-threshold <- 0.5
-load(file = "data analysis/results/rv144_4_niter60npost10_pre_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_4_niter60npost5_pre_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_4_niter30npost10_pre_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_4_niter30npost5_pre_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-
-threshold <- .98
-load(file = "data analysis/results/rv144_11_niter30npost8_prior_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_11_niter60npost4_prior_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
 
 
 #######################

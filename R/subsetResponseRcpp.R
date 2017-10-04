@@ -1067,6 +1067,9 @@ flowReMix <- function(formula,
           isingfit <- pIsing(assignmentList, AND = TRUE,
                               preAssignment = preAssignmentMat,
                              prevfit = isingCoefs)
+          isingfit <- pIsing(assignmentList, AND = TRUE,
+                             preAssignment = preAssignmentMat,
+                             prevfit = isingfit)
         }
 
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
