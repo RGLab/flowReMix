@@ -1,4 +1,4 @@
-cpus <- 5
+cpus <- 2
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -52,9 +52,9 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
-configurations <- expand.grid(niters = c(40, 80, 120),
+configurations <- expand.grid(niters = c(50, 100),
                               npost = c(1),
-                              seed = c(1:10))
+                              seed = c(1:100))
 config <- configurations[setting, ]
 niter <- config[[1]]
 npost <- config[[2]]
@@ -62,7 +62,7 @@ seed <- config[[3]]
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 100,
                              keepEach = 10, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
@@ -89,12 +89,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
 
-file <- paste("results/rv144_22_niter", niter, "npost", npost, "seed", seed, "c.Robj", sep = "")
+file <- paste("results/rv144_24_niter", niter, "npost", npost, "seed", seed, "c.Robj", sep = "")
 save(fit, file = file)
 
-stab <- stabilityGraph(fit, reps = 500, cpus = round(cpus / 2), type = "ising",
+stab <- stabilityGraph(fit, reps = 400, cpus = round(cpus / 2), type = "ising",
                        cv = FALSE, gamma = 0.25, AND = TRUE)
-file <- paste("results/rv144_stab_22_niter", niter, "npost", npost,  "seed", seed,"c.Robj", sep = "")
+file <- paste("results/rv144_stab_24_niter", niter, "npost", npost,  "seed", seed,"c.Robj", sep = "")
 save(stab, file = file)
 
 

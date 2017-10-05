@@ -69,6 +69,7 @@ booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
 
 # Getting result files --------------------------
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_20__*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_22__*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
@@ -103,7 +104,8 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 
 # Bootstrapping -------------------------
-groups <- list(c(1:38), c(1:20), c(21:38))
+# groups <- list(c(1:38), c(1:20), c(21:38))
+groups <- list(c(1:27), c(8:17), c(18:27), c(1:7))
 resList <- list()
 for(i in 1:length(groups)) {
   temppost <- postList[groups[[i]]]
@@ -118,37 +120,57 @@ for(i in 1:length(groups)) {
   resList[[i]] <- resList[[i]][order(resList[[i]][, 2], decreasing = TRUE), ]
 }
 
+# Bootstrapping the variabilty of an aggregate fit --------------
+reps <- 200
+results <- list()
+for(g in 1:length(groups)) {
+  aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
+  for(r in 1:reps) {
+    temppost <- postList[groups[[g]]]
+    samp <- temppost[sample.int(length(temppost), length(temppost), replace = TRUE)]
+    samp <- Reduce("+", samp) / length(samp)
+    aucs[r, ] <- apply(samp, 2, function(x) roc(infect ~ x)$auc)
+  }
+  means <- colMeans(aucs)
+  sds <- apply(aucs, 2, sd)
+  medians <- apply(aucs, 2, median)
+  res <- data.frame(lci = means - 2 * sds, median = medians, uci = means + 2 * sds)
+  rownames(res) <- colnames(fit$posteriors)[-1]
+  res <- res[order(res[, 2], decreasing = TRUE), ]
+  print(res)
+  results[[g]] <- res
+}
 
 # Analysis for a single fit ----------------------
-reps <- 200
-aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
-rprob <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
-niters <- nrow(subjList[[1]])
-for(i in 1:reps) {
-  samp <- sample.int(niters, niters, replace = TRUE)
-  post <- t(sapply(subjList, function(x) colMeans(x[samp, ])))
-  aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
-  rprob[i, ] <- colMeans(post)
-  cat(i, " ")
-}
-
-centerAUC <- apply(fit$posteriors[, -1], 2, function(x) roc(infect ~ x)$auc)
-centerRprob <- colMeans(fit$posteriors[, -1])
-CI <- matrix(ncol = 2, nrow = length(centerAUC))
-probCI <- matrix(ncol = 2, nrow = length(centerAUC))
-for(i in 1:length(centerAUC)) {
-  CI[i, ] <- quantile(centerAUC[i] - (aucs[, i] - mean(aucs[, i])), probs = c(0.025, 0.975))
-  probCI[i, ] <- quantile(centerRprob[i] - (rprob[, i] - mean(rprob[, i])), probs = c(0.025, 0.975))
-}
-CI <- cbind(CI[, 1], centerAUC, CI[, 2])
-probCI <- cbind(probCI[, 1], centerRprob, probCI[, 2])
-CI <- data.frame(CI)
-probCI <- data.frame(probCI)
-names(CI) <- c("lowerCI", "estimate", "upperCI")
-names(probCI) <- c("lowerCI", "estimate", "upperCI")
-
-colMeans(aucs)
-max(colMeans(aucs))
-sds <- apply(aucs, 2, sd)
-names(sds) <- names(fit$posteriors)[-1]
-
+# reps <- 200
+# aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
+# rprob <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
+# niters <- nrow(subjList[[1]])
+# for(i in 1:reps) {
+#   samp <- sample.int(niters, niters, replace = TRUE)
+#   post <- t(sapply(subjList, function(x) colMeans(x[samp, ])))
+#   aucs[i, ] <- apply(post, 2, function(x) roc(infect ~ x)$auc)
+#   rprob[i, ] <- colMeans(post)
+#   cat(i, " ")
+# }
+#
+# centerAUC <- apply(fit$posteriors[, -1], 2, function(x) roc(infect ~ x)$auc)
+# centerRprob <- colMeans(fit$posteriors[, -1])
+# CI <- matrix(ncol = 2, nrow = length(centerAUC))
+# probCI <- matrix(ncol = 2, nrow = length(centerAUC))
+# for(i in 1:length(centerAUC)) {
+#   CI[i, ] <- quantile(centerAUC[i] - (aucs[, i] - mean(aucs[, i])), probs = c(0.025, 0.975))
+#   probCI[i, ] <- quantile(centerRprob[i] - (rprob[, i] - mean(rprob[, i])), probs = c(0.025, 0.975))
+# }
+# CI <- cbind(CI[, 1], centerAUC, CI[, 2])
+# probCI <- cbind(probCI[, 1], centerRprob, probCI[, 2])
+# CI <- data.frame(CI)
+# probCI <- data.frame(probCI)
+# names(CI) <- c("lowerCI", "estimate", "upperCI")
+# names(probCI) <- c("lowerCI", "estimate", "upperCI")
+#
+# colMeans(aucs)
+# max(colMeans(aucs))
+# sds <- apply(aucs, 2, sd)
+# names(sds) <- names(fit$posteriors)[-1]
+#

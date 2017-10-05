@@ -124,7 +124,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericVector binomDensity ;
   NumericMatrix randomEta ;
   NumericVector integratedDensities;
-  double sigmaHat, muHat ;
+  double sigmaHat, muHat, prevMuHat ;
   double priorProb, densityRatio, pResponder ;
   int k, j, m;
 
@@ -172,8 +172,14 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
           eta = subsetAltEta ;
         }
         etaResid = empEta - eta ;
-        muHat = mean(etaResid) ;
-        vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
+        if(k == 0) {
+          muHat = mean(etaResid) ;
+          vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
+        } else {
+          prevMuHat = muHat ;
+          muHat = mean(etaResid) ;
+          vsample = vsample - prevMuHat + muHat ;
+        }
         sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef[j], TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;

@@ -8,7 +8,7 @@
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
-                           gamma = 0.9, AND = TRUE) {
+                           gamma = 0.9, AND = TRUE, seed = NULL) {
   type <- type[1]
   if(type == "ising") {
     samples <- obj$assignmentList
@@ -33,11 +33,13 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     doParallel::registerDoParallel(cores = cpus)
     registerDoRNG()
   }
-  set.seed(100)
+
+  if(!is.null(seed)) {
+    set.seed(seed)
+  }
 
   # perc <- 0.1
-  # requireNamespace("progress")
-  # pb = progress_bar$new(total=reps);
+  # pb <-  progress::progress_bar$new(total = reps);
   cluster_res = foreach(i = 1:reps) %dorng% {
     mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
     colnames(mat) <- subsets
@@ -50,8 +52,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     # }
     return(countCovar)
   }
-  countCovar = Reduce(x = cluster_res, f=function(x,y)x+y)
-  # cat("100% \n")
+
   doParallel::stopImplicitCluster()
 
   props <- countCovar / reps

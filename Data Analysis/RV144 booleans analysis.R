@@ -146,7 +146,22 @@ load(file = "data analysis/results/rv144_18_niter100npost6.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost2.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost4.Robj")
 load(file = "data analysis/results/rv144_18_niter200npost6.Robj")
-
+load(file = "data analysis/results/rv144_22_niter40npost1seed1c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed2c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed3c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed4c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed5c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed6c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed7c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed8c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed9c.Robj")
+load(file = "data analysis/results/rv144_22_niter40npost1seed10c.Robj")
+load(file = "data analysis/results/rv144_22_niter80npost1seed1c.Robj")
+load(file = "data analysis/results/rv144_22_niter80npost1seed3c.Robj")
+load(file = "data analysis/results/rv144_22_niter80npost1seed6c.Robj")
+load(file = "data analysis/results/rv144_22_niter80npost1seed7c.Robj")
+load(file = "data analysis/results/rv144_22_niter80npost1seed8c.Robj")
+load(file = "data analysis/results/rv144_22_niter80npost1seed9c.Robj")
 
 
 fit$data <- booldata
@@ -175,9 +190,9 @@ rocplot <- plot(fit, target = vaccine, type = "ROC", ncols = 6,
 #           base_height = 6,
 #           base_width = 12)
 
-rocResults <- summary(fit, target = vaccine, direction = ">", adjust = "BH",
-                       sortAUC = FALSE)
-rocResults[order(rocResults$auc, decreasing = TRUE), ]
+# rocResults <- summary(fit, target = vaccine, direction = ">", adjust = "BH",
+#                        sortAUC = FALSE)
+# rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
 # ROC for infection status -------------------
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)

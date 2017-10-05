@@ -85,7 +85,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
-  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), ]
+  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), , drop = FALSE]
   if(length(nonzero) != 0) {
     nonzero <- t(apply(nonzero, 1, sort))
     nonzero <- unique(nonzero)
@@ -190,7 +190,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
-  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]),,drop=FALSE ]
+  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), , drop=FALSE ]
   if(length(nonzero) != 0) {
     nonzero <- t(apply(nonzero, 1, sort))
     nonzero <- unique(nonzero)
