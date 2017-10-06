@@ -74,7 +74,7 @@ NumericVector computeBinomDensity(NumericVector subsetCount,
       prob = expit(prob) ;
       count = subsetCount[j] ;
       N = subsetN[j] ;
-      if(betaDispersion & (M < 150000)) {
+      if(betaDispersion & (M < 150000) ) {
         density += betaBinomDens(count, N ,prob, M) ;
       } else {
         density += R::dbinom(count, N, prob, 1) / subsetSize ;
@@ -117,7 +117,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 IntegerVector preAssignment,
                                 double randomAssignProb,
                                 NumericVector mprobs, double preAssignCoef,
-                                double prior) {
+                                double prior, bool zeroPosteriorProbs) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -139,12 +139,12 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   double isingOffset = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
-      if(preAssignment[j] != -1 & preAssignCoef < 10e-4) {
+      if(preAssignment[j] != -1 & preAssignCoef < 10e-4 & !zeroPosteriorProbs) {
         assignment[j] = preAssignment[j] ;
-        continue ;
-      } else if(preAssignment[j] == 0) {
+        continue;
+      }else if(preAssignment[j] == 0 & preAssignCoef > 10e-4) {
         isingOffset = -prior ;
-      } else if(preAssignment[j] == 1) {
+      } else if(preAssignment[j] == 1 & preAssignCoef > 10e-4) {
         isingOffset = prior ;
       } else {
         isingOffset = 0 ;
@@ -216,7 +216,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         assignment[j] = 0 ;
       }
     }
-
     if((m % keepEach) == 0) {
       assignmentMatrix(assignNum++, _) = assignment ;
     }

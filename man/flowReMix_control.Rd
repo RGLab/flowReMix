@@ -9,7 +9,8 @@ flowReMix_control(updateLag = 5, randomAssignProb = 0, nsamp = 20,
   maxDispersion = 10^3, minDispersion = 10^8, isingInit = -4,
   keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
   initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
-  markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = FALSE)
+  markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = FALSE,
+  zeroPosteriorProbs = FALSE)
 }
 \arguments{
 \item{updateLag}{number of iterations before the algorithm is assumed to
@@ -48,6 +49,14 @@ univariate numerical integration in the Gibbs sampler.}
 Options are either "sparse" for \code{\link[glmnet]{cv.glmnet}} or "binom"
 for \code{\link[stats]{glm}}. If left as \code{NULL} then it will be determined
 according to the regression_method specified for the \code{flowReMix} call.}
+
+\item{prior}{\code{numeric} value, a prior for response and non-response in the Ising model
+used constrain non-responders (e.g. when pu>ps).}
+
+\item{zeroPosteriorProbs}{boolean. \code{TRUE} will zero out posterior response
+probabilities where pu>ps, equivalent to a one-sided test. The full set of responses
+will still be used to estimate the Ising model. Default \code{FALSE}. Can be used together
+with the prior argument on the Ising model.}
 }
 \value{
 An object of type \code{flowReMix_control}.
