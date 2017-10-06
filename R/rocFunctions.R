@@ -107,7 +107,7 @@ fdrTable <- function(obj, target) {
   notNA <- !is.na(target)
   post <- 1 - obj$posteriors[notNA, -1]
   colnames(post) <- names(obj$coefficients)
-  subsets <- names(fit$coefficients)
+  subsets <- names(obj$coefficients)
   p <- length(subsets)
 
   if(is.factor(target)) {
@@ -188,7 +188,7 @@ plotScatter <- function(obj, subsets = NULL,
 
   library(ggplot2)
   if(!is.null(target)) {
-    if(length(target) != nrow(fit$posteriors)) {
+    if(length(target) != nrow(obj$posteriors)) {
       stop("Length of target must be identical to the number of subjects in the dataset!")
     }
   }
@@ -202,12 +202,12 @@ plotScatter <- function(obj, subsets = NULL,
     varname <- varname[length(varname)]
   }
 
-  post <- fit$posteriors
+  post <- obj$posteriors
   names(post)[1] <- "id"
   post <- reshape2::melt(post, id = "id")
   names(post) <- c("id", "sub.population", "post")
   if(!is.null(target)) {
-    shapes <- data.frame(id = fit$posteriors[, 1], shape = target)
+    shapes <- data.frame(id = obj$posteriors[, 1], shape = target)
     post <- merge(post, shapes, all.x = TRUE, all.y = FALSE)
   }
   dat <- merge(dat, post, all.x = TRUE, all.y = FALSE,

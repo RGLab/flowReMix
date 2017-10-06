@@ -95,7 +95,7 @@ computeGraphAUC <- function(object, outcome = NULL, reps = 100,
   if(!is.null(outcome)) {
     if(!is.null(samples)) {
       posteriors <- data.frame(t(sapply(samples, colMeans)))
-      posteriors <- cbind(fit$posteriors[, 1], posteriors)
+      posteriors <- cbind(object$posteriors[, 1], posteriors)
       colnames(posteriors)[1] <- "id"
     } else {
       posteriors <- object$posteriors
@@ -124,7 +124,7 @@ computeGraphAUC <- function(object, outcome = NULL, reps = 100,
     subsets <- names(posteriors)[-c(1, ctrlCol)]
     result <- data.frame(subsets, aucs, pvals, qvals)
   } else {
-    posteriors <- fit$posteriors
+    posteriors <- object$posteriors
     levelProbs <- colMeans(posteriors[, 2:ncol(posteriors)])
     result <- NULL
   }
