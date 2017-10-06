@@ -41,6 +41,14 @@
 #'   for \code{\link[stats]{glm}}. If left as \code{NULL} then it will be determined
 #'   according to the regression_method specified for the \code{flowReMix} call.
 #'
+#' @param zeroPosteriorProbs boolean. \code{TRUE} will zero out posterior response
+#' probabilities where pu>ps, equivalent to a one-sided test. The full set of responses
+#' will still be used to estimate the Ising model. Default \code{FALSE}. Can be used together
+#' with the prior argument on the Ising model.
+#'
+#' @param prior \code{numeric} value, a prior for response and non-response in the Ising model
+#' used constrain non-responders (e.g. when pu>ps).
+#'
 #' @return An object of type \code{flowReMix_control}.
 #'
 #' @export
@@ -50,7 +58,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
                               initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
                               markovChainEM = TRUE, seed=100, prior = 0,
-                              isingWprior = FALSE) {
+                              isingWprior = FALSE,zeroPosteriorProbs=FALSE) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
@@ -70,7 +78,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  markovChainEM = markovChainEM,
                  seed=seed,
                  prior = abs(prior),
-                 isingWprior = isingWprior)
+                 isingWprior = isingWprior, zeroPosteriorProbs = zeroPosteriorProbs)
   class(object) <- "flowReMix_control"
   return(object)
 }

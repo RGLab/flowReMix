@@ -336,6 +336,7 @@ flowReMix <- function(formula,
   markovChainEM <- control$markovChainEM
   prior <- control$prior
   isingWprior <- control$isingWprior
+  zeroPosteriorProbs <- control$zeroPosteriorProbs
 
   if(parallel) {
     if(is.null(ncores)) {
@@ -955,7 +956,7 @@ flowReMix <- function(formula,
                                            M, betaDispersion,
                                            as.integer(subjectData$pre$assign),
                                            randomAssignProb, modelprobs, iterAssignCoef,
-                                           prior)
+                                           prior, zeroPosteriorProbs)
       }
 
       unifVec <- runif(nsamp * nSubsets)
@@ -990,7 +991,11 @@ flowReMix <- function(formula,
 
     for(i in 1:nSubjects) {
       assignmentMat <- assignmentList[[i]]
-      iterPosteriors <- colMeans(assignmentMat)
+      if(zeroPosteriorProbs){
+        assignmentMat[,which(preAssignment[[i]]$assign==0)]=0 #zero out pre-assigned z's
+        iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
+        assignmentMat <- assignmentList[[i]]  # restore the z's for cluster assignments.
+      }
       posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
 
