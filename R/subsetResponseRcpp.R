@@ -320,32 +320,39 @@ flowReMix <- function(formula,
   }
   updateLag <- control$updateLag
   randomAssignProb <- max(min(control$randomAssignProb, 0.5), 0)
-  nsamp <- control$nsamp
-  dataReplicates <- control$nPosteriors
-  maxDispersion <- control$maxDispersion
-  minDispersion <- control$minDispersion
-  centerCovariance <- control$centerCovariance
-  intSampSize <- control$intSampSize
-  initMHcoef <- control$initMHcoef
-  keepEach <- control$keepEach
+  nsamp <- as.integer(control$nsamp)
+  dataReplicates <- as.integer(control$nPosteriors)
+  maxDispersion <- as.integer(control$maxDispersion)
+  minDispersion <- as.integer(control$minDispersion)
+  centerCovariance <- as.logical(control$centerCovariance)
+  intSampSize <- as.integer(control$intSampSize)
+  initMHcoef <- as.numeric(control$initMHcoef)
+  keepEach <- as.integer(control$keepEach)
   initMethod <- control$initMethod
-  ncores <- control$ncores
+  ncores <- as.integer(control$ncores)
   isingInit <- control$isingInit
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
   markovChainEM <- control$markovChainEM
-  prior <- control$prior
-  isingWprior <- control$isingWprior
-  zeroPosteriorProbs <- control$zeroPosteriorProbs
-
+  prior <- as.numeric(control$prior)
+  isingWprior <- as.logical(control$isingWprior)
+  zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
+  if(nsamp<=updateLag){
+	stop("nsamp should be > updateLag")
+  }
   if(parallel) {
+	library(doParallel)
+	library(foreach)
+	library(doRNG)
     if(is.null(ncores)) {
-      doParallel::registerDoParallel()
+      cl = makeiForkCluster(detectCores())
+      doParallel::registerDoParallel(cl)
       if(!is.null(control$seed)){
         set.seed(control$seed)
       }
     } else {
-      doParallel::registerDoParallel(ncores)
+	cl = makeForkCluster(ncores)
+      doParallel::registerDoParallel(cl)
       if(!is.null(control$seed)){
         set.seed(control$seed)
       }
@@ -377,7 +384,7 @@ flowReMix <- function(formula,
   regressionMethod <- regression_method
   isingMethod <- ising_model
   covarianceMethod <- covariance
-  maxIter <- iterations
+  maxIter <- as.integer(iterations)
   rate <- 1
   updateLag <- max(ceiling(updateLag), 1)
   if(updateLag < 2) {

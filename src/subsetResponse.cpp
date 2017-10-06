@@ -142,9 +142,9 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       if(preAssignment[j] != -1 & preAssignCoef < 10e-4 & !zeroPosteriorProbs) {
         assignment[j] = preAssignment[j] ;
         continue;
-      }else if(preAssignment[j] == 0 & preAssignCoef > 10e-4) {
+      }else if(preAssignment[j] == 0 ) {
         isingOffset = -prior ;
-      } else if(preAssignment[j] == 1 & preAssignCoef > 10e-4) {
+      } else if(preAssignment[j] == 1) {
         isingOffset = prior ;
       } else {
         isingOffset = 0 ;
