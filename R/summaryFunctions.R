@@ -17,8 +17,8 @@ plot.flowReMix <- function(obj,...){
     target = obj$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup#%>%select(outcome)%>%unlist%>%factor
     target <- as.data.frame(target)
     post <- obj$posteriors[, 1:2]
-    if(is.factor(fit$posteriors[, 1])) {
-      target[, 1] <- factor(target[, 1], levels = levels(fit$posteriors[, 1]))
+    if(is.factor(obj$posteriors[, 1])) {
+      target[, 1] <- factor(target[, 1], levels = levels(obj$posteriors[, 1]))
     }
     target <- merge(post, target, sort = FALSE)
     target <- target[, 3]
@@ -65,7 +65,7 @@ plot.flowReMix <- function(obj,...){
 summary.flowReMix <- function(obj, ...) {
   mc = match.call();
   if(is.null(mc$subject_id)){
-    subject_id = fit$subject_id
+    subject_id = obj$subject_id
     subject_id = enquo(subject_id)
   }else{
     subject_id = mc$subject_id
@@ -85,7 +85,7 @@ summary.flowReMix <- function(obj, ...) {
     type = eval(mc$type,envir=parent.frame())
   }
   type = match.arg(type, c("FDR","ROC"))
-  if(!exists("data",fit)){
+  if(!exists("data",obj)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }
   #Check of the target variable is valid

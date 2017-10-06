@@ -107,8 +107,8 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
     }
   }
   network <- list()
-  rownames(isingZ) <- names(fit$coefficients)
-  colnames(isingZ) <- names(fit$coefficients)
+  rownames(isingZ) <- names(obj$coefficients)
+  colnames(isingZ) <- names(obj$coefficients)
   network$network <- isingZ
   network$type <- "ising"
 
