@@ -36,6 +36,8 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 
   if(!is.null(seed)) {
     set.seed(seed)
+  }else{
+    set.seed(100)
   }
 
   # perc <- 0.1
