@@ -262,7 +262,7 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
 
 // [[Rcpp::export]]
-NumericMatrix randomEffectCoordinateMH(NumericVector y, NumericVector N,
+NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
                               int i, int nsamp, int nSubsets,
                               NumericVector MHcoef,
                               IntegerVector assignment,

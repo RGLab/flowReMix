@@ -297,6 +297,11 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
+#' @importFrom R.utils withTimeout
+#' @importFrom grDevices rainbow
+#' @importFrom utils capture.output
+#' @importFrom utils setTxtProgressBar
+#' @importFrom utils txtProgressBar
 #' @import doRNG
 #' @md
 #' @export
@@ -341,9 +346,9 @@ flowReMix <- function(formula,
 	stop("nsamp should be > updateLag")
   }
   if(parallel) {
-	library(doParallel)
-	library(foreach)
-	library(doRNG)
+	requireNamespace(doParallel)
+    requireNamespace(foreach)
+    requireNamespace(doRNG)
     if(is.null(ncores)) {
       cl = makeiForkCluster(detectCores())
       doParallel::registerDoParallel(cl)
@@ -795,7 +800,7 @@ flowReMix <- function(formula,
           if(is.null(X)) return(NULL)
           y <- cbind(popDat[[1]]$N - popDat[[1]]$y, popDat[[1]]$y)
           fit <- NULL
-          try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
+          try(withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
                                                             offset = popDat[[1]]$randomOffset),
                                    timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
@@ -975,7 +980,7 @@ flowReMix <- function(formula,
 
       MHattempts <- rep(0, nSubsets)
       MHsuccess <- rep(0, nSubsets)
-      randomMat <- randomEffectCoordinateMH(y, N,
+      randomMat <- simRandomEffectCoordinateMH(y, N,
                                             subjectData$index,
                                             nsamp, nSubsets, MHcoef,
                                             as.vector(assignment),

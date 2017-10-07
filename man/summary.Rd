@@ -5,7 +5,7 @@
 \alias{summary.flowReMix}
 \title{summary of a flowReMix fit}
 \usage{
-\method{summary}{flowReMix}(obj, ...)
+\method{summary}{flowReMix}(object, ...)
 }
 \arguments{
 \item{subject}{the name of the subject variable, as an unquoted variable}

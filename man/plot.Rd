@@ -5,12 +5,12 @@
 \alias{plot.flowReMix}
 \title{plot a flowReMix fit object}
 \usage{
-\method{plot}{flowReMix}(obj, ...)
+\method{plot}{flowReMix}(x, ...)
 }
 \arguments{
-\item{obj}{The model fit of class \code{flowReMix} returned by the fitting function.}
-
 \item{...}{additional arguments.}
+
+\item{obj}{The model fit of class \code{flowReMix} returned by the fitting function.}
 
 \item{type}{the type of plot to make, one of c("scatter","boxplot","FDR","ROC","graph")}
 

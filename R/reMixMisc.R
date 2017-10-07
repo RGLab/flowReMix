@@ -84,6 +84,9 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
 }
 
 
+#' @importFrom IsingFit IsingFit
+#' @importFrom GGally ggnet2
+#' @import stats
 #' @export
 computeGraphAUC <- function(object, outcome = NULL, reps = 100,
                             samples = NULL,
@@ -146,7 +149,7 @@ computeGraphAUC <- function(object, outcome = NULL, reps = 100,
       colnames(mat) <- names(object$coefficients)
       keep <- apply(mat, 2, function(x) any(x != x[1]))
       mat <- mat[, keep]
-      model <- IsingFit::IsingFit(mat, AND = AND, plot = FALSE)
+      model <- IsingFit(mat, AND = AND, plot = FALSE)
       modelList[[i]] <- model
       #plot(model)
       countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
@@ -158,19 +161,19 @@ computeGraphAUC <- function(object, outcome = NULL, reps = 100,
   }
 
   # Plotting graph ---------------------
-  require(GGally)
-  library(network)
-  library(sna)
+  requireNamespace(GGally)
+  requireNamespace(network)
+  requireNamespace(sna)
   network <- props
   if(screen) {
-    keep <- apply(network, 1, function(x) any(abs(x) >= threshold))
+    keep <- apply(network, 1, function(x,threshold=threshold) any(abs(x) >= threshold))
     network <- network::network[keep, keep]
   } else {
     keep <- rep(TRUE, length(props))
   }
   net <- network::network(props)
   subsets <- names(object$coefficients)
-  nodes <- GGally::ggnet2(network, label = subsets[keep])$data
+  nodes <- ggnet2(network, label = subsets[keep])$data
   edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
   p <- nrow(network)
   row <- 1

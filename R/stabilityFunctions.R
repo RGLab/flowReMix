@@ -5,6 +5,7 @@
 #' @importFrom GGally ggnet2
 #' @importFrom viridis plasma
 #' @importFrom igraph graph.adjacency
+#' @import doParallel
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
@@ -30,7 +31,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   if(cpus == 1) {
     foreach::registerDoSEQ()
   } else {
-    doParallel::registerDoParallel(cores = cpus)
+    registerDoParallel(cores = cpus)
     registerDoRNG()
   }
 
@@ -55,7 +56,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     return(countCovar)
   }
 
-  doParallel::stopImplicitCluster()
+  stopImplicitCluster()
 
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
@@ -127,14 +128,22 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 }
 
 #' @export
-plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
-                                     fill = NULL, fillName = NULL,
-                                     fillRange = NULL, fillPalette = NULL,
-                                     title = TRUE, label_size = 1.8,seed=100) {
+plot.flowReMix_stability <- function(x, ...){
+  mc = match.call();
+  threshold = ifelse(is.null(mc$threshold),0.5,mc$threshold)
+  plotAll = ifelse(is.null(mc$plotAll),FALSE,mc$plotAll)
+  fill = mc$fill
+  fillName = mc$fillName
+  fillRange = mc$fillRange
+  fillPalette = mc$fillPalette
+  title = ifelse(is.null(mc$title),TRUE,mc$title)
+  label_size = ifelse(is.null(mc$label_size),1.8,mc$label_size)
+  seed = ifelse(is.null(mc$seed),100,mc$seed)
+
   set.seed(seed)
-  require(ggplot2)
+  requireNamespace(ggplot2)
   measure <- fill
-  props <- obj$network
+  props <- x$network
   props[abs(props) < threshold] <- 0
   network <- props
   if(!plotAll) {
@@ -170,13 +179,13 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
   edgecol <- scale_colour_manual(name = "Correlation", values = c("dark green", "dark red"))
   edges$Dependence <- abs(edges$Dependence)
 
-  if(is.null(obj$raw)) {
+  if(is.null(x$raw)) {
     alphaTitle <- "Edge Propensity"
   } else {
     alphaTitle <- "Edge Quantile"
   }
 
-  library(ggplot2)
+  requireNamespace(ggplot2)
   figure <- ggplot() +
     edgecol +
     geom_segment(data = edges, aes(x = xstart, y = ystart,
@@ -216,25 +225,27 @@ plot.flowReMix_stability <- function(obj, threshold = 0.5, plotAll = FALSE,
 
   if(is.character(title)) {
     figure <- figure + ggtitle(title)
-  } else if(obj$type == "ising" & title) {
+  } else if(x$type == "ising" & title) {
     figure <- figure + ggtitle("Estimated Dependence Structure for Ising Model")
-  } else if(obj$type == "randomEffects" & title) {
+  } else if(x$type == "randomEffects" & title) {
     figure <- figure + ggtitle("Estimated Dependence Structure for Random Effects")
   }
 
   return(figure)
 }
 
+#' @importFrom igraph graph.adjacency
+#' @importFrom igraph components
 #' @export
 getGraphComponents <- function(obj, threshold = 0.5,
                                minsize = 2, groupNames = NULL) {
   # Finding groups -------------
-  library(igraph)
+  reqiureNamespace(igraph)
   network <- obj$network
   network[abs(network) < threshold] <- 0
   network[network != 0] <- 1
-  graph <- igraph::graph.adjacency(network)
-  comp <- igraph::components(graph)
+  graph <- graph.adjacency(network)
+  comp <- components(graph)
   groups <- which(comp$csize >= minsize)
   groups <- lapply(groups, function(x) names(comp$membership)[comp$membership == x])
   if(is.null(groupNames)) {

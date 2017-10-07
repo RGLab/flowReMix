@@ -151,9 +151,12 @@ fdrTable <- function(obj, target) {
 
 #' @export
 #' @import ggplot2
-plot.flowReMix_fdrTable <- function(obj, target, subsets = NULL,
-                                    varname = NULL) {
-  plotList <- obj$empiricalFDR
+plot.flowReMix_fdrTable <- function(x, ...) {
+  mc = match.call()
+  target = mc$target
+  subsets = mc$subsets
+  varname = mc$varname
+  plotList <- x$empiricalFDR
   if(!is.null(subsets)) {
     plotList <- subset(plotList, subset %in% subsets)
   }
@@ -186,7 +189,7 @@ plotScatter <- function(obj, subsets = NULL,
     dat <- subset(dat, repnum == 1)
   }
 
-  library(ggplot2)
+  requireNamespace(ggplot2)
   if(!is.null(target)) {
     if(length(target) != nrow(obj$posteriors)) {
       stop("Length of target must be identical to the number of subjects in the dataset!")

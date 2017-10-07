@@ -8,17 +8,17 @@
 #' @param varname the variable name to appear in the legend
 #' @param ... additional arguments.
 #' @export
-plot.flowReMix <- function(obj,...){
+plot.flowReMix <- function(x,...){
   mc = match.call()
   if(!is.null(mc$target)){
     target = mc$target
     target = enquo(target)
-    subject_id = obj$subject_id
-    target = obj$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup#%>%select(outcome)%>%unlist%>%factor
+    subject_id = x$subject_id
+    target = x$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup#%>%select(outcome)%>%unlist%>%factor
     target <- as.data.frame(target)
-    post <- obj$posteriors[, 1:2]
-    if(is.factor(obj$posteriors[, 1])) {
-      target[, 1] <- factor(target[, 1], levels = levels(obj$posteriors[, 1]))
+    post <- x$posteriors[, 1:2]
+    if(is.factor(x$posteriors[, 1])) {
+      target[, 1] <- factor(target[, 1], levels = levels(x$posteriors[, 1]))
     }
     target <- merge(post, target, sort = FALSE)
     target <- target[, 3]
@@ -28,7 +28,7 @@ plot.flowReMix <- function(obj,...){
   mc$type = NULL
 
   if(type == "FDR") {
-    table <- fdrTable(obj, target = target)
+    table <- fdrTable(x, target = target)
     mc[[1]] = as.name("plot")
     mc$obj = table
     mc$target = NULL
@@ -62,10 +62,10 @@ plot.flowReMix <- function(obj,...){
 #' @param type either "ROC" or "FDR".
 #' @importFrom rlang enquo
 #' @export
-summary.flowReMix <- function(obj, ...) {
+summary.flowReMix <- function(object, ...) {
   mc = match.call();
   if(is.null(mc$subject_id)){
-    subject_id = obj$subject_id
+    subject_id = object$subject_id
     subject_id = enquo(subject_id)
   }else{
     subject_id = mc$subject_id
@@ -85,11 +85,11 @@ summary.flowReMix <- function(obj, ...) {
     type = eval(mc$type,envir=parent.frame())
   }
   type = match.arg(type, c("FDR","ROC"))
-  if(!exists("data",obj)){
+  if(!exists("data",object)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }
   #Check of the target variable is valid
-  isvalid = obj$data %>%
+  isvalid = object$data %>%
     group_by(!!subject_id) %>% mutate(nlevels = length(unique(!!target)))
   if(!all(isvalid$nlevels %in% 1)){
     stop(
@@ -104,14 +104,14 @@ summary.flowReMix <- function(obj, ...) {
       )
     )
   }
-  outcome = obj$data %>%
+  outcome = object$data %>%
     group_by(!!subject_id) %>%
     summarize(outcome=unique(!!target))
   #left join ensures order in posteriors is respected.
   outcome <- as.data.frame(outcome)
-  obj$posteriors[, 1] <- as.character(obj$posteriors[, 1])
+  object$posteriors[, 1] <- as.character(object$posteriors[, 1])
   outcome[, 1] <- as.character(outcome[, 1])
-  outcome = suppressWarnings(left_join(obj$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
+  outcome = suppressWarnings(left_join(object$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
     mc$type = NULL
     mc[[1]]=as.name("rocTable")
@@ -119,7 +119,7 @@ summary.flowReMix <- function(obj, ...) {
     eval(mc, envir=parent.frame())
     # return(rocTable(obj, outcome, type=type,...))
   } else if(type == "FDR") {
-    return(fdrTable(obj, ifelse(is.factor(outcome),outcome,factor(outcome))))
+    return(fdrTable(object, ifelse(is.factor(outcome),outcome,factor(outcome))))
   } else {
     stop("Unknown summary method!")
   }
