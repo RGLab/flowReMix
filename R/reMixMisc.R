@@ -14,6 +14,8 @@
 #' @param nsamp number of Gibbs/componentwise MH cycles to perform for each
 #'   subject. Must be larger than keepEach.
 #'
+#' @param lastSample how many samples to keep from the final iteration.
+#'
 #' @param initMHcoef the initial value for the shrinkage/inflation to perform on
 #'   the estimated covariance in the componentwise MH sampler. The initial value
 #'   does not matter much as this parameter self-tunes as the algorithm runs and
@@ -22,6 +24,11 @@
 #' @param nPosteriors number of posterior samples to take per subject. If left
 #'   as \code{NULL} then a value will be determined within flowReMix according
 #'   to a preset formula.
+#'
+#' @param minDispersion the minimum overdispersion allowed. The larger the value of the variable the less overdispersion is allowed.
+#'
+#'
+#' @param isingInit initialize the Ising model with this value.
 #'
 #' @param maxDispersion the maximum overdispersion level allowed. The lower the
 #'   value of the variable the more overdispersion is allowed. Must be larger
@@ -41,13 +48,25 @@
 #'   for \code{\link[stats]{glm}}. If left as \code{NULL} then it will be determined
 #'   according to the regression_method specified for the \code{flowReMix} call.
 #'
+#' @param ncores The number of cpu cores to use to fit the model in parallel.
+#'
+#' @param preAssignCoefs coefficients to multiply the posterior probabilities. 0 is a hard assignment and observations that are
+#' designated non-responders based on pu > ps will have posterior probabilities of 0. > 0 is a soft assignment, and a prior will be
+#' placed on the prior probability of non-response in the Ising model.
+#'
+#' @param markovChainEM \code{logical} use the mcEM algorithm to fit the model. Default TRUE.
+#'
 #' @param zeroPosteriorProbs boolean. \code{TRUE} will zero out posterior response
 #' probabilities where pu>ps, equivalent to a one-sided test. The full set of responses
 #' will still be used to estimate the Ising model. Default \code{FALSE}. Can be used together
 #' with the prior argument on the Ising model.
 #'
+#' @param seed \code{numeric} a random seed for reproducible initialization. Default 100.
+#'
 #' @param prior \code{numeric} value, a prior for response and non-response in the Ising model
 #' used constrain non-responders (e.g. when pu>ps).
+#'
+#' @param isingWprior \code{logical} fit the Ising model with a prior on the baseline response using the parameter in \code{prior}. Default TRUE.
 #'
 #' @return An object of type \code{flowReMix_control}.
 #'
@@ -86,7 +105,9 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
 
 #' @importFrom IsingFit IsingFit
 #' @importFrom GGally ggnet2
-#' @import stats
+#' @importFrom stats na.pass
+#' @importFrom stats model.matrix
+#' @importFrom stats model.frame
 #' @export
 computeGraphAUC <- function(object, outcome = NULL, reps = 100,
                             samples = NULL,

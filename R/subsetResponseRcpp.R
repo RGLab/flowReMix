@@ -1,7 +1,6 @@
 #' @useDynLib flowReMix
 #' @importFrom Rcpp sourceCpp
-#'
-
+#' @importFrom stats as.formula coef cov.wt dbinom glm model.offset model.response model.weights optim optimize p.adjust pbeta predict pwilcox rbinom rnorm runif t.test uniroot update.formula  var weighted.mean weights wilcox.test
 autoPreAssign <- function(x) {
   y <- x$y
   N <- x$N
@@ -186,6 +185,8 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'   the \code{\link[stats]{glm}} function with family = "binomial".
 #'
 #' @param iterations the number of stochastic-EM itreations to perform.
+#'
+#' @param parallel \code{logical}. Use parallel processing to fit the model. Default TRUE.
 #'
 #' @param verbose whether to print information regrading the fitting process as
 #'   the optimization algorithm runs.
