@@ -1008,6 +1008,8 @@ flowReMix <- function(formula,
         assignmentMat[,which(preAssignment[[i]]$assign==0)]=0 #zero out pre-assigned z's
         iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
         assignmentMat <- assignmentList[[i]]  # restore the z's for cluster assignments.
+      }else{
+        iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
       }
       posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
