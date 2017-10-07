@@ -64,7 +64,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     # }
     return(countCovar)
   }
-
+  countCovar = Reduce(x = cluster_res,f=`+`)
   stopImplicitCluster()
 
   props <- countCovar / reps
@@ -141,7 +141,7 @@ plot.flowReMix_stability <- function(x, ...){
   mc = match.call();
   threshold = ifelse(is.null(mc$threshold),0.5,mc$threshold)
   plotAll = ifelse(is.null(mc$plotAll),FALSE,mc$plotAll)
-  fill = mc$fill
+  fill = eval(mc$fill,envir=parent.frame())
   fillName = mc$fillName
   fillRange = mc$fillRange
   fillPalette = mc$fillPalette

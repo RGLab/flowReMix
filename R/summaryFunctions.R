@@ -49,6 +49,8 @@ plot.flowReMix <- function(x,...){
     return(eval(mc,envir = parent.frame()))
   } else if(type == "graph") {
     mc[[1]] = as.name("plotRawGraph")
+    mc$obj=mc$x
+    mc$x=NULL
     mc$target=NULL
     if(!is.null(match.call()$fill) & is.null(match.call()$fillName)) {
       return(eval(mc,envir = parent.frame()))
@@ -125,6 +127,8 @@ summary.flowReMix <- function(object, ...) {
     mc$type = NULL
     mc[[1]]=as.name("rocTable")
     mc$target = outcome
+    mc$obj=mc$object
+    mc$object=NULL
     eval(mc, envir=parent.frame())
     # return(rocTable(obj, outcome, type=type,...))
   } else if(type == "FDR") {
