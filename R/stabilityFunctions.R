@@ -1,5 +1,14 @@
 #' @name stabilityGraph
 #' @title compute a stability graph for the Ising model from a flowReMix fit.
+#' @description Compute the stable components of the Ising or Random Effects graphical model through bootstrapping.
+#' @param obj \code{flowReMix} model fit.
+#' @param type \code{character} "ising" or "randomEffects"
+#' @param cv \code{integer} MORE DETAILS
+#' @param reps \code{integer} number of replications.
+#' @param cpus \code{integer} number of cpus to use
+#' @param gamma \code{numeric} MORE DETAILS
+#' @param AND \code{logical}. How the Ising edges are aggregated. AND or OR.
+#' @param seed random seed. Default 100 if NULL.
 #' @import ggplot2
 #' @importFrom network network
 #' @importFrom GGally ggnet2
@@ -141,7 +150,7 @@ plot.flowReMix_stability <- function(x, ...){
   seed = ifelse(is.null(mc$seed),100,mc$seed)
 
   set.seed(seed)
-  requireNamespace(ggplot2)
+  requireNamespace("ggplot2")
   measure <- fill
   props <- x$network
   props[abs(props) < threshold] <- 0
@@ -185,7 +194,7 @@ plot.flowReMix_stability <- function(x, ...){
     alphaTitle <- "Edge Quantile"
   }
 
-  requireNamespace(ggplot2)
+  requireNamespace("ggplot2")
   figure <- ggplot() +
     edgecol +
     geom_segment(data = edges, aes(x = xstart, y = ystart,

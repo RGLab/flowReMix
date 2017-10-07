@@ -1,12 +1,16 @@
 #' @name plot
 #' @title plot a flowReMix fit object
 #' @description Generate a plot of a flowReMix model fit. Various plot types are supported.
-#' "scatter", "boxplot", "FDR", "ROC", "ising"
-#' @param obj The model fit of class \code{flowReMix} returned by the fitting function.
-#' @param type the type of plot to make, one of c("scatter","boxplot","FDR","ROC","graph")
-#' @param target the name of the outcome variable as an unquoted variable.
-#' @param varname the variable name to appear in the legend
-#' @param ... additional arguments.
+#' \itemize{
+#' \item{subject}{The name of the subject variable, as an unquoted variable.}
+#' \item{target}{unquoted variable name in the data corresponding to the outcome variable. Required.}
+#' \item{varname}{character string used to label the outcome variable on the plot legend.}
+#' \item{type}{character specifying the plot type. can be "scatter", "boxplot", "FDR", "ROC", "ising". Required.}
+#' }
+#' @param x The model fit of class \code{flowReMix} returned by the fitting function.
+#' @param ... additional arguments, see description.
+#' @usage
+#'   \method{plot}{flowReMix}(x,...)
 #' @export
 plot.flowReMix <- function(x,...){
   mc = match.call()
@@ -25,6 +29,7 @@ plot.flowReMix <- function(x,...){
     mc$target = target
   }
   type = mc$type
+  type = match.arg(c("ROC","scatter","boxplot","FDR","graph"))
   mc$type = NULL
 
   if(type == "FDR") {
@@ -57,9 +62,13 @@ plot.flowReMix <- function(x,...){
 #' @title summary of a flowReMix fit
 #' @description summarize the output of a flowReMix object into a rocTable
 #' Uses non-standard evaluation
-#' @param subject the name of the subject variable, as an unquoted variable
-#' @param target the name of the outcome variable as an unquoted variable.
-#' @param type either "ROC" or "FDR".
+#' \itemize{
+#' \item{subject}{The name of the subject variable, as an unquoted variable.}
+#' \item{target}{The name of the outcome variable as an unquoted variable.}
+#' \item{type}{either "ROC" or "FDR".}
+#' }
+#' @param object a flowReMix model fit.
+#' @param ... additional arguments. See description
 #' @importFrom rlang enquo
 #' @export
 summary.flowReMix <- function(object, ...) {
