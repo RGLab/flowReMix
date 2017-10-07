@@ -189,7 +189,7 @@ plotScatter <- function(obj, subsets = NULL,
     dat <- subset(dat, repnum == 1)
   }
 
-  requireNamespace(ggplot2)
+  requireNamespace("ggplot2")
   if(!is.null(target)) {
     if(length(target) != nrow(obj$posteriors)) {
       stop("Length of target must be identical to the number of subjects in the dataset!")

@@ -29,23 +29,29 @@ plot.flowReMix <- function(x,...){
     mc$target = target
   }
   type = mc$type
-  type = match.arg(c("ROC","scatter","boxplot","FDR","graph"))
+  type = match.arg(eval(type,envir=parent.frame()),c("ROC","scatter","boxplot","FDR","graph"))
   mc$type = NULL
 
   if(type == "FDR") {
-    table <- fdrTable(x, target = target)
+    table <- fdrTable(obj=x, target = target)
     mc[[1]] = as.name("plot")
     mc$obj = table
     mc$target = NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "ROC") {
     mc[[1]] = as.name("plotROC")
+    mc$obj = mc$x
+    mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "scatter") {
     mc[[1]] = as.name("plotScatter")
+    mc$obj = mc$x
+    mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "boxplot") {
     mc[[1]] = as.name("plotBoxplot")
+    mc$obj = mc$x
+    mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "graph") {
     mc[[1]] = as.name("plotRawGraph")
