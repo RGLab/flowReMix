@@ -125,6 +125,17 @@ summary.flowReMix <- function(obj, ...) {
   }
 }
 
+#' @title print.flowReMix
+#' @name print.flowReMix
+#' @description print a flowReMix object
+#' @param x a flowReMix fit
+#' @param ... 
+#' @export
+print.flowReMix = function(x, ...){
+  cat("A flowReMix fit with \n")
+  cat("\t",ncol(x$posteriors)-1," cell subsets\n")
+  cat("\t",nrow(x$posteriors)," subjects\n")
+}
 
 
 
