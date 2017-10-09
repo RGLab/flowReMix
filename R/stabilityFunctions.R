@@ -139,15 +139,15 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 #' @export
 plot.flowReMix_stability <- function(x, ...){
   mc = match.call();
-  threshold = ifelse(is.null(mc$threshold),0.5,mc$threshold)
-  plotAll = ifelse(is.null(mc$plotAll),FALSE,mc$plotAll)
+  threshold = ifelse(is.null(eval(mc$threshold,envir=parent.frame())),0.5,eval(mc$threshold,envir=parent.frame()))
+  plotAll = ifelse(is.null(eval(mc$plotAll,envir=parent.frame())),FALSE,eval(mc$plotAll,envir=parent.frame()))
   fill = eval(mc$fill,envir=parent.frame())
-  fillName = mc$fillName
-  fillRange = mc$fillRange
-  fillPalette = mc$fillPalette
-  title = ifelse(is.null(mc$title),TRUE,mc$title)
-  label_size = ifelse(is.null(mc$label_size),1.8,mc$label_size)
-  seed = ifelse(is.null(mc$seed),100,mc$seed)
+  fillName = eval(mc$fillName,envir=parent.frame())
+  fillRange = eval(mc$fillRange,envir=parent.frame())
+  fillPalette = eval(mc$fillPalette,envir=parent.frame())
+  title = ifelse(is.null(eval(mc$title,envir=parent.frame())),TRUE,eval(mc$title,envir=parent.frame()))
+  label_size = ifelse(is.null(eval(mc$label_size,envir=parent.frame())),1.8,eval(mc$label_size,envir=parent.frame()))
+  seed = ifelse(is.null(eval(mc$seed,envir=parent.frame())),100,eval(mc$seed,parent.frame()))
 
   set.seed(seed)
   requireNamespace("ggplot2")
