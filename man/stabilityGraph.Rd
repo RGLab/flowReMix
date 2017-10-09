@@ -7,3 +7,23 @@
 stabilityGraph(obj, type = c("ising", "randomEffects"), cv = FALSE,
   reps = 100, cpus = 1, gamma = 0.9, AND = TRUE, seed = NULL)
 }
+\arguments{
+\item{obj}{\code{flowReMix} model fit.}
+
+\item{type}{\code{character} "ising" or "randomEffects"}
+
+\item{cv}{\code{integer} MORE DETAILS}
+
+\item{reps}{\code{integer} number of replications.}
+
+\item{cpus}{\code{integer} number of cpus to use}
+
+\item{gamma}{\code{numeric} MORE DETAILS}
+
+\item{AND}{\code{logical}. How the Ising edges are aggregated. AND or OR.}
+
+\item{seed}{random seed. Default 100 if NULL.}
+}
+\description{
+Compute the stable components of the Ising or Random Effects graphical model through bootstrapping.
+}

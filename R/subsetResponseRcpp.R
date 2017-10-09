@@ -1,7 +1,6 @@
 #' @useDynLib flowReMix
 #' @importFrom Rcpp sourceCpp
-#'
-
+#' @importFrom stats as.formula coef cov.wt dbinom glm model.offset model.response model.weights optim optimize p.adjust pbeta predict pwilcox rbinom rnorm runif t.test uniroot update.formula  var weighted.mean weights wilcox.test
 autoPreAssign <- function(x) {
   y <- x$y
   N <- x$N
@@ -187,6 +186,8 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @param iterations the number of stochastic-EM itreations to perform.
 #'
+#' @param parallel \code{logical}. Use parallel processing to fit the model. Default TRUE.
+#'
 #' @param verbose whether to print information regrading the fitting process as
 #'   the optimization algorithm runs.
 #'
@@ -297,6 +298,11 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
+#' @importFrom R.utils withTimeout
+#' @importFrom grDevices rainbow
+#' @importFrom utils capture.output
+#' @importFrom utils setTxtProgressBar
+#' @importFrom utils txtProgressBar
 #' @import doRNG
 #' @md
 #' @export
@@ -341,9 +347,9 @@ flowReMix <- function(formula,
 	stop("nsamp should be > updateLag")
   }
   if(parallel) {
-	library(doParallel)
-	library(foreach)
-	library(doRNG)
+	requireNamespace("doParallel")
+    requireNamespace("foreach")
+    requireNamespace("doRNG")
     if(is.null(ncores)) {
       cl = makeiForkCluster(detectCores())
       doParallel::registerDoParallel(cl)
@@ -795,7 +801,7 @@ flowReMix <- function(formula,
           if(is.null(X)) return(NULL)
           y <- cbind(popDat[[1]]$N - popDat[[1]]$y, popDat[[1]]$y)
           fit <- NULL
-          try(R.utils::withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
+          try(withTimeout(fit <- glmnet::cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
                                                             offset = popDat[[1]]$randomOffset),
                                    timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
@@ -975,7 +981,7 @@ flowReMix <- function(formula,
 
       MHattempts <- rep(0, nSubsets)
       MHsuccess <- rep(0, nSubsets)
-      randomMat <- randomEffectCoordinateMH(y, N,
+      randomMat <- simRandomEffectCoordinateMH(y, N,
                                             subjectData$index,
                                             nsamp, nSubsets, MHcoef,
                                             as.vector(assignment),
@@ -1002,6 +1008,8 @@ flowReMix <- function(formula,
         assignmentMat[,which(preAssignment[[i]]$assign==0)]=0 #zero out pre-assigned z's
         iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
         assignmentMat <- assignmentList[[i]]  # restore the z's for cluster assignments.
+      }else{
+        iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
       }
       posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
       clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]

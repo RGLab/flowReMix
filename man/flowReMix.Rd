@@ -47,6 +47,8 @@ the \code{\link[stats]{glm}} function with family = "binomial".}
 
 \item{iterations}{the number of stochastic-EM itreations to perform.}
 
+\item{parallel}{\code{logical}. Use parallel processing to fit the model. Default TRUE.}
+
 \item{verbose}{whether to print information regrading the fitting process as
 the optimization algorithm runs.}
 

@@ -5,20 +5,19 @@
 \alias{plot.flowReMix}
 \title{plot a flowReMix fit object}
 \usage{
-\method{plot}{flowReMix}(obj, ...)
+\method{plot}{flowReMix}(x,...)
 }
 \arguments{
-\item{obj}{The model fit of class \code{flowReMix} returned by the fitting function.}
+\item{x}{The model fit of class \code{flowReMix} returned by the fitting function.}
 
-\item{...}{additional arguments.}
-
-\item{type}{the type of plot to make, one of c("scatter","boxplot","FDR","ROC","graph")}
-
-\item{target}{the name of the outcome variable as an unquoted variable.}
-
-\item{varname}{the variable name to appear in the legend}
+\item{...}{additional arguments, see description.}
 }
 \description{
 Generate a plot of a flowReMix model fit. Various plot types are supported.
-"scatter", "boxplot", "FDR", "ROC", "ising"
+\itemize{
+\item{subject}{The name of the subject variable, as an unquoted variable.}
+\item{target}{unquoted variable name in the data corresponding to the outcome variable. Required.}
+\item{varname}{character string used to label the outcome variable on the plot legend.}
+\item{type}{character specifying the plot type. can be "scatter", "boxplot", "FDR", "ROC", "ising". Required.}
+}
 }
