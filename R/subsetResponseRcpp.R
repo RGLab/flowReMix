@@ -193,6 +193,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @param control an optional object of \code{\link{flowReMix_control}} class.
 #'
+#' @param keepSamples \code{logical} whether to keep all the samples. Fitted object takes more memory. Default TRUE.
 #'
 #' @details flowReMix fits a mixture of mixed effects regression models for
 #'   binomial data. Accordingly, the response supplied in the \code{formula}
@@ -317,7 +318,7 @@ flowReMix <- function(formula,
                       ising_model = c("sparse", "dense", "none"),
                       regression_method = c("betabinom", "binom", "sparse", "robust"),
                       iterations = 10, parallel = TRUE, verbose = TRUE,
-                      control = NULL) {
+                      control = NULL,keepSamples=TRUE) {
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()
@@ -343,6 +344,9 @@ flowReMix <- function(formula,
   prior <- as.numeric(control$prior)
   isingWprior <- as.logical(control$isingWprior)
   zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
+  if(!keepSamples&!markovChainEM){
+    stop("keepSamples must be TRUE if markovChainEM is FALSE")
+  }
   if(nsamp<=updateLag){
 	stop("nsamp should be > updateLag")
   }
@@ -1047,13 +1051,16 @@ flowReMix <- function(formula,
     # Updating Covariance -------------------------
     if(verbose)print("Estimating Covariance!")
     if(iter <= updateLag) {
-      randomOuput <- randomList
+      if(keepSamples)
+        randomOuput <- randomList
     } else if (iter == updateLag + 1) {
       names(randomList) <- names(databyid)
-      randomOutput <- randomList
+      if(keepSamples)
+        randomOutput <- randomList
     } else {
       names(randomList) <- names(databyid)
-      randomOutput <- c(randomOutput, randomList)
+      if(keepSamples)
+        randomOutput <- c(randomOutput, randomList)
     }
     if(!markovChainEM) {
       randomList <- randomOuput
@@ -1087,13 +1094,17 @@ flowReMix <- function(formula,
     if(!mixed) {
       if(verbose)print("Updating Ising!")
       if(iter <= updateLag) {
-        exportAssignment <- assignmentList
+        if(keepSamples)
+          exportAssignment <- assignmentList
       } else if(iter == updateLag + 1) {
-        exportAssignment <- assignmentList
-        names(exportAssignment) <- names(databyid)
+        if(keepSamples){
+          exportAssignment <- assignmentList
+          names(exportAssignment) <- names(databyid)
+        }
       } else {
         names(assignmentList) <- names(databyid)
-        exportAssignment <- c(exportAssignment, assignmentList)
+        if(keepSamples)
+          exportAssignment <- c(exportAssignment, assignmentList)
       }
 
       if(!markovChainEM) {
@@ -1211,11 +1222,15 @@ flowReMix <- function(formula,
   result$invCovVar <- invCovVar - invCovAvg^2
   result$randomEffects <- estimatedRandomEffects
   result$dispersion <- M
-  result$randomEffectSamp <- randomOutput
+  if(keepSamples){
+    result$randomEffectSamp <- randomOutput
+  }
   if(!mixed) {
     result$isingCov <- isingCoefs
     result$isingfit <- isingfit
-    result$assignmentList <- exportAssignment
+    if(keepSamples){
+      result$assignmentList <- exportAssignment
+    }
     posteriors[, -1] <- 1 - posteriors[, -1]
     result$posteriors <- posteriors
     result$levelProbs <- levelProbs
