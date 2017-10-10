@@ -958,7 +958,6 @@ flowReMix <- function(formula,
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
     dataLength <- 0
     MHlag <- 5
-    condvar <- 1 / diag(invcov)
     assignmentList <- list()
     randomList <- list()
     assignListLength <- 0
@@ -973,51 +972,11 @@ flowReMix <- function(formula,
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
     MHresult <- foreach(subjectData = listForMH) %dorng% {
-      # subjectData <- databyid[[i]]
-      popInd <- subjectData$dat$subpopInd
-      N <- subjectData$dat$N
-      y <- subjectData$dat$y
-      prop <- y/N
-      unifVec <- runif(nsamp * nSubsets)
-      normVec <- rnorm(intSampSize)
-      if(mixed) {
-        assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
-      } else {
-        assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
-                                           subjectData$dat$nullEta, subjectData$dat$altEta,
-                                           covariance, nsamp, nSubsets, keepEach, intSampSize,
-                                           MHcoef,
-                                           as.integer(popInd),
-                                           unifVec, normVec,
-                                           M, betaDispersion,
-                                           as.integer(subjectData$pre$assign),
-                                           randomAssignProb, modelprobs, iterAssignCoef,
-                                           prior, zeroPosteriorProbs)
-      }
-
-      unifVec <- runif(nsamp * nSubsets)
-      eta <- subjectData$dat$nullEta
-      assignment <- as.vector(assignmentMat[nrow(assignmentMat), ])
-      responderSubset <- popInd %in% which(assignment == 1)
-      eta[responderSubset] <- subjectData$dat$altEta[responderSubset]
-      randomEst <- as.numeric(subjectData$rand)
-
-      MHattempts <- rep(0, nSubsets)
-      MHsuccess <- rep(0, nSubsets)
-      randomMat <- simRandomEffectCoordinateMH(y, N,
-                                            subjectData$index,
-                                            nsamp, nSubsets, MHcoef,
-                                            as.vector(assignment),
-                                            as.integer(popInd),
-                                            as.numeric(eta),
-                                            randomEst,
-                                            as.numeric(condvar), covariance, invcov,
-                                            MHattempts, MHsuccess,
-                                            unifVec,
-                                            M, betaDispersion,
-                                            keepEach)
-      return(list(assign = assignmentMat, rand = randomMat,
-                  rate = MHsuccess / MHattempts))
+      flowSstep(subjectData, nsamp, nSubsets, intSampSize,
+                isingCoefs, covariance, keepEach, MHcoef,
+                betaDispersion, randomAssignProb, modelprobs,
+                iterAssignCoef, prior, zeroPosteriorProbs,
+                M, invcov, mixed)
     }
     # print(mem_used()) #### MEMORY CHECK
 
@@ -1267,7 +1226,58 @@ flowReMix <- function(formula,
   return(result)
 }
 
+flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
+                      isingCoefs, covariance, keepEach, MHcoef,
+                      betaDispersion, randomAssignProb, modelprobs,
+                      iterAssignCoef, prior, zeroPosteriorProbs,
+                      M, invcov, mixed) {
+  # subjectData <- databyid[[i]]
+  condvar <- 1 / diag(invcov)
+  popInd <- subjectData$dat$subpopInd
+  N <- subjectData$dat$N
+  y <- subjectData$dat$y
+  prop <- y/N
+  unifVec <- runif(nsamp * nSubsets)
+  normVec <- rnorm(intSampSize)
+  if(mixed) {
+    assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
+  } else {
+    assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
+                                       subjectData$dat$nullEta, subjectData$dat$altEta,
+                                       covariance, nsamp, nSubsets, keepEach, intSampSize,
+                                       MHcoef,
+                                       as.integer(popInd),
+                                       unifVec, normVec,
+                                       M, betaDispersion,
+                                       as.integer(subjectData$pre$assign),
+                                       randomAssignProb, modelprobs, iterAssignCoef,
+                                       prior, zeroPosteriorProbs)
+  }
 
+  unifVec <- runif(nsamp * nSubsets)
+  eta <- subjectData$dat$nullEta
+  assignment <- as.vector(assignmentMat[nrow(assignmentMat), ])
+  responderSubset <- popInd %in% which(assignment == 1)
+  eta[responderSubset] <- subjectData$dat$altEta[responderSubset]
+  randomEst <- as.numeric(subjectData$rand)
+
+  MHattempts <- rep(0, nSubsets)
+  MHsuccess <- rep(0, nSubsets)
+  randomMat <- simRandomEffectCoordinateMH(y, N,
+                                           subjectData$index,
+                                           nsamp, nSubsets, MHcoef,
+                                           as.vector(assignment),
+                                           as.integer(popInd),
+                                           as.numeric(eta),
+                                           randomEst,
+                                           as.numeric(condvar), covariance, invcov,
+                                           MHattempts, MHsuccess,
+                                           unifVec,
+                                           M, betaDispersion,
+                                           keepEach)
+  return(list(assign = assignmentMat, rand = randomMat,
+              rate = MHsuccess / MHattempts))
+}
 
 
 
