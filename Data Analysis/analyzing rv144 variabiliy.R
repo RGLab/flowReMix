@@ -69,7 +69,9 @@ booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
 
 # Getting result files --------------------------
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_20__*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_22__*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_23__*"))[1:197]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_24__*"))[1:197]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_25__*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
@@ -105,41 +107,94 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 # Bootstrapping -------------------------
 # groups <- list(c(1:38), c(1:20), c(21:38))
-groups <- list(c(1:27), c(8:17), c(18:27), c(1:7))
+groups <- list(c(181:280), c(281:378), c(1:93), c(94:180))
+# groups <- list(c(1:98))
 resList <- list()
+rpList <- list()
 for(i in 1:length(groups)) {
   temppost <- postList[groups[[i]]]
   aucs <- matrix(nrow = length(temppost), ncol = ncol(fit$posteriors) - 1)
+  responseProb <- matrix(nrow = length(temppost), ncol = ncol(fit$posteriors) - 1)
   for(j in 1:length(temppost)) {
-    aucs[j, ] <- apply(temppost[[j]], 2, function(x) roc(infect ~ x)$auc)
+    try(aucs[j, ] <- apply(temppost[[j]], 2, function(x) roc(infect ~ x)$auc))
+    try(responseProb[j, ] <- colMeans(temppost[[j]]))
   }
   means <- colMeans(aucs)
   sds <- apply(aucs, 2, sd) /sqrt(nrow(aucs))
-  resList[[i]] <- data.frame(lci = means - 2 * sds, estimate = means, uci = means + 2 * sds)
-  rownames(resList[[i]]) <- colnames(fit$posteriors)[-1]
-  resList[[i]] <- resList[[i]][order(resList[[i]][, 2], decreasing = TRUE), ]
+  quantiles <- t(apply(aucs, 2, quantile, na.rm = TRUE))
+  rpQuantiles <- t(apply(responseProb, 2, quantile, na.rm = TRUE))
+  rownames(quantiles) <- colnames(fit$posteriors[-1])
+  rownames(rpQuantiles) <- colnames(fit$posteriors[-1])
+  # resList[[i]] <- data.frame(lci = means - 2 * sds, estimate = means, uci = means + 2 * sds)
+  resList[[i]] <- quantiles
+  rpList[[i]] <- rpQuantiles
+  rpList[[i]] <- rpList[[i]][order(resList[[i]][, 3], decreasing = TRUE), ]
+  resList[[i]] <- resList[[i]][order(resList[[i]][, 3], decreasing = TRUE), ]
+  print(cbind(resList[[i]], rpList[[i]]))
 }
 
+rep1 <- resList[[2]]
+rep2 <- resList[[3]]
+rep1 <- rep1[order(rep2[, 3], decreasing = TRUE), ]
+colnames(rep1) <- paste(50, "iter", colnames(rep1), sep = "")
+colnames(rep2) <- paste(100, "iter", colnames(rep2), sep = "")
+rep <- cbind(rep1, rep2)
+round(rep, 3)
+
+names(rpList) <- paste(c(40, 80, 160, 320), "iterations")
+
 # Bootstrapping the variabilty of an aggregate fit --------------
-reps <- 200
+reps <- 100
 results <- list()
+presults <- list()
 for(g in 1:length(groups)) {
   aucs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
+  rprobs <- matrix(nrow = reps, ncol = ncol(fit$posteriors) - 1)
   for(r in 1:reps) {
     temppost <- postList[groups[[g]]]
     samp <- temppost[sample.int(length(temppost), length(temppost), replace = TRUE)]
     samp <- Reduce("+", samp) / length(samp)
     aucs[r, ] <- apply(samp, 2, function(x) roc(infect ~ x)$auc)
+    rprobs[r, ] <- colMeans(samp)
   }
+  means <- colMeans(rprobs)
+  sds <- apply(rprobs, 2, sd)
+  pres <- data.frame(lci = means - 2 * sds, estimate = means, uci = means + 2 * sds)
+  rownames(pres) <- colnames(fit$posteriors)[-1]
+
   means <- colMeans(aucs)
   sds <- apply(aucs, 2, sd)
-  medians <- apply(aucs, 2, median)
-  res <- data.frame(lci = means - 2 * sds, median = medians, uci = means + 2 * sds)
+  res <- data.frame(lci = means - 2 * sds, estimate = means, uci = means + 2 * sds)
   rownames(res) <- colnames(fit$posteriors)[-1]
+  pres <- pres[order(res[, 2], decreasing = TRUE), ]
   res <- res[order(res[, 2], decreasing = TRUE), ]
-  print(res)
+  print(cbind(res, pres))
   results[[g]] <- res
+  presults[[g]] <- pres
 }
+
+# temp <- results
+# results[[3]] <- results[[3]][order(results[[2]][, 2]), ]
+report <- cbind(results[[1]], results[[2]])
+names(report) <- c("lci50", "median50", "uci50", "lci100", "median100", "uci100")
+
+# Concensus graph -----------------------
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_24__*"))[200:390]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_stab_23__*"))[1:196]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_stab_25__*"))[c(groups[[4]])]
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
+net <- list()
+for(i in 1:length(filenames)) {
+  load(file = filenames[[i]])
+  # net[[i]] <- stability$network
+  net[[i]] <- stab$network
+}
+net <- Reduce("+", net) / length(net)
+stability$network <- net
+stab$network <- net
+plot(stab, threshold = .95, fill = rocResults$auc)
+
+scatter <- plot(fit, type = "scatter", target = vaccine)
 
 # Analysis for a single fit ----------------------
 # reps <- 200

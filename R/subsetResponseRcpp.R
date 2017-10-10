@@ -305,6 +305,8 @@ initializeModel <- function(dat, formula, method, mixed) {
 #' @importFrom utils setTxtProgressBar
 #' @importFrom utils txtProgressBar
 #' @import doRNG
+#' @import doParallel
+#' @import foreach
 #' @md
 #' @export
 flowReMix <- function(formula,
@@ -336,7 +338,7 @@ flowReMix <- function(formula,
   initMHcoef <- as.numeric(control$initMHcoef)
   keepEach <- as.integer(control$keepEach)
   initMethod <- control$initMethod
-  ncores <- as.integer(control$ncores)
+  ncores <-  control$ncores
   isingInit <- control$isingInit
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
@@ -351,17 +353,14 @@ flowReMix <- function(formula,
 	stop("nsamp should be > updateLag")
   }
   if(parallel) {
-	requireNamespace("doParallel")
-    requireNamespace("foreach")
-    requireNamespace("doRNG")
     if(is.null(ncores)) {
-      cl = makeiForkCluster(detectCores())
+      cl <- parallel::makeForkCluster(detectCores())
       doParallel::registerDoParallel(cl)
       if(!is.null(control$seed)){
         set.seed(control$seed)
       }
     } else {
-	cl = makeForkCluster(ncores)
+      cl = parallel::makeForkCluster(ncores)
       doParallel::registerDoParallel(cl)
       if(!is.null(control$seed)){
         set.seed(control$seed)
@@ -846,23 +845,23 @@ flowReMix <- function(formula,
         }
       }
 
-      if(markovChainEM) {
-        coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
-                                  iter, Inf, rate, flagEquation,
-                                  SIMPLIFY = FALSE)
-      } else {
-        coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
-                                  iter, updateLag, rate, flagEquation,
-                                  SIMPLIFY = FALSE)
-
-      }
+      coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
+                                iter, Inf, rate, flagEquation,
+                                SIMPLIFY = FALSE)
 
       if(iter == min(updateLag, iterations)) {
         coefficientsOut <- coefficientList
       } else if(iter > updateLag) {
-        coefficientsOut <- mapply(updateCoefs, coefficientList, glmFits,
-                                  iter, updateLag, rate, flagEquation,
-                                  SIMPLIFY = FALSE)
+        if(markovChainEM) {
+          coefficientsOut <- mapply(updateCoefs, coefficientList, glmFits,
+                                    iter, updateLag, rate, flagEquation,
+                                    SIMPLIFY = FALSE)
+          if(iter == iterations) {
+            coefficientList <- coefficientsOut
+          }
+        } else if(!markovChainEM & iter == iterations) {
+          coefficientsOut <- coefficientList
+        }
       }
     }
 
