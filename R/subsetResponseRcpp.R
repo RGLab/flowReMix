@@ -179,7 +179,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'   used by default.
 #'
 #' @param ising_model a method for estimating the Ising model.
-#'   \code{\link[IsingFit]{IsingFit}} will be used by default.
+#'   Sparse neighborhood selection will be used by default.
 #'
 #' @param regression_method the regression method to be used. Default option is
 #'   the \code{\link[stats]{glm}} function with family = "binomial".
@@ -248,8 +248,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'   assumed. If the \code{ising_model} is set to \code{"dense"} then the ising
 #'   model is estimated via a set of firth regressions
 #'   (\code{\link[logistf]{logistf}}), one for each node in the graph. The
-#'   default option is \code{"sparse"}, where the
-#'   \code{\link[IsingFit]{IsingFit}} method is used.
+#'   default option is \code{"sparse"}, where neighborhood selection with eBIC will be used.
 #'
 #'   \code{regression_method} specifies which function should be used for
 #'   estimating the reqression coefficients conditionally on the values of the
@@ -281,9 +280,6 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'   effects.
 #'
 #'   * \code{isingCov} the estimated `covariance` structure of the ising model.
-#'
-#'   * \code{isingfit} if \code{ising_model = "sparse"} then the object returned
-#'   by the \code{\link[IsingFit]{IsingFit}} function. \code{NULL} otherwise.
 #'
 #'   * \code{dispersion} the over-dispersion estimated for each cell-subset. If
 #'   regression method is not "betabinomial" then this will be a vector of large
