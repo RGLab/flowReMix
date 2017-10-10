@@ -341,6 +341,8 @@ flowReMix <- function(formula,
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
   markovChainEM <- control$markovChainEM
+  clusterType = control$clusterType[1]
+  clusterType = match.arg(clusterType,c("SOCK","FORK","AUTO"))
   prior <- as.numeric(control$prior)
   isingWprior <- as.logical(control$isingWprior)
   zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
@@ -355,13 +357,23 @@ flowReMix <- function(formula,
     requireNamespace("foreach")
     requireNamespace("doRNG")
     if(is.null(ncores)) {
-      cl = makeiForkCluster(detectCores())
+      if(clusterType=="FORK")
+        cl = makeForkCluster(detectCores())
+      else if(clusterType=="SOCK")
+        cl = makePSOCKCluster(detectCores())
+      else
+        cl = makeCluster(detecCores())
       doParallel::registerDoParallel(cl)
       if(!is.null(control$seed)){
         set.seed(control$seed)
       }
     } else {
-	cl = makeForkCluster(ncores)
+      if(clusterType=="FORK")
+        cl = makeForkCluster(ncores)
+      else if(clusterType=="SOCK")
+        cl = makePSOCKCluster(ncores)
+      else
+        cl = makeCluster(ncores)
       doParallel::registerDoParallel(cl)
       if(!is.null(control$seed)){
         set.seed(control$seed)

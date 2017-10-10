@@ -68,6 +68,8 @@
 #'
 #' @param isingWprior \code{logical} fit the Ising model with a prior on the baseline response using the parameter in \code{prior}. Default TRUE.
 #'
+#' @param clusterType \code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.
+#'
 #' @return An object of type \code{flowReMix_control}.
 #'
 #' @export
@@ -77,7 +79,8 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
                               initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
                               markovChainEM = TRUE, seed=100, prior = 0,
-                              isingWprior = FALSE,zeroPosteriorProbs=FALSE) {
+                              isingWprior = FALSE,zeroPosteriorProbs=FALSE,
+                              clusterType=c("AUTO","FORK","SOCK")) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
@@ -97,7 +100,9 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  markovChainEM = markovChainEM,
                  seed=seed,
                  prior = abs(prior),
-                 isingWprior = isingWprior, zeroPosteriorProbs = zeroPosteriorProbs)
+                 isingWprior = isingWprior,
+                 zeroPosteriorProbs = zeroPosteriorProbs,
+                 clusterType=c("AUTO","SOCK","FORK"))
   class(object) <- "flowReMix_control"
   return(object)
 }
