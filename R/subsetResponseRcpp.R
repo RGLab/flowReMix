@@ -308,9 +308,11 @@ initializeModel <- function(dat, formula, method, mixed) {
 #' @importFrom glmnet cv.glmnet
 #' @importFrom glmnet coef.cv.glmnet
 #' @importFrom glmnet predict.cv.glmnet
+#' @importFrom data.table is.data.table
 #' @import doRNG
 #' @import doParallel
 #' @import foreach
+#' @import parallel
 #' @md
 #' @export
 flowReMix <- function(formula,
@@ -406,6 +408,12 @@ flowReMix <- function(formula,
   }
 
   # Checking if inputs are valid --------------------------
+  if(!is.null(data)) {
+    if(is.data.table(data)) {
+      data <- as.data.frame(data)
+    }
+  }
+
   regressionMethod <- regression_method
   isingMethod <- ising_model
   covarianceMethod <- covariance
@@ -720,7 +728,7 @@ flowReMix <- function(formula,
       accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
       accumList[[max(1, iter - updateLag)]] <- dataByPopulation
-      accumDat <- rbindlist(accumList)
+      accumDat <- data.frame(rbindlist(accumList))
       accumDat <- by(accumDat, accumDat$sub.population, function(x) x)
     }
     rm(dataByPopulation)
