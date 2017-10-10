@@ -25,7 +25,6 @@ Imports: Rcpp,
     rlang,
     igraph,
     doRNG,
-    IsingFit,
     R.utils,
     sna 
 Suggests: pROC,

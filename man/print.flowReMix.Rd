@@ -8,6 +8,7 @@
 }
 \arguments{
 \item{x}{a flowReMix fit}
+
 \item{...}{additional arguments}
 }
 \description{
