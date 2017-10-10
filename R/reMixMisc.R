@@ -113,6 +113,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
 #' @importFrom stats na.pass
 #' @importFrom stats model.matrix
 #' @importFrom stats model.frame
+#' @importFrom network network
 #' @export
 computeGraphAUC <- function(object, outcome = NULL, reps = 100,
                             samples = NULL,
@@ -187,17 +188,14 @@ computeGraphAUC <- function(object, outcome = NULL, reps = 100,
   }
 
   # Plotting graph ---------------------
-  requireNamespace("GGally")
-  requireNamespace("network")
-  requireNamespace("sna")
   network <- props
   if(screen) {
     keep <- apply(network, 1, function(x,threshold=threshold) any(abs(x) >= threshold))
-    network <- network::network[keep, keep]
+    network <- network[keep, keep]
   } else {
     keep <- rep(TRUE, length(props))
   }
-  net <- network::network(props)
+  net <- network(props)
   subsets <- names(object$coefficients)
   nodes <- ggnet2(network, label = subsets[keep])$data
   edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)

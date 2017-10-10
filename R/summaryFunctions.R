@@ -148,7 +148,7 @@ summary.flowReMix <- function(object, ...) {
 #' @name print.flowReMix
 #' @description print a flowReMix object
 #' @param x a flowReMix fit
-#' @param ... 
+#' @param ... additional arguments
 #' @export
 print.flowReMix = function(x, ...){
   cat("A flowReMix fit with \n")

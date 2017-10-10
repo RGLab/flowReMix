@@ -9,7 +9,7 @@ flowReMix(formula, subject_id, cell_type = NULL, cluster_variable,
   covariance = c("sparse", "dense", "diagonal"), ising_model = c("sparse",
   "dense", "none"), regression_method = c("betabinom", "binom", "sparse",
   "robust"), iterations = 10, parallel = TRUE, verbose = TRUE,
-  control = NULL)
+  control = NULL, keepSamples = TRUE)
 }
 \arguments{
 \item{formula}{an object of class \code{\link[stats]{formula}}. The response
@@ -53,6 +53,8 @@ the \code{\link[stats]{glm}} function with family = "binomial".}
 the optimization algorithm runs.}
 
 \item{control}{an optional object of \code{\link{flowReMix_control}} class.}
+
+\item{keepSamples}{\code{logical} whether to keep all the samples. Fitted object takes more memory. Default TRUE.}
 }
 \value{
 \code{flowReMix} returns an object of class \code{flowReMix} which

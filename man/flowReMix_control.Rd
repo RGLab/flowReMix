@@ -10,7 +10,7 @@ flowReMix_control(updateLag = 5, randomAssignProb = 0, nsamp = 20,
   keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
   initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
   markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = FALSE,
-  zeroPosteriorProbs = FALSE)
+  zeroPosteriorProbs = FALSE, clusterType = c("AUTO", "FORK", "SOCK"))
 }
 \arguments{
 \item{updateLag}{number of iterations before the algorithm is assumed to
@@ -75,6 +75,8 @@ used constrain non-responders (e.g. when pu>ps).}
 probabilities where pu>ps, equivalent to a one-sided test. The full set of responses
 will still be used to estimate the Ising model. Default \code{FALSE}. Can be used together
 with the prior argument on the Ising model.}
+
+\item{clusterType}{\code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.}
 }
 \value{
 An object of type \code{flowReMix_control}.
