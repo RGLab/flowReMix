@@ -54,7 +54,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     keepEach <- max(obj$keepEach, 10)
     nsamp <- ceiling(reps * keepEach / obj$nPosteriors)
     isingCoefs <- obj$isingAvg
-    nSubsets <- length(fit$coefficients)
+    nSubsets <- length(obj$coefficients)
     intSampSize <- obj$intSampSize
     cov <- obj$covariance
     MHcoef <- obj$MHcoef
@@ -94,7 +94,11 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   # perc <- 0.1
   # pb <-  progress::progress_bar$new(total = reps);
   cluster_res = foreach(i = 1:reps) %dorng% {
-    mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
+    if(!sampleNew) {
+      mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
+    } else {
+      mat <- t(sapply(samples, function(x) x[i, , drop = FALSE]))
+    }
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
                      method = "sparse", cv = cv)
