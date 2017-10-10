@@ -1,7 +1,6 @@
 logit <- function(x) log(x / (1 - x))
 expit <- function(x) 1 / (1 + exp(-x))
 
-#' @export
 raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,

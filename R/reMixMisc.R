@@ -114,7 +114,6 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
 #' @importFrom stats model.matrix
 #' @importFrom stats model.frame
 #' @importFrom network network
-#' @export
 computeGraphAUC <- function(object, outcome = NULL, reps = 100,
                             samples = NULL,
                             props = NULL,

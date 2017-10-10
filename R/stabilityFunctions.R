@@ -79,7 +79,6 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   return(results)
 }
 
-#' @export
 plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FALSE,
                          fill = NULL, fillName = NULL,
                          fillRange = NULL, fillPalette = NULL,
@@ -245,7 +244,6 @@ plot.flowReMix_stability <- function(x, ...){
 
 #' @importFrom igraph graph.adjacency
 #' @importFrom igraph components
-#' @export
 getGraphComponents <- function(obj, threshold = 0.5,
                                minsize = 2, groupNames = NULL) {
   # Finding groups -------------
