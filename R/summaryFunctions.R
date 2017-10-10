@@ -39,22 +39,26 @@ plot.flowReMix <- function(x,...){
     mc$target = NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "ROC") {
-    mc[[1]] = as.name("plotROC")
+    # mc[[1]] = as.name("flowReMix:::plotROC")
+    mc[[1]] = getFromNamespace("plotROC",ns = "flowReMix")
     mc$obj = mc$x
     mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "scatter") {
-    mc[[1]] = as.name("plotScatter")
+    # mc[[1]] = as.name("flowReMix:::plotScatter")
+    mc[[1]] = getFromNamespace("plotScatter",ns = "flowReMix")
     mc$obj = mc$x
     mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "boxplot") {
-    mc[[1]] = as.name("plotBoxplot")
+    # mc[[1]] = as.name("flowReMix:::plotBoxplot")
+    mc[[1]] = getFromNamespace("plotBoxplot",ns = "flowReMix")
     mc$obj = mc$x
     mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "graph") {
-    mc[[1]] = as.name("plotRawGraph")
+    # mc[[1]] = as.name("flowReMix:::plotRawGraph")
+    mc[[1]] = getFromNamespace("plotRawGraph",ns = "flowReMix")
     mc$obj=mc$x
     mc$x=NULL
     mc$target=NULL
@@ -131,12 +135,11 @@ summary.flowReMix <- function(object, ...) {
   outcome = suppressWarnings(left_join(object$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
     mc$type = NULL
-    mc[[1]]=as.name("rocTable")
+    mc[[1]]=  getFromNamespace("rocTable",ns = "flowReMix")
     mc$target = outcome
     mc$obj=mc$object
     mc$object=NULL
     eval(mc, envir=parent.frame())
-    # return(rocTable(obj, outcome, type=type,...))
   } else if(type == "FDR") {
     return(fdrTable(object, ifelse(is.factor(outcome),outcome,factor(outcome))))
   } else {

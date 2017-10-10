@@ -741,13 +741,11 @@ flowReMix <- function(formula,
       popList <- lapply(1:nSubsets, function(j) list(accumDat[[j]], separation[j], clusterAssignments[, j]))
       # Robust
       if(robustreg) {
-        # glmFits <- foreach(j = 1:nSubsets) %dorng% {
         glmResult <- foreach(popDat = popList) %dorng% {
           if(sum(popDat[[3]]) < 3) {
             return(NULL)
           }
 
-          # popdata <- dataByPopulation[[j]]
           if(popDat[[2]]) {
             fit <- glm(glmformula, data = popDat[[1]], weights = weights,
                        family = "binomial", method = brglmFit)
@@ -789,7 +787,6 @@ flowReMix <- function(formula,
             return(NULL)
           }
 
-          # popdata <- dataByPopulation[[j]]
           if(separation[j]) {
             fit <- glm(glmformula, data = popDat[[1]], weights = weights,
                        family = "binomial", method = brglmFit)
@@ -819,7 +816,6 @@ flowReMix <- function(formula,
           if(sum(popDat[[3]]) < 3) {
             return(NULL)
           }
-          # popdata <- dataByPopulation[[j]]
           try(X <- model.matrix(glmformula, data = popDat[[1]])[, - 1], silent = TRUE)
           if(is.null(X)) return(NULL)
           y <- cbind(popDat[[1]]$N - popDat[[1]]$y, popDat[[1]]$y)
@@ -1090,7 +1086,6 @@ flowReMix <- function(formula,
       }
 
       assignmentList <- do.call("rbind",assignmentList)
-      # assignmentList <- t(sapply(assignmentList, function(x) x[nrow(x), ]))
       assignmentList <- data.frame(assignmentList)
       names(assignmentList) <- names(accumDat)
 
@@ -1099,7 +1094,6 @@ flowReMix <- function(formula,
           # UPDATING PRIOR MODEL SIZE PROBABILITIES
           tempprobs <- estimateMonotoneProbs(assignmentList, method = "arrange")
           modelprobs <- (1 - iterweight) * modelprobs + iterweight * tempprobs
-          #modelprobs <- 0.5 ^ (3 * 0:nSubsets)
           modelprobs <- modelprobs / sum(modelprobs)
         }
         if(!isingWprior) {
@@ -1107,7 +1101,6 @@ flowReMix <- function(formula,
                               modelprobs = modelprobs,
                               minprob = 1 / nSubjects,verbose=verbose)
         } else {
-          # names(assignmentList) <- names(coefficientList)
           isingfit <- pIsing(assignmentList, AND = TRUE,
                               preAssignment = preAssignmentMat,
                              prevfit = isingCoefs,verbose=verbose)
@@ -1231,7 +1224,6 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                       betaDispersion, randomAssignProb, modelprobs,
                       iterAssignCoef, prior, zeroPosteriorProbs,
                       M, invcov, mixed) {
-  # subjectData <- databyid[[i]]
   condvar <- 1 / diag(invcov)
   popInd <- subjectData$dat$subpopInd
   N <- subjectData$dat$N
