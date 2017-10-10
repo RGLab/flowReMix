@@ -410,7 +410,7 @@ flowReMix <- function(formula,
   # Checking if inputs are valid --------------------------
   if(!is.null(data)) {
     if(is.data.table(data)) {
-      data <- as.data.frame(data)
+      data <- as.data.frame(data,check.names=FALSE)
     }
   }
 
