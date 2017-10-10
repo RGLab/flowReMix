@@ -26,7 +26,8 @@ Imports: Rcpp,
     igraph,
     doRNG,
     IsingFit,
-    R.utils 
+    R.utils,
+    sna 
 Suggests: pROC,
     reshape2,
 RoxygenNote: 6.0.1
