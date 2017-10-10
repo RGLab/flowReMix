@@ -18,25 +18,8 @@
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
-                           gamma = 0.9, AND = TRUE, seed = NULL) {
-  type <- type[1]
-  if(type == "ising") {
-    samples <- obj$assignmentList
-    family <- "binomial"
-  } else if(type == "randomEffects") {
-    samples <- obj$randomEffectSamp
-    family <- "gaussian"
-  } else {
-    stop("Method not supported!")
-  }
-  names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
-  samples <- lapply(unique(names(samples)), function(x) {
-    do.call("rbind", samples[names(samples) == x])
-  })
-  subsets <- names(obj$coefficients)
-
-  nsubsets <- ncol(samples[[1]])
-  countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
+                           gamma = 0.9, AND = TRUE, seed = NULL,
+                           sampleNew = FALSE) {
   if(cpus == 1) {
     foreach::registerDoSEQ()
   } else {
@@ -50,6 +33,64 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     set.seed(100)
   }
 
+  type <- type[1]
+  if(!sampleNew) {
+    if(type == "ising") {
+      if(is.null(obj$assignmentList)) {
+        stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
+      }
+      samples <- obj$assignmentList
+      family <- "binomial"
+    } else if(type == "randomEffects") {
+      if(is.null(obj$randomEffectSamp)) {
+        stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
+      }
+      samples <- obj$randomEffectSamp
+      family <- "gaussian"
+    } else {
+      stop("Method not supported!")
+    }
+  } else {
+    keepEach <- max(obj$keepEach, 10)
+    nsamp <- ceiling(reps * keepEach / obj$nPosteriors)
+    isingCoefs <- obj$isingAvg
+    nSubsets <- length(fit$coefficients)
+    intSampSize <- obj$intSampSize
+    cov <- obj$covariance
+    MHcoef <- obj$MHcoef
+    preCoef <- obj$preAssignCoefs[length(obj$preAssignCoefs)]
+    prior <- obj$prior
+    dispersion <- obj$dispersion
+    invcov <- obj$invCovAvg
+    mixed <- obj$mixed
+    MHresult <- foreach(subjectData = obj$mhList) %dorng% {
+      flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
+                intSampSize = intSampSize, isingCoefs = isingCoefs,
+                covariance = cov, keepEach = keepEach,
+                MHcoef = MHcoef, betaDispersion = TRUE,
+                randomAssignProb = 0, modelprobs = 0,
+                iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+                M = dispersion, invcov = invcov, mixed = mixed,
+                sampleRandom = (type != "ising"))
+    }
+    if(type == "ising") {
+      samples <- lapply(MHresult, function(x) x$assign)
+      family = "binomial"
+    } else if(type == "randomEffects") {
+      samples <- lapply(MHresult, function(x) x$rand)
+      family <- "gaussian"
+    }
+    names(samples) <- sapply(obj$mhList, function(x) x$pre$id[1])
+  }
+
+  names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
+  samples <- lapply(unique(names(samples)), function(x) {
+    do.call("rbind", samples[names(samples) == x])
+  })
+  subsets <- names(obj$coefficients)
+
+  nsubsets <- ncol(samples[[1]])
+
   # perc <- 0.1
   # pb <-  progress::progress_bar$new(total = reps);
   cluster_res = foreach(i = 1:reps) %dorng% {
@@ -57,14 +98,14 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
                      method = "sparse", cv = cv)
-    countCovar <- countCovar + (coefs != 0) * sign(coefs)
+    countCovar <- (coefs != 0) * sign(coefs)
     # if(i / reps > perc & perc < 1) {
     #   cat(perc * 100, "% ", sep = "")
     #   perc <- perc + 0.1
     # }
     return(countCovar)
   }
-  countCovar = Reduce(x = cluster_res,f=`+`)
+  countCovar = Reduce(x = cluster_res, f=`+`)
   stopImplicitCluster()
 
   props <- countCovar / reps

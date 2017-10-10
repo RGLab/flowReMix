@@ -945,10 +945,15 @@ flowReMix <- function(formula,
     MHsuccess <- rep(0, nSubsets)
     # S-step ------------------------------
     if(verbose)print("Sampling!")
-    listForMH <- lapply(1:nSubjects, function(i) list(dat = databyid[[i]],
+    if(iter == 1) { # finding the columns of the data that are needed for S-step
+      forcols <- databyid[[1]]
+      keepcols <- which(names(forcols) %in% c("y", "N", "subpopInd", "nullEta", "altEta"))
+      rm(forcols)
+    }
+    listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
-                                                      index = i))
+                                                      index = i), keepcols)
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
     MHresult <- foreach(subjectData = listForMH) %dorng% {
@@ -956,7 +961,7 @@ flowReMix <- function(formula,
                 isingCoefs, covariance, keepEach, MHcoef,
                 betaDispersion, randomAssignProb, modelprobs,
                 iterAssignCoef, prior, zeroPosteriorProbs,
-                M, invcov, mixed)
+                M, invcov, mixed, sampleRandom = TRUE)
     }
     # print(mem_used()) #### MEMORY CHECK
 
@@ -1180,6 +1185,15 @@ flowReMix <- function(formula,
   result$invCovVar <- invCovVar - invCovAvg^2
   result$randomEffects <- estimatedRandomEffects
   result$dispersion <- M
+  result$mhList <- listForMH
+  result$MHcoef <- MHcoef
+  result$intSampSize <- intSampSize
+  result$keepEach <- keepEach
+  result$preAssignCoefs <- preAssignCoefs
+  result$prior <- prior
+  result$mixed <- mixed
+  result$nPosteriors <- dataReplicates
+
   if(keepSamples){
     result$randomEffectSamp <- randomOutput
   }
@@ -1200,18 +1214,24 @@ flowReMix <- function(formula,
   if(parallel) {
     doParallel::stopImplicitCluster()
   }
+
+  dat$repnumber <- as.numeric(sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[2]]))
+  dat$id <- sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[1]])
+  dat <- subset(dat, repnumber == 1)
+  dat$repnumber <- NULL
   result$data <- data
+
   result$subject_id <- match.call()$subject_id
   if(!verbose) close(pb)
   return(result)
 }
 
+# S-step function -----------------
 flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                       isingCoefs, covariance, keepEach, MHcoef,
                       betaDispersion, randomAssignProb, modelprobs,
                       iterAssignCoef, prior, zeroPosteriorProbs,
-                      M, invcov, mixed) {
-  # subjectData <- databyid[[i]]
+                      M, invcov, mixed, sampleRandom = TRUE) {
   condvar <- 1 / diag(invcov)
   popInd <- subjectData$dat$subpopInd
   N <- subjectData$dat$N
@@ -1243,18 +1263,22 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
 
   MHattempts <- rep(0, nSubsets)
   MHsuccess <- rep(0, nSubsets)
-  randomMat <- simRandomEffectCoordinateMH(y, N,
-                                           subjectData$index,
-                                           nsamp, nSubsets, MHcoef,
-                                           as.vector(assignment),
-                                           as.integer(popInd),
-                                           as.numeric(eta),
-                                           randomEst,
-                                           as.numeric(condvar), covariance, invcov,
-                                           MHattempts, MHsuccess,
-                                           unifVec,
-                                           M, betaDispersion,
-                                           keepEach)
+  if(sampleRandom) {
+    randomMat <- simRandomEffectCoordinateMH(y, N,
+                                             subjectData$index,
+                                             nsamp, nSubsets, MHcoef,
+                                             as.vector(assignment),
+                                             as.integer(popInd),
+                                             as.numeric(eta),
+                                             randomEst,
+                                             as.numeric(condvar), covariance, invcov,
+                                             MHattempts, MHsuccess,
+                                             unifVec,
+                                             M, betaDispersion,
+                                             keepEach)
+  } else {
+    randomMat <- NULL
+  }
   return(list(assign = assignmentMat, rand = randomMat,
               rate = MHsuccess / MHattempts))
 }

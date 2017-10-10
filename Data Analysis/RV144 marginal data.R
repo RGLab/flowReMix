@@ -39,7 +39,7 @@ data$treatment2 <- data$treatment
 
 control <- flowReMix_control(updateLag = 2, nsamp = 50, initMHcoef = 1,
                              keepEach = 10, isingWprior = TRUE,
-                             nPosteriors = 1, centerCovariance = FALSE,
+                             nPosteriors = 2, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = 2,
@@ -64,6 +64,9 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo random.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed indepdent.Robj")
+
+system.time(stab <- stabilityGraph(fit, sampleNew = FALSE, reps = 50))
+system.time(stab <- stabilityGraph(fit, sampleNew = TRUE, reps = 50))
 
 # Scatter plots -----------------
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
