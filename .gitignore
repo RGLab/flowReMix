@@ -6,6 +6,7 @@ data/*
 data-raw/*
 
 Data Analysis/results/*
+Data Analysis/old/*
 tables/*
 write-ups/*
 figures/*
