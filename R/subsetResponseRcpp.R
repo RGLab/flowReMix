@@ -13,7 +13,7 @@ autoPreAssign <- function(x) {
   }
   assign <- as.numeric(by(x, x$sub.population, function(y) min(y$prop[y$treatmentvar == baseline]) < max(y$prop[y$treatmentvar != baseline])))
   assign[assign == 1] <- -1
-  result <- data.frame(ptid = x$id[1], subset = unique(x$sub.population), assign = assign)
+  result <- data.frame(id = x$id[1], subset = unique(x$sub.population), assign = assign)
   return(result)
 }
 
@@ -354,12 +354,18 @@ flowReMix <- function(formula,
   prior <- as.numeric(control$prior)
   isingWprior <- as.logical(control$isingWprior)
   zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
-  if(!keepSamples&!markovChainEM){
-    stop("keepSamples must be TRUE if markovChainEM is FALSE")
+
+  if(markovChainEM) {
+    saveSamples <- keepSamples
+  } else {
+    saveSamples <- keepSamples
+    keepSamples <- TRUE
   }
+
   if(nsamp<=updateLag){
 	stop("nsamp should be > updateLag")
   }
+
   if(parallel) {
     if(is.null(ncores)) {
       if(clusterType=="FORK") {
@@ -394,7 +400,6 @@ flowReMix <- function(formula,
       set.seed(control$seed)
     }
   }
-
 
   ncores <- getDoParWorkers()
   if(ncores == 1) {
@@ -891,22 +896,20 @@ flowReMix <- function(formula,
     rm(popInd)
 
     # Updating Covariance -------------------------
-    if(verbose)print("Estimating Covariance!")
-    if(iter <= updateLag) {
-      if(keepSamples)
-        randomOuput <- randomList
-    } else if (iter == updateLag + 1) {
+    if(verbose) print("Estimating Covariance!")
+
+    if(iter == updateLag + 1) {
       names(randomList) <- names(databyid)
-      if(keepSamples)
-        randomOutput <- randomList
-    } else {
+      if(keepSamples) randomOutput <- randomList
+    } else if(iter > updateLag + 1){
       names(randomList) <- names(databyid)
-      if(keepSamples)
-        randomOutput <- c(randomOutput, randomList)
+      if(keepSamples) randomOutput <- c(randomOutput, randomList)
     }
-    if(!markovChainEM) {
-      randomList <- randomOuput
+
+    if(!markovChainEM & iter > updateLag + 1) {
+      randomList <- randomOutput
     }
+
     randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
@@ -934,22 +937,19 @@ flowReMix <- function(formula,
 
     # Updating Ising -----------------------
     if(!mixed) {
-      if(verbose)print("Updating Ising!")
-      if(iter <= updateLag) {
-        if(keepSamples)
-          exportAssignment <- assignmentList
-      } else if(iter == updateLag + 1) {
-        if(keepSamples){
+      if(verbose) print("Updating Ising!")
+
+      if(iter == updateLag + 1) {
+        if(keepSamples) {
           exportAssignment <- assignmentList
           names(exportAssignment) <- names(databyid)
         }
-      } else {
+      } else if(iter > updateLag + 1) {
         names(assignmentList) <- names(databyid)
-        if(keepSamples)
-          exportAssignment <- c(exportAssignment, assignmentList)
+        if(keepSamples) exportAssignment <- c(exportAssignment, assignmentList)
       }
 
-      if(!markovChainEM) {
+      if(!markovChainEM & iter > updateLag + 1) {
         assignmentList <- exportAssignment
       }
 
@@ -1020,7 +1020,6 @@ flowReMix <- function(formula,
       }
     }
 
-
     if(verbose) {
       print(c(iter, levelP = levelProbs))
       if(betaDispersion) print(c(M = M))
@@ -1064,16 +1063,15 @@ flowReMix <- function(formula,
   result$control <- control
   result$data <- data
   result$subject_id <- match.call()$subject_id
+  result$preAssignment <- preAssignmentMat
+  result$MHcoef <- MHcoef
 
-  if(keepSamples){
-    result$randomEffectSamp <- randomOutput
-  }
+  if(saveSamples) result$randomEffectSamp <- randomOutput
+
   if(!mixed) {
     result$isingCov <- isingCoefs
     result$isingfit <- isingfit
-    if(keepSamples){
-      result$assignmentList <- exportAssignment
-    }
+    if(saveSamples) result$assignmentList <- exportAssignment
     posteriors[, -1] <- 1 - posteriors[, -1]
     result$posteriors <- posteriors
     result$levelProbs <- levelProbs
@@ -1085,12 +1083,13 @@ flowReMix <- function(formula,
   if(parallel) {
     stopImplicitCluster()
   }
-  if(dataReplicates>1){
-    dat$repnumber <- as.numeric(sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[2]]))
-    dat$id <- sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[1]])
-    dat <- subset(dat, repnumber == 1)
-    dat$repnumber <- NULL
-  }
+
+  # if(dataReplicates>1){
+  #   dat$repnumber <- as.numeric(sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[2]]))
+  #   dat$id <- sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[1]])
+  #   dat <- subset(dat, repnumber == 1)
+  #   dat$repnumber <- NULL
+  # }
 
   if(!verbose) close(pb)
   return(result)

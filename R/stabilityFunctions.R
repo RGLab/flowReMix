@@ -51,19 +51,25 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
       stop("Method not supported!")
     }
   } else {
-    keepEach <- max(obj$keepEach, 10)
-    nsamp <- ceiling(reps * keepEach / obj$nPosteriors)
+    mhList <- reConstructMHlist(obj)
+    keepEach <- max(obj$control$keepEach, 10)
+    nsamp <- ceiling(reps * keepEach / obj$control$nPosteriors)
     isingCoefs <- obj$isingAvg
     nSubsets <- length(obj$coefficients)
-    intSampSize <- obj$intSampSize
+    intSampSize <- obj$control$intSampSize
     cov <- obj$covariance
-    MHcoef <- obj$MHcoef
-    preCoef <- obj$preAssignCoefs[length(obj$preAssignCoefs)]
-    prior <- obj$prior
+    if(!is.null(obj$MHcoef)) {
+      MHcoef <- obj$MHcoef
+    } else {
+      warning("Fit object does not contain a vector of MH coefficients! Using inital (sub-optimal!) values!")
+      MHcoef <- rep(obj$control$initMHcoef, nSubsets)
+    }
+    preCoef <- obj$control$preAssignCoefs[length(obj$control$preAssignCoefs)]
+    prior <- obj$control$prior
     dispersion <- obj$dispersion
     invcov <- obj$invCovAvg
-    mixed <- obj$mixed
-    MHresult <- foreach(subjectData = obj$mhList) %dorng% {
+    mixed <- is.null(obj$isingAvg)
+    MHresult <- foreach(subjectData = mhList) %dorng% {
       flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
                 intSampSize = intSampSize, isingCoefs = isingCoefs,
                 covariance = cov, keepEach = keepEach,
@@ -80,7 +86,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
       samples <- lapply(MHresult, function(x) x$rand)
       family <- "gaussian"
     }
-    names(samples) <- sapply(obj$mhList, function(x) x$pre$id[1])
+    names(samples) <- sapply(mhList, function(x) x$pre$id[1])
   }
 
   names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
@@ -122,6 +128,43 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   results$type <- type
   class(results) <- c("flowReMix_stability")
   return(results)
+}
+
+# Function for reconstructing MHlist for sampling new posteriors --------------
+reConstructMHlist <- function(obj) {
+  mixed <- is.null(obj$isingfit)
+  dat <- buildFlowFrame(obj$call, obj$data)
+  dat <- dat[[1]]
+  formulas <- editFlowFormulas(obj$call, mixed)
+  initFormula <- formulas$initFormula
+  dat$iteration <- 1
+  bypop <- by(dat, INDICES = dat$sub.population, FUN = computeFlowEta, obj$coefficients, 1, initFormula, mixed)
+  names(bypop) <- names(obj$coefficients)
+  databyid <- do.call("rbind", bypop)
+  rm(bypop)
+  databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
+  databyid <- by(databyid, databyid$id, function(x) x)
+
+  if(is.null(obj$preAssignment)) {
+    preAssignment <- do.call("rbind", by(dat, dat$id, autoPreAssign))
+  } else {
+    preAssignment <- obj$preAssignment
+  }
+  preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
+  preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
+
+  forcols <- databyid[[1]]
+  keepcols <- which(names(forcols) %in% c("y", "N", "subpopInd", "nullEta", "altEta"))
+  rm(forcols)
+
+  estimatedRandomEffects <- obj$randomEffects
+  nSubjects <- nrow(obj$posteriors)
+  listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
+                                                              pre = preAssignment[[i]],
+                                                              rand = estimatedRandomEffects[i, ],
+                                                              index = i), keepcols)
+  names(listForMH) <- names(databyid)
+  return(listForMH)
 }
 
 plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FALSE,
