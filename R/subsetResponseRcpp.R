@@ -363,7 +363,7 @@ flowReMix <- function(formula,
   }
 
   if(nsamp<=updateLag){
-	stop("nsamp should be > updateLag")
+    stop("nsamp should be > updateLag")
   }
 
   if(parallel) {
@@ -1065,13 +1065,12 @@ flowReMix <- function(formula,
   result$subject_id <- match.call()$subject_id
   result$preAssignment <- preAssignmentMat
   result$MHcoef <- MHcoef
-
-  if(saveSamples) result$randomEffectSamp <- randomOutput
+  result$randomEffectSamp <- randomOutput
 
   if(!mixed) {
     result$isingCov <- isingCoefs
     result$isingfit <- isingfit
-    if(saveSamples) result$assignmentList <- exportAssignment
+    result$assignmentList <- exportAssignment
     posteriors[, -1] <- 1 - posteriors[, -1]
     result$posteriors <- posteriors
     result$levelProbs <- levelProbs
@@ -1084,12 +1083,34 @@ flowReMix <- function(formula,
     stopImplicitCluster()
   }
 
-  # if(dataReplicates>1){
-  #   dat$repnumber <- as.numeric(sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[2]]))
-  #   dat$id <- sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[1]])
-  #   dat <- subset(dat, repnumber == 1)
-  #   dat$repnumber <- NULL
-  # }
+  # Stability Selection -----------------
+  if(parallel) {
+    cpus <- control$ncores
+    if(is.null(cpus)) cpus <- floor(detectCores() / 2)
+  } else {
+    cpus <- 1
+  }
+
+  if(control$isingStabilityReps > 0) {
+    if(verbose) print("Performing stability selection for ising model!")
+    result$isingStability <- stabilityGraph(result, type = "ising",
+                                            reps = control$isingStabilityReps,
+                                            seed = control$seed,
+                                            cpus = cpus)
+  }
+
+  if(control$randStabilityReps > 0) {
+    if(verbose) print("Performing stability selection for random effects!")
+    result$randomStability <- stabilityGraph(result, type = "randomEffects",
+                                            reps = control$randStabilityReps,
+                                            seed = control$seed,
+                                            cpus = cpus)
+  }
+
+  if(!saveSamples) {
+    result$randomEffectSamp <- NULL
+    result$assignmentList <- NULL
+  }
 
   if(!verbose) close(pb)
   return(result)

@@ -45,7 +45,8 @@ control <- flowReMix_control(updateLag = 2, nsamp = 50, initMHcoef = 1,
                              initMethod = "robust", ncores = 2,
                              markovChainEM = TRUE,
                              seed = 10,
-                             preAssignCoefs = 1)
+                             preAssignCoefs = 1,
+                             isingStabilityReps = 5, randStabilityReps = 5)
 
 data$stim <- factor(data$stim, levels = c("negctrl", "env"))
 assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))
@@ -59,7 +60,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  regression_method = "robust",
                  iterations = 4, parallel = TRUE,
                  cluster_assignment = TRUE, keepSamples = TRUE,
-                 verbose = FALSE, control = control))
+                 verbose = TRUE, control = control))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo random.Robj")
