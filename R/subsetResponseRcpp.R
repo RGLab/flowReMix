@@ -326,7 +326,7 @@ flowReMix <- function(formula,
                       ising_model = c("sparse", "dense", "none"),
                       regression_method = c("betabinom", "binom", "sparse", "robust"),
                       iterations = 10, parallel = TRUE, verbose = TRUE,
-                      control = NULL,keepSamples=TRUE) {
+                      control = NULL, keepSamples = TRUE) {
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()
@@ -350,7 +350,7 @@ flowReMix <- function(formula,
   preAssignCoefs <- control$preAssignCoefs
   markovChainEM <- control$markovChainEM
   clusterType = control$clusterType[1]
-  clusterType = match.arg(clusterType,c("SOCK","FORK","AUTO"))
+  clusterType = match.arg(clusterType, c("SOCK","FORK","AUTO"))
   prior <- as.numeric(control$prior)
   isingWprior <- as.logical(control$isingWprior)
   zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
@@ -362,24 +362,28 @@ flowReMix <- function(formula,
   }
   if(parallel) {
     if(is.null(ncores)) {
-      if(clusterType=="FORK")
+      if(clusterType=="FORK") {
         cl = makeForkCluster(detectCores())
-      else if(clusterType=="SOCK")
+        registerDoParallel(cl)
+      } else if(clusterType=="SOCK") {
         cl = makePSOCKCluster(detectCores())
-      else
-        cl = makeCluster(detecCores())
-      registerDoParallel(cl)
+        registerDoParallel(cl)
+      } else {
+        registerDoParallel()
+      }
       if(!is.null(control$seed)){
         set.seed(control$seed)
       }
     } else {
-      if(clusterType=="FORK")
+      if(clusterType=="FORK") {
         cl = makeForkCluster(ncores)
-      else if(clusterType=="SOCK")
+        registerDoParallel(cl)
+      } else if(clusterType=="SOCK") {
         cl = makePSOCKCluster(ncores)
-      else
-        cl = makeCluster(ncores)
-      registerDoParallel(cl)
+        registerDoParallel(cl)
+      } else {
+        cl <- registerDoParallel(ncores)
+      }
       if(!is.null(control$seed)){
         set.seed(control$seed)
       }
@@ -569,7 +573,12 @@ flowReMix <- function(formula,
   dat$off <- off
   dat$sub.population <- sub.population
   dat$treatmentvar <- treatmentvar
+  dat$tempTreatment <- dat$treatmentvar
   dat <- dat[, -1]
+
+  subpopInd <- as.numeric(dat$sub.population)
+  uniqueSubpop <- sort(unique(subpopInd))
+  dat$subpopInd <- subpopInd
 
   # Determining number of data replicates ----------------------
   if(is.null(dataReplicates)) {
@@ -585,10 +594,6 @@ flowReMix <- function(formula,
   } else {
     dataReplicates <- 1
   }
-
-  subpopInd <- as.numeric(dat$sub.population)
-  uniqueSubpop <- sort(unique(subpopInd))
-  dat$subpopInd <- subpopInd
 
   # Editing formulas ------------------------------
   covariates <- deparse(formula[[3]])
@@ -681,7 +686,6 @@ flowReMix <- function(formula,
   }
 
   # More preparations ---------------------------
-  dat$tempTreatment <- dat$treatmentvar
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
@@ -1111,7 +1115,7 @@ flowReMix <- function(formula,
                               minprob = 1 / nSubjects,verbose=verbose)
         } else {
           isingfit <- pIsing(assignmentList, AND = TRUE,
-                              preAssignment = preAssignmentMat,
+                             preAssignment = preAssignmentMat,
                              prevfit = isingCoefs,verbose=verbose)
         }
 
