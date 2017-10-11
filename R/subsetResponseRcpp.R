@@ -503,13 +503,10 @@ flowReMix <- function(formula,
   }
 
   # Editing formulas ------------------------------
-  covariates <- deparse(formula[[3]])
-  if(!mixed) {
-    covariates <- gsub(as.character(call$cluster_variable), "treatmentvar", covariates)
-  }
-  formula <- update.formula(formula, as.formula(paste(". ~", covariates)))
-  glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
-  initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
+  formulas <- editFlowFormulas(match.call(), mixed)
+  formula <- formulas$formula
+  glmformula <- formulas$glmformula
+  initFormula <- formulas$initFormula
 
   # Initializing covariates and random effects------------------
   if(verbose) print("Initializing Regression Equations")
@@ -1329,5 +1326,21 @@ computeFlowEta <- function(popdata, coefficients, iter,
 
   return(subsetDat)
 }
+
+# Function for editing formulas ---------------
+editFlowFormulas <- function(call, mixed) {
+  formula <- call$formula
+  covariates <- deparse(formula[[3]])
+  if(!mixed) {
+    covariates <- gsub(as.character(call$cluster_variable), "treatmentvar", covariates)
+  }
+  formula <- update.formula(formula, as.formula(paste(". ~", covariates)))
+  glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
+  initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
+  return(list(formula = formula, glmformula = glmformula, initFormula = initFormula))
+}
+
+
+
 
 
