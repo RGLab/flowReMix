@@ -20,50 +20,76 @@ aggregateModels = function(x, verbose=TRUE){
     stop("x must be a vector of rds file names holing flowReMix model fits or a list of flowReMix model fits.", call. = FALSE)
   }
   output = list()
+  coefList = list()
+  postList = list()
+
   if(TYPE=="list"){
-    if(verbose)
+    if(verbose){
       pb = txtProgressBar(min = 1, max = length(x),style=3)
+    }
     #average each
     output = x[[1L]]
+    coefList = c(coefList,list(output$coefficients))
+    postList = c(postList,list(output$posteriors))
     for(i in seq_along(x)[-1L]){
-      if(verbose)
+      if(verbose){
         setTxtProgressBar(pb,i)
+      }
       this = x[[i]]
+      #we also need the CIs of the coefficients and the posterior probabilities.
+      #we'll keep a list of each, then summarize them and save them in a slot in the final object.
       output = .averageModels(output,this,i,x)
+      coefList = c(coefList,list(this$coefficients))
+      postList = c(postList,list(this$posteriors))
     }
   }
   if(TYPE == "vector"){
     #load each and average.
-    if(verbose)
+    if(verbose){
       pb = txtProgressBar(min = 1, max = length(x),style=3)
+    }
     for(i in seq_along(x)){
       this = try(readRDS(x[i]),silent==TRUE)
-      if(verbose)
+      if(verbose){
         setTxtProgressBar(pb,i)
+      }
       if(inherits(this,"try-error")){
         stop(x[i]," is not a valid rds file", call = FALSE)
       }
       if(!inherits(this,"flowReMix")){
         stop(x[i], " is not a valid flowReMix fit object", call = FALSE)
       }
-      #continue work
-      if(i==1)
+      #continue merging
+      if(i==1){
         output = this
-      else{
-        #check that models are compatible
+        coefList = c(coefList,list(output$coefficients))
+        postList = c(postList,list(output$posteriors))
+      }else{
         output = .averageModels(output,this,i,x)
+        coefList = c(coefList,list(this$coefficients))
+        postList = c(postList,list(this$posteriors))
       }
     }
   }
-  if(verbose)
+  if(verbose){
     close(pb)
+    }
   output$isingCount = round(output$isingCount) #Should be an integer
+  #next we compute the CIs
+
+  coef_summary = .summarizeCoefs(coefList)
+  post_summary = .summarizePost(postList)
+  output$coef_summary = coef_summary
+  output$post_summary = post_summary
+  output$coefList = coefList
+  output$postList = postList
   return(output)
 }
 
 #'@importFrom purrr map2
 #'@importFrom purrr map2_dbl
 #'@importFrom purrr map2_df
+#'@importFrom plyr ldply
 .averageModels <- function(output,this,i,x) {
   if(!all.equal(output$posteriors[,1],this$posteriors[,1])|!all.equal(output$data,this$data))
     stop("Models ",x[i], " and ", x[i-1]," are not compatible.")
@@ -82,4 +108,32 @@ aggregateModels = function(x, verbose=TRUE){
   output$isingVar = matrix(map2_dbl(output$isingVar,this$isingVar,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingVar), dimnames = list(rownames(output$isingVar),colnames(output$isingVar)))
   output$isingCount = matrix(map2_dbl(output$isingCount,this$isingCount,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingCount), dimnames = list(rownames(output$isingCount),colnames(output$isingCount)))
   return(output)
+}
+
+.summarizePost = function(postList){
+  nr = nrow(postList[[1]])
+  nc = ncol(postList[[2]])
+  post_without_id = Map(postList,f = function(x){
+    x[,-1L]
+  })
+  post_array = array(unlist(post_without_id),dim = c(nr,nc-1,length(postList)))
+  #first dimension is row, second is column, third is model, e.g. post_array[1,3,2] is subject 1, subset 3, model 2
+  post_summary = apply(post_array,1:2,function(x)c(mean=mean(x),sd=sd(x),n=length(x),quantile(x,c(0.1,0.5,0.9))))
+  dimnames(post_summary)[[2]] = rownames(postList[[1]]) # put names on the remaining dimensions, subjects in dim 2 and subsets in dim 3
+  dimnames(post_summary)[[3]] = colnames(postList[[1]])[-1L]
+  post_summary = melt(aperm(post_summary,perm = c(2,3,1))) #make subjects dim 1, subsets dim 2, and statistics dim 3
+  colnames(post_summary)[1:3] = c(colnames(postList[[1]])[1],"subset","statistic")
+  post_summary = post_summary%>%spread(statistic,value)
+  post_summary
+}
+
+.summarizeCoefs <- function(coefList) {
+  ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
+    do({
+      data.frame(mean = mean(.$effect),
+                 sd = sd(.$effect),
+                 n = length(.$effect),
+                 t(quantile(.$effect, c(0.1, 0.5, 0.9))),
+                 check.names = FALSE)
+    })
 }
