@@ -18,25 +18,8 @@
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
-                           gamma = 0.9, AND = TRUE, seed = NULL) {
-  type <- type[1]
-  if(type == "ising") {
-    samples <- obj$assignmentList
-    family <- "binomial"
-  } else if(type == "randomEffects") {
-    samples <- obj$randomEffectSamp
-    family <- "gaussian"
-  } else {
-    stop("Method not supported!")
-  }
-  names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
-  samples <- lapply(unique(names(samples)), function(x) {
-    do.call("rbind", samples[names(samples) == x])
-  })
-  subsets <- names(obj$coefficients)
-
-  nsubsets <- ncol(samples[[1]])
-  countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
+                           gamma = 0.9, AND = TRUE, seed = NULL,
+                           sampleNew = FALSE) {
   if(cpus == 1) {
     foreach::registerDoSEQ()
   } else {
@@ -50,21 +33,83 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     set.seed(100)
   }
 
+  type <- type[1]
+  if(!sampleNew) {
+    if(type == "ising") {
+      if(is.null(obj$assignmentList)) {
+        stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
+      }
+      samples <- obj$assignmentList
+      family <- "binomial"
+    } else if(type == "randomEffects") {
+      if(is.null(obj$randomEffectSamp)) {
+        stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
+      }
+      samples <- obj$randomEffectSamp
+      family <- "gaussian"
+    } else {
+      stop("Method not supported!")
+    }
+  } else {
+    keepEach <- max(obj$keepEach, 10)
+    nsamp <- ceiling(reps * keepEach / obj$nPosteriors)
+    isingCoefs <- obj$isingAvg
+    nSubsets <- length(obj$coefficients)
+    intSampSize <- obj$intSampSize
+    cov <- obj$covariance
+    MHcoef <- obj$MHcoef
+    preCoef <- obj$preAssignCoefs[length(obj$preAssignCoefs)]
+    prior <- obj$prior
+    dispersion <- obj$dispersion
+    invcov <- obj$invCovAvg
+    mixed <- obj$mixed
+    MHresult <- foreach(subjectData = obj$mhList) %dorng% {
+      flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
+                intSampSize = intSampSize, isingCoefs = isingCoefs,
+                covariance = cov, keepEach = keepEach,
+                MHcoef = MHcoef, betaDispersion = TRUE,
+                randomAssignProb = 0, modelprobs = 0,
+                iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+                M = dispersion, invcov = invcov, mixed = mixed,
+                sampleRandom = (type != "ising"))
+    }
+    if(type == "ising") {
+      samples <- lapply(MHresult, function(x) x$assign)
+      family = "binomial"
+    } else if(type == "randomEffects") {
+      samples <- lapply(MHresult, function(x) x$rand)
+      family <- "gaussian"
+    }
+    names(samples) <- sapply(obj$mhList, function(x) x$pre$id[1])
+  }
+
+  names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
+  samples <- lapply(unique(names(samples)), function(x) {
+    do.call("rbind", samples[names(samples) == x])
+  })
+  subsets <- names(obj$coefficients)
+
+  nsubsets <- ncol(samples[[1]])
+
   # perc <- 0.1
   # pb <-  progress::progress_bar$new(total = reps);
   cluster_res = foreach(i = 1:reps) %dorng% {
-    mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
+    if(!sampleNew) {
+      mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
+    } else {
+      mat <- t(sapply(samples, function(x) x[i, , drop = FALSE]))
+    }
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
                      method = "sparse", cv = cv)
-    countCovar <- countCovar + (coefs != 0) * sign(coefs)
+    countCovar <- (coefs != 0) * sign(coefs)
     # if(i / reps > perc & perc < 1) {
     #   cat(perc * 100, "% ", sep = "")
     #   perc <- perc + 0.1
     # }
     return(countCovar)
   }
-  countCovar = Reduce(x = cluster_res,f=`+`)
+  countCovar = Reduce(x = cluster_res, f=`+`)
   stopImplicitCluster()
 
   props <- countCovar / reps
@@ -79,7 +124,6 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   return(results)
 }
 
-#' @export
 plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FALSE,
                          fill = NULL, fillName = NULL,
                          fillRange = NULL, fillPalette = NULL,
@@ -139,15 +183,15 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 #' @export
 plot.flowReMix_stability <- function(x, ...){
   mc = match.call();
-  threshold = ifelse(is.null(mc$threshold),0.5,mc$threshold)
-  plotAll = ifelse(is.null(mc$plotAll),FALSE,mc$plotAll)
+  threshold = ifelse(is.null(eval(mc$threshold,envir=parent.frame())),0.5,eval(mc$threshold,envir=parent.frame()))
+  plotAll = ifelse(is.null(eval(mc$plotAll,envir=parent.frame())),FALSE,eval(mc$plotAll,envir=parent.frame()))
   fill = eval(mc$fill,envir=parent.frame())
-  fillName = mc$fillName
-  fillRange = mc$fillRange
-  fillPalette = mc$fillPalette
-  title = ifelse(is.null(mc$title),TRUE,mc$title)
-  label_size = ifelse(is.null(mc$label_size),1.8,mc$label_size)
-  seed = ifelse(is.null(eval(mc$seed)),100,mc$seed)
+  fillName = eval(mc$fillName,envir=parent.frame())
+  fillRange = eval(mc$fillRange,envir=parent.frame())
+  fillPalette = eval(mc$fillPalette,envir=parent.frame())
+  title = ifelse(is.null(eval(mc$title,envir=parent.frame())),TRUE,eval(mc$title,envir=parent.frame()))
+  label_size = ifelse(is.null(eval(mc$label_size,envir=parent.frame())),1.8,eval(mc$label_size,envir=parent.frame()))
+  seed = ifelse(is.null(eval(mc$seed,envir=parent.frame())),100,eval(mc$seed,parent.frame()))
 
   set.seed(seed)
   requireNamespace("ggplot2")
@@ -245,7 +289,6 @@ plot.flowReMix_stability <- function(x, ...){
 
 #' @importFrom igraph graph.adjacency
 #' @importFrom igraph components
-#' @export
 getGraphComponents <- function(obj, threshold = 0.5,
                                minsize = 2, groupNames = NULL) {
   # Finding groups -------------

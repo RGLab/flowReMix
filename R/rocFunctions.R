@@ -1,4 +1,3 @@
-#' @export
 #' @import ggplot2
 #' @import dplyr
 plotROC <- function(obj, target, direction = "auto",
@@ -57,7 +56,6 @@ plotROC <- function(obj, target, direction = "auto",
   return(figure)
 }
 
-#' @export
 rocTable <- function(obj, target, direction = "auto", adjust = "BH",
                      pvalue = c("wilcoxon", "logistic", "ttest"),
                      sortAUC = FALSE, ...) {
@@ -102,7 +100,6 @@ rocTable <- function(obj, target, direction = "auto", adjust = "BH",
   return(result)
 }
 
-#' @export
 fdrTable <- function(obj, target) {
   notNA <- !is.na(target)
   post <- 1 - obj$posteriors[notNA, -1]
@@ -176,7 +173,6 @@ plot.flowReMix_fdrTable <- function(x, ...) {
     ggtitle(paste("FDR and Power Curves for", varname))
 }
 
-#' @export
 #' @import  ggplot2
 plotScatter <- function(obj, subsets = NULL,
                         target = NULL, varname = NULL,
@@ -251,7 +247,6 @@ plotScatter <- function(obj, subsets = NULL,
   return(figure)
 }
 
-#' @export
 #' @import ggplot2
 plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),

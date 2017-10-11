@@ -1,10 +1,9 @@
-cpus <- 8
+cpus <- 4
 print(cpus)
 
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-set.seed(setting)
 
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
@@ -117,19 +116,26 @@ keep <- names(keep[sapply(keep, function(x) x)])
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
-npost <- 10
-niter <- 40
-updateLag <- round(niter / 2)
+configurations <- expand.grid(niter = c(30, 60, 120),
+                              seed = 1:50)
+config <- configurations[setting, ]
+niter <- config[[1]]
+seed <- config[[2]]
+npost <- 1
+
 
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = updateLag, nsamp = 100, initMHcoef = 2.5,
-                             nPosteriors = npost, centerCovariance = TRUE,
-                             maxDispersion = 10^3, minDispersion = 10^7,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 100,
+                             keepEach = 10, initMHcoef = 2.5,
+                             nPosteriors = npost, centerCovariance = FALSE,
+                             maxDispersion = 10^4, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = round(50 / npost), isingInit = -log(99),
-                             ncores = cpus,
-                             preAssignCoefs = 0,
+                             isingInit = -log(99),
+                             seed = seed,
+                             ncores = cpus, preAssignCoefs = 1,
+                             prior = 2, isingWprior = TRUE,
+                             markovChainEM = FALSE,
                              initMethod = "robust")
 
 subsetDat$batch <- factor(subsetDat$batch..)
@@ -148,5 +154,21 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
-filename <- paste("results/HVTNclust10", "_", setting, ".Robj", sep ="")
-save(fit, file = filename)
+
+file <- paste("results/hvtn_1_niter", niter, "npost", 1, "seed", seed, "c.Robj", sep = "")
+save(fit, file = file)
+
+stab <- stabilityGraph(fit, reps = 100, cpus = round(cpus / 2), type = "ising",
+                       cv = FALSE, gamma = 0.25, AND = TRUE, sampleNew = FALSE)
+stabfile <- paste("results/hvtn_stab_1_niter", niter, "npost", 1,  "seed", seed,"c.Robj", sep = "")
+save(stab, file = stabfile)
+fit$assignmentList <- NULL
+fit$randomEffectSamp <- NULL
+fit$mhList <- NULL
+save(fit, file = file)
+
+
+
+
+
+

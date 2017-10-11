@@ -9,7 +9,7 @@ flowReMix(formula, subject_id, cell_type = NULL, cluster_variable,
   covariance = c("sparse", "dense", "diagonal"), ising_model = c("sparse",
   "dense", "none"), regression_method = c("betabinom", "binom", "sparse",
   "robust"), iterations = 10, parallel = TRUE, verbose = TRUE,
-  control = NULL)
+  control = NULL, keepSamples = TRUE)
 }
 \arguments{
 \item{formula}{an object of class \code{\link[stats]{formula}}. The response
@@ -40,7 +40,7 @@ structure of the random effects. \code{\link[PDSCE]{pdsoft.cv}} will be
 used by default.}
 
 \item{ising_model}{a method for estimating the Ising model.
-\code{\link[IsingFit]{IsingFit}} will be used by default.}
+Sparse neighborhood selection will be used by default.}
 
 \item{regression_method}{the regression method to be used. Default option is
 the \code{\link[stats]{glm}} function with family = "binomial".}
@@ -53,6 +53,8 @@ the \code{\link[stats]{glm}} function with family = "binomial".}
 the optimization algorithm runs.}
 
 \item{control}{an optional object of \code{\link{flowReMix_control}} class.}
+
+\item{keepSamples}{\code{logical} whether to keep all the samples. Fitted object takes more memory. Default TRUE.}
 }
 \value{
 \code{flowReMix} returns an object of class \code{flowReMix} which
@@ -69,8 +71,6 @@ subject/cell-type.
 \item \code{covariance} the estimated covariance structure for the random
 effects.
 \item \code{isingCov} the estimated \code{covariance} structure of the ising model.
-\item \code{isingfit} if \code{ising_model = "sparse"} then the object returned
-by the \code{\link[IsingFit]{IsingFit}} function. \code{NULL} otherwise.
 \item \code{dispersion} the over-dispersion estimated for each cell-subset. If
 regression method is not "betabinomial" then this will be a vector of large
 constants.
@@ -141,8 +141,7 @@ status of the different cell-types can be estimated via three methods. If
 assumed. If the \code{ising_model} is set to \code{"dense"} then the ising
 model is estimated via a set of firth regressions
 (\code{\link[logistf]{logistf}}), one for each node in the graph. The
-default option is \code{"sparse"}, where the
-\code{\link[IsingFit]{IsingFit}} method is used.
+default option is \code{"sparse"}, where neighborhood selection with eBIC will be used.
 
 \code{regression_method} specifies which function should be used for
 estimating the reqression coefficients conditionally on the values of the

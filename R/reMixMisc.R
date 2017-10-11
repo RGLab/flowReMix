@@ -68,6 +68,8 @@
 #'
 #' @param isingWprior \code{logical} fit the Ising model with a prior on the baseline response using the parameter in \code{prior}. Default TRUE.
 #'
+#' @param clusterType \code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.
+#'
 #' @return An object of type \code{flowReMix_control}.
 #'
 #' @export
@@ -77,7 +79,8 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
                               initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
                               markovChainEM = TRUE, seed=100, prior = 0,
-                              isingWprior = FALSE,zeroPosteriorProbs=FALSE) {
+                              isingWprior = FALSE,zeroPosteriorProbs=FALSE,
+                              clusterType=c("AUTO","FORK","SOCK")) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
@@ -97,152 +100,150 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  markovChainEM = markovChainEM,
                  seed=seed,
                  prior = abs(prior),
-                 isingWprior = isingWprior, zeroPosteriorProbs = zeroPosteriorProbs)
+                 isingWprior = isingWprior,
+                 zeroPosteriorProbs = zeroPosteriorProbs,
+                 clusterType=c("AUTO","SOCK","FORK"))
   class(object) <- "flowReMix_control"
   return(object)
 }
 
 
-#' @importFrom IsingFit IsingFit
-#' @importFrom GGally ggnet2
-#' @importFrom stats na.pass
-#' @importFrom stats model.matrix
-#' @importFrom stats model.frame
-#' @export
-computeGraphAUC <- function(object, outcome = NULL, reps = 100,
-                            samples = NULL,
-                            props = NULL,
-                            AND = TRUE,
-                            screen = TRUE,
-                            threhsold = 0.5) {
-  # Computing AUCs --------------------------------
-  if(!is.null(outcome)) {
-    if(!is.null(samples)) {
-      posteriors <- data.frame(t(sapply(samples, colMeans)))
-      posteriors <- cbind(object$posteriors[, 1], posteriors)
-      colnames(posteriors)[1] <- "id"
-    } else {
-      posteriors <- object$posteriors
-    }
-
-    colnames(outcome)[1] <- "id"
-    posteriors <- merge(posteriors, outcome,
-                        all.x = TRUE, by.x = "id", by.y = "id")
-    ctrlCol <- ncol(posteriors)
-
-    aucs <- numeric(ctrlCol - 2)
-    n1 <- sum(posteriors[, ctrlCol] == 1)
-    n0 <- sum(posteriors[, ctrlCol] == 0)
-    outcome <- posteriors[, ctrlCol]
-    for(i in 2:(ctrlCol - 1)) {
-      post <- posteriors[, i]
-      rocfit <- roc(outcome ~ post)
-      subset <- names(posteriors)[i]
-      auc <- rocfit$auc
-      aucs[i - 1] <- auc
-    }
-
-    pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
-    pvals <- 2 * pmin(pvals,  1 - pvals)
-    qvals <- p.adjust(pvals, method = "BY")
-    subsets <- names(posteriors)[-c(1, ctrlCol)]
-    result <- data.frame(subsets, aucs, pvals, qvals)
-  } else {
-    posteriors <- object$posteriors
-    levelProbs <- colMeans(posteriors[, 2:ncol(posteriors)])
-    result <- NULL
-  }
-
-
-  # Estimating graph -------------------
-  if(is.null(samples)) {
-    assignments <- object$assignmentList
-  } else {
-    assignments <- samples
-  }
-
-  if(is.null(props)) {
-    modelList <- list()
-    nsubsets <- ncol(assignments[[1]])
-    countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
-    for(i in 1:reps) {
-      mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
-      colnames(mat) <- names(object$coefficients)
-      keep <- apply(mat, 2, function(x) any(x != x[1]))
-      mat <- mat[, keep]
-      model <- IsingFit(mat, AND = AND, plot = FALSE)
-      modelList[[i]] <- model
-      #plot(model)
-      countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
-      print(c(rep = i))
-    }
-
-    props <- countCovar / reps
-    props[abs(props) <= threshold] <- 0
-  }
-
-  # Plotting graph ---------------------
-  requireNamespace("GGally")
-  requireNamespace("network")
-  requireNamespace("sna")
-  network <- props
-  if(screen) {
-    keep <- apply(network, 1, function(x,threshold=threshold) any(abs(x) >= threshold))
-    network <- network::network[keep, keep]
-  } else {
-    keep <- rep(TRUE, length(props))
-  }
-  net <- network::network(props)
-  subsets <- names(object$coefficients)
-  nodes <- ggnet2(network, label = subsets[keep])$data
-  edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
-  p <- nrow(network)
-  row <- 1
-  for(j in 2:p) {
-    for(i in 1:(j-1)) {
-      if(network[i, j] != 0) {
-        edges[row, ] <- unlist(c(nodes[i, 6:7], nodes[j, 6:7], network[i, j]))
-        row <- row + 1
-      }
-    }
-  }
-
-  edges <- data.frame(edges)
-  names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
-  nodes$auc <- aucs[keep]
-  nodes$qvals <- result$qvals[keep]
-  nodes$sig <- nodes$qvals < 0.1
-
-  names(edges)[5] <- "Dependence"
-  lims <- max(abs(props))
-  plot <- ggplot() +
-    scale_colour_gradient2(limits=c(-lims, lims), low="dark red", high = "dark green") +
-    geom_segment(data = edges, aes(x = xstart, y = ystart,
-                                   xend = xend, yend = yend,
-                                   col = Dependence,
-                                   alpha = abs(Dependence)),
-                 size = 1) +
-    scale_fill_gradientn(colours = rainbow(4))
-  if(is.null(outcome)) {
-    plot <- plot + geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
-                              size = 8, col = "grey")
-  } else {
-    plot <- plot + geom_point(data = nodes, aes(x = x, y = y, fill = levelProbs), shape = 21,
-                              size = 8, col = "grey")
-  }
-  plot <- plot + scale_shape(solid = FALSE) +
-    geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
-    theme(axis.line=element_blank(),axis.text.x=element_blank(),
-          axis.text.y=element_blank(),axis.ticks=element_blank(),
-          axis.title.x=element_blank(),
-          axis.title.y=element_blank(),
-          panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-          panel.grid.minor=element_blank(),plot.background=element_blank())
-
-  return(list(graphplot = plot, props = props, auctable = result))
-}
-
-
-
-
-
+# @importFrom GGally ggnet2
+# @importFrom stats na.pass
+# @importFrom stats model.matrix
+# @importFrom stats model.frame
+# @importFrom network network
+# computeGraphAUC <- function(object, outcome = NULL, reps = 100,
+#                             samples = NULL,
+#                             props = NULL,
+#                             AND = TRUE,
+#                             screen = TRUE,
+#                             threhsold = 0.5) {
+#   # Computing AUCs --------------------------------
+#   if(!is.null(outcome)) {
+#     if(!is.null(samples)) {
+#       posteriors <- data.frame(t(sapply(samples, colMeans)))
+#       posteriors <- cbind(object$posteriors[, 1], posteriors)
+#       colnames(posteriors)[1] <- "id"
+#     } else {
+#       posteriors <- object$posteriors
+#     }
+#
+#     colnames(outcome)[1] <- "id"
+#     posteriors <- merge(posteriors, outcome,
+#                         all.x = TRUE, by.x = "id", by.y = "id")
+#     ctrlCol <- ncol(posteriors)
+#
+#     aucs <- numeric(ctrlCol - 2)
+#     n1 <- sum(posteriors[, ctrlCol] == 1)
+#     n0 <- sum(posteriors[, ctrlCol] == 0)
+#     outcome <- posteriors[, ctrlCol]
+#     for(i in 2:(ctrlCol - 1)) {
+#       post <- posteriors[, i]
+#       rocfit <- roc(outcome ~ post)
+#       subset <- names(posteriors)[i]
+#       auc <- rocfit$auc
+#       aucs[i - 1] <- auc
+#     }
+#
+#     pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
+#     pvals <- 2 * pmin(pvals,  1 - pvals)
+#     qvals <- p.adjust(pvals, method = "BY")
+#     subsets <- names(posteriors)[-c(1, ctrlCol)]
+#     result <- data.frame(subsets, aucs, pvals, qvals)
+#   } else {
+#     posteriors <- object$posteriors
+#     levelProbs <- colMeans(posteriors[, 2:ncol(posteriors)])
+#     result <- NULL
+#   }
+#
+#
+#   # Estimating graph -------------------
+#   if(is.null(samples)) {
+#     assignments <- object$assignmentList
+#   } else {
+#     assignments <- samples
+#   }
+#
+#   if(is.null(props)) {
+#     modelList <- list()
+#     nsubsets <- ncol(assignments[[1]])
+#     countCovar <- matrix(0, nrow = nsubsets, ncol = nsubsets)
+#     for(i in 1:reps) {
+#       mat <- t(sapply(assignments, function(x) x[sample(1:nrow(x), 1), ]))
+#       colnames(mat) <- names(object$coefficients)
+#       keep <- apply(mat, 2, function(x) any(x != x[1]))
+#       mat <- mat[, keep]
+#       model <- IsingFit(mat, AND = AND, plot = FALSE)
+#       modelList[[i]] <- model
+#       #plot(model)
+#       countCovar[keep, keep] <- countCovar[keep, keep] + (model$weiadj != 0) * sign(model$weiadj)
+#       print(c(rep = i))
+#     }
+#
+#     props <- countCovar / reps
+#     props[abs(props) <= threshold] <- 0
+#   }
+#
+#   # Plotting graph ---------------------
+#   network <- props
+#   if(screen) {
+#     keep <- apply(network, 1, function(x,threshold=threshold) any(abs(x) >= threshold))
+#     network <- network[keep, keep]
+#   } else {
+#     keep <- rep(TRUE, length(props))
+#   }
+#   net <- network(props)
+#   subsets <- names(object$coefficients)
+#   nodes <- ggnet2(network, label = subsets[keep])$data
+#   edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
+#   p <- nrow(network)
+#   row <- 1
+#   for(j in 2:p) {
+#     for(i in 1:(j-1)) {
+#       if(network[i, j] != 0) {
+#         edges[row, ] <- unlist(c(nodes[i, 6:7], nodes[j, 6:7], network[i, j]))
+#         row <- row + 1
+#       }
+#     }
+#   }
+#
+#   edges <- data.frame(edges)
+#   names(edges) <- c("xstart", "ystart", "xend", "yend", "width")
+#   nodes$auc <- aucs[keep]
+#   nodes$qvals <- result$qvals[keep]
+#   nodes$sig <- nodes$qvals < 0.1
+#
+#   names(edges)[5] <- "Dependence"
+#   lims <- max(abs(props))
+#   plot <- ggplot() +
+#     scale_colour_gradient2(limits=c(-lims, lims), low="dark red", high = "dark green") +
+#     geom_segment(data = edges, aes(x = xstart, y = ystart,
+#                                    xend = xend, yend = yend,
+#                                    col = Dependence,
+#                                    alpha = abs(Dependence)),
+#                  size = 1) +
+#     scale_fill_gradientn(colours = rainbow(4))
+#   if(is.null(outcome)) {
+#     plot <- plot + geom_point(data = nodes, aes(x = x, y = y, fill = auc), shape = 21,
+#                               size = 8, col = "grey")
+#   } else {
+#     plot <- plot + geom_point(data = nodes, aes(x = x, y = y, fill = levelProbs), shape = 21,
+#                               size = 8, col = "grey")
+#   }
+#   plot <- plot + scale_shape(solid = FALSE) +
+#     geom_text(data = nodes, aes(x = x, y = y, label = nodes$label), size = 1.8) +
+#     theme(axis.line=element_blank(),axis.text.x=element_blank(),
+#           axis.text.y=element_blank(),axis.ticks=element_blank(),
+#           axis.title.x=element_blank(),
+#           axis.title.y=element_blank(),
+#           panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+#           panel.grid.minor=element_blank(),plot.background=element_blank())
+#
+#   return(list(graphplot = plot, props = props, auctable = result))
+# }
+#
+#
+#
+#
+#
