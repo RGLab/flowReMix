@@ -22,6 +22,7 @@ aggregateModels = function(x, verbose=TRUE){
   output = list()
   coefList = list()
   postList = list()
+  levelProbsMatrix = NULL
 
   if(TYPE=="list"){
     if(verbose){
@@ -31,6 +32,7 @@ aggregateModels = function(x, verbose=TRUE){
     output = x[[1L]]
     coefList = c(coefList,list(output$coefficients))
     postList = c(postList,list(output$posteriors))
+    levelProbsMatrix = cbind(levelProbsMatrix,output$levelProbs)
     for(i in seq_along(x)[-1L]){
       if(verbose){
         setTxtProgressBar(pb,i)
@@ -41,6 +43,7 @@ aggregateModels = function(x, verbose=TRUE){
       output = .averageModels(output,this,i,x)
       coefList = c(coefList,list(this$coefficients))
       postList = c(postList,list(this$posteriors))
+      levelProbsMatrix = cbind(levelProbsMatrix,this$levelProbs)
     }
   }
   if(TYPE == "vector"){
@@ -64,10 +67,12 @@ aggregateModels = function(x, verbose=TRUE){
         output = this
         coefList = c(coefList,list(output$coefficients))
         postList = c(postList,list(output$posteriors))
+        levelProbsMatrix = cbind(levelProbsMatrix,output$levelProbs)
       }else{
         output = .averageModels(output,this,i,x)
         coefList = c(coefList,list(this$coefficients))
         postList = c(postList,list(this$posteriors))
+        levelProbsMatrix = cbind(levelProbsMatrix,this$levelProbs)
       }
     }
   }
@@ -79,16 +84,21 @@ aggregateModels = function(x, verbose=TRUE){
 
   coef_summary = .summarizeCoefs(coefList)
   post_summary = .summarizePost(postList)
+  rownames(levelProbsMatrix) = colnames(this$posteriors)[-1L]
+  levelProbs_summary = .summarizeLevelProbs(levelProbsMatrix)
   output$coef_summary = coef_summary
   output$post_summary = post_summary
   output$coefList = coefList
   output$postList = postList
+  output$levelProbs_summary = levelProbs_summary
+  output$levelProbsMatrix = levelProbsMatrix
   return(output)
 }
 
 #'@importFrom purrr map2
 #'@importFrom purrr map2_dbl
 #'@importFrom purrr map2_df
+#'@importFrom reshape2 melt
 #'@importFrom plyr ldply
 .averageModels <- function(output,this,i,x) {
   if(!all.equal(output$posteriors[,1],this$posteriors[,1])|!all.equal(output$data,this$data))
@@ -128,7 +138,7 @@ aggregateModels = function(x, verbose=TRUE){
 }
 
 .summarizeCoefs <- function(coefList) {
-  coefummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
+  coefsummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
     do({
       data.frame(mean = mean(.$effect),
                  sd = sd(.$effect),
@@ -138,4 +148,20 @@ aggregateModels = function(x, verbose=TRUE){
     })
   colnames(coefsummaries)[1] = "subset"
   coefsummaries
+}
+
+.summarizeLevelProbs = function(levelProbsMatrix){
+  levelProbs_summary = do.call(rbind, apply(levelProbsMatrix, 1, .describe))
+  rownames(levelProbs_summary) = rownames(levelProbsMatrix)
+  levelProbs_summary
+}
+
+.describe = function(x){
+  data.frame(
+    mean = mean(x),
+    sd = sd(x),
+    n = length(x),
+    t(quantile(x, c(0.1, 0.5, 0.9))),
+    check.names = FALSE
+  )
 }
