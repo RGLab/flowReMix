@@ -1231,11 +1231,12 @@ flowReMix <- function(formula,
   if(parallel) {
     stopImplicitCluster()
   }
-
-  dat$repnumber <- as.numeric(sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[2]]))
-  dat$id <- sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[1]])
-  dat <- subset(dat, repnumber == 1)
-  dat$repnumber <- NULL
+  if(dataReplicates>1){
+    dat$repnumber <- as.numeric(sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[2]]))
+    dat$id <- sapply(dat$id, function(x) strsplit(x, "%%%", fixed = FALSE)[[1]][[1]])
+    dat <- subset(dat, repnumber == 1)
+    dat$repnumber <- NULL
+  }
   result$data <- data
 
   result$subject_id <- match.call()$subject_id
