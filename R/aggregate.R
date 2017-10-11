@@ -137,4 +137,5 @@ aggregateModels = function(x, verbose=TRUE){
                  check.names = FALSE)
     })
   colnames(coefsummaries)[1] = "subset"
+  coefsummaries
 }
