@@ -906,6 +906,10 @@ flowReMix <- function(formula,
       if(keepSamples) randomOutput <- c(randomOutput, randomList)
     }
 
+    if(markovChainEM & iter == iterations) {
+      randomOutput <- randomList
+    }
+
     if(!markovChainEM & iter > updateLag + 1) {
       randomList <- randomOutput
     }
@@ -951,6 +955,10 @@ flowReMix <- function(formula,
 
       if(!markovChainEM & iter > updateLag + 1) {
         assignmentList <- exportAssignment
+      }
+
+      if(markovChainEM & iter == iterations) {
+        exportAssignment <- assignmentList
       }
 
       assignmentList <- do.call("rbind",assignmentList)
