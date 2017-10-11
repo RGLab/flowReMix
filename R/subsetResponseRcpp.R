@@ -1198,7 +1198,6 @@ flowReMix <- function(formula,
 
   # Preparing flowReMix object --------------------
   result <- list()
-  result$modelFrame <- dat
   result$coefficients <- coefficientsOut
   names(result$coefficients) <- names(accumDat)
   result$covariance <- covariance
@@ -1206,14 +1205,10 @@ flowReMix <- function(formula,
   result$invCovVar <- invCovVar - invCovAvg^2
   result$randomEffects <- estimatedRandomEffects
   result$dispersion <- M
-  result$mhList <- listForMH
-  result$MHcoef <- MHcoef
-  result$intSampSize <- intSampSize
-  result$keepEach <- keepEach
-  result$preAssignCoefs <- preAssignCoefs
-  result$prior <- prior
-  result$mixed <- mixed
-  result$nPosteriors <- dataReplicates
+  result$call <- match.call()
+  result$control <- control
+  result$data <- data
+  result$subject_id <- match.call()$subject_id
 
   if(keepSamples){
     result$randomEffectSamp <- randomOutput
@@ -1241,9 +1236,7 @@ flowReMix <- function(formula,
     dat <- subset(dat, repnumber == 1)
     dat$repnumber <- NULL
   }
-  result$data <- data
 
-  result$subject_id <- match.call()$subject_id
   if(!verbose) close(pb)
   return(result)
 }
@@ -1305,5 +1298,8 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
               rate = MHsuccess / MHattempts))
 }
 
+buildFlowFrame <- function(x) {
+
+}
 
 
