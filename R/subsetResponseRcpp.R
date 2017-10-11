@@ -481,104 +481,10 @@ flowReMix <- function(formula,
 
   #### Getting all relevant variables from call --------------------
   # Getting model frame
-  dat <- model.frame(formula, data, na.action=na.pass)
-  n <- dim(dat)[1]
-
-  # Getting id, waves, weights and treatment variable
-  if(typeof(data) == "environment"){
-    id <- subject_id
-    if(is.null(call$subject_id)) stop("id must be specified!")
-    weights <- weights
-    if(is.null(call$weights)) weights <- rep(1, n)
-    treatmentvar <- cluster_variable
-  }
-  else{
-    if(length(call$subject_id) == 1){
-      subj.col <- which(colnames(data) == call$subject_id)
-      if(length(subj.col) > 0){
-        id <- data[, subj.col]
-      }else{
-        id <- eval(call$subject_id, envir = parent.frame())
-      }
-    }else if(is.null(call$subject_id)){
-      id <- 1:n
-    }
-
-    if(length(call$weights) == 1){
-      weights.col <- which(colnames(data) == call$weights)
-      if(length(weights.col) > 0){
-        weights <- data[, weights.col]
-      }else{
-        weights <- eval(call$weights, envir=parent.frame())
-      }
-    }else if(is.null(call$weights)){
-      weights <- rep.int(1, n)
-    }
-
-    if(length(call$cluster_variable) == 1){
-      treatment.col <- which(colnames(data) == call$cluster_variable)
-      if(length(treatment.col) > 0){
-        treatmentvar <- data[,treatment.col]
-      }else{
-        treatmentvar <- eval(call$cluster_variable, envir=parent.frame())
-      }
-    }
-  }
-
-  # getting offset, if no offset is given, then set to zero
-  offset <- model.offset(dat)
-  if(is.null(offset)){
-    off <- rep(0, n)
-  }else{
-    off <- offset
-  }
-
-  # getting Subpopulation
-  if(typeof(data) == "environment"){
-    sub.population <- cell_type
-  }
-  else {
-    if(length(call$cell_type) == 1){
-      s.col <- which(colnames(data) == call$cell_type)
-      if(length(s.col) > 0) {
-        sub.population <- data[, s.col]
-      }
-      else {
-        sub.population <- eval(call$cell_type, envir=parent.frame())
-      }
-    }
-    else if(is.null(call$cell_type)){
-      sub.population <- rep(1, n)
-      sub.population <- factor(sub.population)
-    }
-  }
-
-  # Sub-population must be a factor
-  if(!is.factor(sub.population)) stop("Sub-population must be a factor!")
-
-  # Creating working dataset ------------------------------
-  y <- model.frame(formula, data)
-  y <- model.response(y)
-  if(!is.matrix(y) | ncol(y) != 2) {
-    stop("Response must be a two columns matrix, the first column of which is the
-         count of the cell subset and the second is the `parent count - cell count'.")
-  }
-  N <- rowSums(y)
-  y <- y[, 1]
-  dat$y <- y
-  dat$N <- N
-  dat$id <- id
-  dat$weights <- weights
-  dat$prop <- y / N
-  dat$off <- off
-  dat$sub.population <- sub.population
-  dat$treatmentvar <- treatmentvar
-  dat$tempTreatment <- dat$treatmentvar
-  dat <- dat[, -1]
-
-  subpopInd <- as.numeric(dat$sub.population)
-  uniqueSubpop <- sort(unique(subpopInd))
-  dat$subpopInd <- subpopInd
+  dat <- buildFlowFrame(match.call(), data)
+  subpopInd <- dat$subpopInd
+  uniqueSubpop <- dat$uniqueSubpop
+  dat <- dat$frame
 
   # Determining number of data replicates ----------------------
   if(is.null(dataReplicates)) {
@@ -1298,8 +1204,107 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
               rate = MHsuccess / MHattempts))
 }
 
-buildFlowFrame <- function(x) {
+buildFlowFrame <- function(call, data) {
+  formula <- call$formula
+  dat <- model.frame(formula, data, na.action=na.pass)
+  n <- dim(dat)[1]
 
+  # Getting id, waves, weights and treatment variable
+  if(typeof(data) == "environment"){
+    id <- subject_id
+    if(is.null(call$subject_id)) stop("id must be specified!")
+    weights <- weights
+    if(is.null(call$weights)) weights <- rep(1, n)
+    treatmentvar <- cluster_variable
+  }
+  else{
+    if(length(call$subject_id) == 1){
+      subj.col <- which(colnames(data) == call$subject_id)
+      if(length(subj.col) > 0){
+        id <- data[, subj.col]
+      }else{
+        id <- eval(call$subject_id, envir = parent.frame())
+      }
+    }else if(is.null(call$subject_id)){
+      id <- 1:n
+    }
+
+    if(length(call$weights) == 1){
+      weights.col <- which(colnames(data) == call$weights)
+      if(length(weights.col) > 0){
+        weights <- data[, weights.col]
+      }else{
+        weights <- eval(call$weights, envir=parent.frame())
+      }
+    }else if(is.null(call$weights)){
+      weights <- rep.int(1, n)
+    }
+
+    if(length(call$cluster_variable) == 1){
+      treatment.col <- which(colnames(data) == call$cluster_variable)
+      if(length(treatment.col) > 0){
+        treatmentvar <- data[,treatment.col]
+      }else{
+        treatmentvar <- eval(call$cluster_variable, envir=parent.frame())
+      }
+    }
+  }
+
+  # getting offset, if no offset is given, then set to zero
+  offset <- model.offset(dat)
+  if(is.null(offset)){
+    off <- rep(0, n)
+  }else{
+    off <- offset
+  }
+
+  # getting Subpopulation
+  if(typeof(data) == "environment"){
+    sub.population <- cell_type
+  }
+  else {
+    if(length(call$cell_type) == 1){
+      s.col <- which(colnames(data) == call$cell_type)
+      if(length(s.col) > 0) {
+        sub.population <- data[, s.col]
+      }
+      else {
+        sub.population <- eval(call$cell_type, envir=parent.frame())
+      }
+    }
+    else if(is.null(call$cell_type)){
+      sub.population <- rep(1, n)
+      sub.population <- factor(sub.population)
+    }
+  }
+
+  # Sub-population must be a factor
+  if(!is.factor(sub.population)) stop("Sub-population must be a factor!")
+
+  # Creating working dataset ------------------------------
+  y <- model.frame(formula, data)
+  y <- model.response(y)
+  if(!is.matrix(y) | ncol(y) != 2) {
+    stop("Response must be a two columns matrix, the first column of which is the
+         count of the cell subset and the second is the `parent count - cell count'.")
+  }
+  N <- rowSums(y)
+  y <- y[, 1]
+  dat$y <- y
+  dat$N <- N
+  dat$id <- id
+  dat$weights <- weights
+  dat$prop <- y / N
+  dat$off <- off
+  dat$sub.population <- sub.population
+  dat$treatmentvar <- treatmentvar
+  dat$tempTreatment <- dat$treatmentvar
+  dat <- dat[, -1]
+
+  subpopInd <- as.numeric(dat$sub.population)
+  uniqueSubpop <- sort(unique(subpopInd))
+  dat$subpopInd <- subpopInd
+  return(list(frame = dat, uniqueSubpop = uniqueSubpop, subpopInd = subpopInd))
 }
 
 
