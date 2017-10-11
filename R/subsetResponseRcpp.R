@@ -484,6 +484,7 @@ flowReMix <- function(formula,
   dat <- buildFlowFrame(match.call(), data)
   subpopInd <- dat$subpopInd
   uniqueSubpop <- dat$uniqueSubpop
+  baseline <- dat$baseline
   dat <- dat$frame
 
   # Determining number of data replicates ----------------------
@@ -804,67 +805,18 @@ flowReMix <- function(formula,
       M <- (1 - iterweight) * oldM + iterweight * M
     }
 
-    # Updating Prediction
-    for(j in 1:length(accumDat)) {
-      coefs <- coefficientList[[j]]
-      coefs <- coefs[!is.na(coefs)]
-      subsetDat <- subset(accumDat[[j]], iteration == iter)
-
-      # Updating nullEta only if we are fitting a model w clustering
-      if(!mixed) {
-        if(is.factor(subsetDat$treatmentvar)) {
-          baseline <- levels(subsetDat$tempTreatment)[1]
-          subsetDat$treatmentvar <- factor(baseline, levels = levels(subsetDat$tempTreatment))
-        } else {
-          subsetDat$treatmentvar <- 0
-        }
-
-        modelMat <- NULL
-        try(modelMat <- model.matrix(initFormula, data = subsetDat))
-        if(!all(colnames(modelMat) %in% names(coefs))) {
-          modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
-        }
-        newNullEta <- as.numeric(modelMat %*% coefs)
-        if(iter > 1) {
-          nullEta <- subsetDat$nullEta
-        } else {
-          nullEta <- 0
-        }
-
-        if(TRUE) {
-          subsetDat$nullEta <- newNullEta
-        } else {
-          subsetDat$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
-        }
-        subsetDat$treatmentvar <- subsetDat$tempTreatment
-      }
-
-
-      modelMat <- model.matrix(initFormula, data = subsetDat)
-      if(!all(colnames(modelMat) %in% names(coefs))) {
-        modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
-      }
-      newAltEta <- as.numeric(modelMat %*% coefs)
-
-      if(iter > 1) {
-        altEta <- subsetDat$altEta
-      } else {
-        altEta <- 0
-      }
-
-      if(TRUE) {
-        subsetDat$altEta <- newAltEta
-      } else {
-        subsetDat$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
-      }
-
-      accumDat[[j]] <- subsetDat
+    # Updating Prediction ---------------
+    if(iter == 1) popnames <- names(accumDat)
+    accumDat <- foreach(popdata = accumDat) %dopar% {
+      computeFlowEta(popdata, coefficientList, iter, initFormula, mixed)
     }
+    names(accumDat) <- popnames
 
     databyid <- do.call("rbind", accumDat)
     databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
     databyid <- by(databyid, databyid$id, function(x) x)
 
+    # S-step ------------------------------
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
     dataLength <- 0
     MHlag <- 5
@@ -873,8 +825,8 @@ flowReMix <- function(formula,
     assignListLength <- 0
     MHattempts <- rep(0, nSubsets)
     MHsuccess <- rep(0, nSubsets)
-    # S-step ------------------------------
-    if(verbose)print("Sampling!")
+    if(verbose) print("Sampling!")
+
     if(iter == 1) { # finding the columns of the data that are needed for S-step
       forcols <- databyid[[1]]
       keepcols <- which(names(forcols) %in% c("y", "N", "subpopInd", "nullEta", "altEta"))
@@ -1006,7 +958,7 @@ flowReMix <- function(formula,
 
       assignmentList <- do.call("rbind",assignmentList)
       assignmentList <- data.frame(assignmentList)
-      names(assignmentList) <- names(accumDat)
+      names(assignmentList) <- popnames
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
         if(isingMethod == "raIsing") {
@@ -1085,13 +1037,13 @@ flowReMix <- function(formula,
     posteriors <- data.frame(posteriors)
     if(dataReplicates <= 1) {
       posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
-      names(posteriors) <- c(as.character(call$subject_id), names(accumDat))
+      names(posteriors) <- c(as.character(call$subject_id), popnames)
     } else {
       realIDs <- gsub("\\%%%.*", "", uniqueIDs)
       post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
       postid <- names(post)
       posteriors <- data.frame(do.call("rbind", post))
-      names(posteriors) <- names(accumDat)
+      names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)
     }
@@ -1105,7 +1057,7 @@ flowReMix <- function(formula,
   # Preparing flowReMix object --------------------
   result <- list()
   result$coefficients <- coefficientsOut
-  names(result$coefficients) <- names(accumDat)
+  names(result$coefficients) <- popnames
   result$covariance <- covariance
   result$invCovAvg <- invCovAvg
   result$invCovVar <- invCovVar - invCovAvg^2
@@ -1204,6 +1156,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
               rate = MHsuccess / MHattempts))
 }
 
+# A fuction for constructing the data.frame used within the flowReMix iterations ----------
 buildFlowFrame <- function(call, data) {
   formula <- call$formula
   dat <- model.frame(formula, data, na.action=na.pass)
@@ -1304,7 +1257,77 @@ buildFlowFrame <- function(call, data) {
   subpopInd <- as.numeric(dat$sub.population)
   uniqueSubpop <- sort(unique(subpopInd))
   dat$subpopInd <- subpopInd
-  return(list(frame = dat, uniqueSubpop = uniqueSubpop, subpopInd = subpopInd))
+
+  if(is.numeric(dat$treatmentvar)) {
+    baseline <- 0
+  } else if(is.factor(dat$treatmentvar)) {
+    baseline <- levels(dat$treatmentvar)[1]
+  } else {
+    stop("`cluster_variable' must be a numeric variable or a factor!")
+  }
+
+  return(list(frame = dat,
+              uniqueSubpop = uniqueSubpop,
+              subpopInd = subpopInd,
+              baseline = baseline))
+}
+
+# A function for computing the linear term in the flowReMix Model --------
+computeFlowEta <- function(popdata, coefficients, iter,
+                           initFormula, mixed) {
+  j <- popdata$subpopInd[1]
+  coefs <- coefficients[[j]]
+  coefs <- coefs[!is.na(coefs)]
+  subsetDat <- subset(popdata, iteration == iter)
+
+  # Updating nullEta only if we are fitting a model w clustering
+  if(!mixed) {
+    if(is.factor(subsetDat$treatmentvar)) {
+      baseline <- levels(subsetDat$tempTreatment)[1]
+      subsetDat$treatmentvar <- factor(baseline, levels = levels(subsetDat$tempTreatment))
+    } else {
+      subsetDat$treatmentvar <- 0
+    }
+
+    modelMat <- NULL
+    try(modelMat <- model.matrix(initFormula, data = subsetDat))
+    if(!all(colnames(modelMat) %in% names(coefs))) {
+      modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
+    }
+    newNullEta <- as.numeric(modelMat %*% coefs)
+    if(iter > 1) {
+      nullEta <- subsetDat$nullEta
+    } else {
+      nullEta <- 0
+    }
+
+    if(TRUE) {
+      subsetDat$nullEta <- newNullEta
+    } else {
+      subsetDat$nullEta <- (1- iterweight) * nullEta + iterweight * newNullEta
+    }
+    subsetDat$treatmentvar <- subsetDat$tempTreatment
+  }
+
+  modelMat <- model.matrix(initFormula, data = subsetDat)
+  if(!all(colnames(modelMat) %in% names(coefs))) {
+    modelMat <- modelMat[, colnames(modelMat) %in% names(coefs)]
+  }
+  newAltEta <- as.numeric(modelMat %*% coefs)
+
+  if(iter > 1) {
+    altEta <- subsetDat$altEta
+  } else {
+    altEta <- 0
+  }
+
+  if(TRUE) {
+    subsetDat$altEta <- newAltEta
+  } else {
+    subsetDat$altEta <- (1 - iterweight) * altEta + iterweight * newAltEta
+  }
+
+  return(subsetDat)
 }
 
 
