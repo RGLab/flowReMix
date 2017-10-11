@@ -79,8 +79,8 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               keepEach = 5, centerCovariance = TRUE, intSampSize = 100,
                               initMethod = NULL, ncores = NULL, preAssignCoefs = 0,
                               markovChainEM = TRUE, seed=100, prior = 0,
-                              isingWprior = FALSE,zeroPosteriorProbs=FALSE,
-                              clusterType=c("AUTO","FORK","SOCK")) {
+                              isingWprior = FALSE, zeroPosteriorProbs = FALSE,
+                              clusterType = c("AUTO","FORK","SOCK")) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
