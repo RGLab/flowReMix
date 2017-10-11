@@ -121,12 +121,12 @@ configurations <- expand.grid(niter = c(30, 60, 120),
 config <- configurations[setting, ]
 niter <- config[[1]]
 seed <- config[[2]]
-npost <- 1
+npost <- 3
 
 
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 100,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 40,
                              keepEach = 10, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
@@ -155,12 +155,12 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_1_niter", niter, "npost", 1, "seed", seed, "c.Robj", sep = "")
+file <- paste("results/hvtn_2_niter", niter, "npost", 3, "seed", seed, "c.Robj", sep = "")
 save(fit, file = file)
 
 stab <- stabilityGraph(fit, reps = 100, cpus = round(cpus / 2), type = "ising",
                        cv = FALSE, gamma = 0.25, AND = TRUE, sampleNew = FALSE)
-stabfile <- paste("results/hvtn_stab_1_niter", niter, "npost", 1,  "seed", seed,"c.Robj", sep = "")
+stabfile <- paste("results/hvtn_stab_2_niter", niter, "npost", 3,  "seed", seed,"c.Robj", sep = "")
 save(stab, file = stabfile)
 fit$assignmentList <- NULL
 fit$randomEffectSamp <- NULL

@@ -3,7 +3,7 @@ require(pROC)
 require(reshape2)
 load("data/rv144_booleans.rda")
 bySubset <- by(data.frame(booleans$stim, booleans$nonstim), booleans$Subset, function(x) x)
-largerThanThershold <- sapply(bySubset, function(x) colSums(x >5))
+largerThanThershold <- sapply(bySubset, function(x) colSums(x > 5))
 
 booldata <- melt(booleans, c("PTID", "Subset"))
 names(booldata)[3:4] <- c("stim", "count")
