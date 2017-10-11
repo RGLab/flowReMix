@@ -59,6 +59,12 @@ plotROC <- function(obj, target, direction = "auto",
 rocTable <- function(obj, target, direction = "auto", adjust = "BH",
                      pvalue = c("wilcoxon", "logistic", "ttest"),
                      sortAUC = FALSE, ...) {
+  mc = match.call()
+  if(!is.null(mc$minProbFilter)){
+    minProbFilter = eval(mc$minProbFilter,envir=parent.frame())
+  }else{
+    minProbFilter = -1
+  }
   notNA <- !is.na(target)
   post <- obj$posteriors[notNA, -1]
   colnames(post) <- names(obj$coefficients)
@@ -89,7 +95,10 @@ rocTable <- function(obj, target, direction = "auto", adjust = "BH",
     val2 <- sort(unique(target))[2]
     pvals <- apply(post, 2, function(x) t.test(x[target == val1], x[target == val2])$p.value)
   }
-  qvals <- p.adjust(pvals, method = adjust)
+  minpfilt = obj$levelProbs>minProbFilter
+  qvals = pvals
+  qvals[!minpfilt] = NA
+  qvals[minpfilt] <- p.adjust(pvals[minpfilt], method = adjust)
   responseProb <- obj$levelProbs
   result <- data.frame(subset = subsets, responseProb  = responseProb,
                        auc = aucs, pvalue = pvals, qvalue = qvals)
