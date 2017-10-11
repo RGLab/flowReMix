@@ -128,7 +128,7 @@ aggregateModels = function(x, verbose=TRUE){
   })
   post_array = array(unlist(post_without_id),dim = c(nr,nc-1,length(postList)))
   #first dimension is row, second is column, third is model, e.g. post_array[1,3,2] is subject 1, subset 3, model 2
-  post_summary = apply(post_array,1:2,function(x)c(mean=mean(x),sd=sd(x),n=length(x),quantile(x,c(0.1,0.5,0.9))))
+  post_summary = apply(post_array,1:2,function(x).describe(x,df=FALSE))#function(x)c(mean=mean(x),sd=sd(x),n=length(x),quantile(x,c(0.1,0.5,0.9))))
   dimnames(post_summary)[[2]] = rownames(postList[[1]]) # put names on the remaining dimensions, subjects in dim 2 and subsets in dim 3
   dimnames(post_summary)[[3]] = colnames(postList[[1]])[-1L]
   post_summary = melt(aperm(post_summary,perm = c(2,3,1))) #make subjects dim 1, subsets dim 2, and statistics dim 3
@@ -139,12 +139,7 @@ aggregateModels = function(x, verbose=TRUE){
 
 .summarizeCoefs <- function(coefList) {
   coefsummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
-    do({
-      data.frame(mean = mean(.$effect),
-                 sd = sd(.$effect),
-                 n = length(.$effect),
-                 t(quantile(.$effect, c(0.1, 0.5, 0.9))),
-                 check.names = FALSE)
+    do({.describe(.$effect)
     })
   colnames(coefsummaries)[1] = "subset"
   coefsummaries
@@ -156,12 +151,21 @@ aggregateModels = function(x, verbose=TRUE){
   levelProbs_summary
 }
 
-.describe = function(x){
-  data.frame(
-    mean = mean(x),
-    sd = sd(x),
-    n = length(x),
-    t(quantile(x, c(0.1, 0.5, 0.9))),
-    check.names = FALSE
-  )
+.describe = function(x,df=TRUE){
+  if(df){
+    data.frame(
+      mean = mean(x),
+      sd = sd(x),
+      n = length(x),
+      t(quantile(x, c(0.1, 0.5, 0.9))),
+      check.names = FALSE
+    )
+  }else{
+    c(
+      mean = mean(x),
+      sd = sd(x),
+      n = length(x),
+      quantile(x, c(0.1, 0.5, 0.9))
+    )
+  }
 }
