@@ -213,7 +213,15 @@ for(i in 1:length(filenames)) {
   net[[i]] <- stability$network
   # net[[i]] <- stab$network
 }
-net <- Reduce("+", net) / length(net)
-stability$network <- net
+agg <- matrix(0, ncol = ncol(net[[1]]), nrow = nrow(net[[1]]))
+rownames(agg) <- rownames(net[[1]])
+colnames(agg) <- colnames(net[[1]])
+for(i in 1:nrow(agg)) {
+  for(j in 1:ncol(agg)) {
+    agg[i, j] <- median(sapply(net, function(x) x[i, j]))
+  }
+}
+net <- Reduce("+", net) #/ length(net)
+stability$network <- agg
 stab$network <- net
 plot(stability, threshold = .8, fill = rocResults$auc)

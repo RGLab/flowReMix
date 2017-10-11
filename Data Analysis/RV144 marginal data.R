@@ -39,7 +39,7 @@ data$treatment2 <- data$treatment
 
 control <- flowReMix_control(updateLag = 2, nsamp = 50, initMHcoef = 1,
                              keepEach = 10, isingWprior = TRUE,
-                             nPosteriors = 2, centerCovariance = FALSE,
+                             nPosteriors = 1, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = 2,
