@@ -128,7 +128,7 @@ aggregateModels = function(x, verbose=TRUE){
 }
 
 .summarizeCoefs <- function(coefList) {
-  ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
+  coefummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
     do({
       data.frame(mean = mean(.$effect),
                  sd = sd(.$effect),
@@ -136,4 +136,5 @@ aggregateModels = function(x, verbose=TRUE){
                  t(quantile(.$effect, c(0.1, 0.5, 0.9))),
                  check.names = FALSE)
     })
+  colnames(coefsummaries)[1] = "subset"
 }
