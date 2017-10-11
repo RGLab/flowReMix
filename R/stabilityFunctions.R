@@ -147,7 +147,7 @@ plot.flowReMix_stability <- function(x, ...){
   fillPalette = mc$fillPalette
   title = ifelse(is.null(mc$title),TRUE,mc$title)
   label_size = ifelse(is.null(mc$label_size),1.8,mc$label_size)
-  seed = ifelse(is.null(mc$seed),100,mc$seed)
+  seed = ifelse(is.null(eval(mc$seed)),100,mc$seed)
 
   set.seed(seed)
   requireNamespace("ggplot2")
