@@ -76,7 +76,7 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 npost <- 1
 niter <- 30
-control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 2.5,
                              keepEach = 10,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 1000, minDispersion = 10^7,
@@ -84,8 +84,8 @@ control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
                              lastSample = 4, isingInit = -log(99),
                              ncores = 2,
                              preAssignCoefs = 1,
-                             prior = 1, isingWprior = FALSE,
-                             markovChainEM = FALSE,
+                             prior = 0, isingWprior = FALSE,
+                             markovChainEM = TRUE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = 0.9)
 

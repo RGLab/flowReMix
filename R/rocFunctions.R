@@ -186,7 +186,11 @@ plot.flowReMix_fdrTable <- function(x, ...) {
 plotScatter <- function(obj, subsets = NULL,
                         target = NULL, varname = NULL,
                         ncol = 5, colPalette = NULL) {
-  dat <- obj$modelFrame
+  if(is.null(obj$modelFrame)) {
+    dat <- buildFlowFrame(obj$call, obj$data)$frame
+  } else {
+    dat <- obj$modelFrame
+  }
   if(length(grep("%%%", dat$id[1])) == 1) {
     split <- strsplit(dat$id, "%%%")
     dat$id <- sapply(split, function(x) x[1])
