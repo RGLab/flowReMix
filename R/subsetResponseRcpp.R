@@ -327,6 +327,8 @@ flowReMix <- function(formula,
                       regression_method = c("betabinom", "binom", "sparse", "robust"),
                       iterations = 10, parallel = TRUE, verbose = TRUE,
                       control = NULL, keepSamples = TRUE) {
+  learningRate <- 0.5
+  keepPercent <- 0.9
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()
@@ -538,12 +540,6 @@ flowReMix <- function(formula,
     separation <- rep(TRUE, length(separation))
   }
 
-  if(isingMethod == "raIsing") {
-    modelprobs <- (1 + nSubsets)^-1 / choose(nSubsets, 0:nSubsets)
-  } else {
-    modelprobs <- rep(1, nSubsets + 1)
-  }
-
   estimatedRandomEffects <- lapply(initialization, function(x) x$randomEffects)
   estimatedRandomEffects <- lapply(estimatedRandomEffects, function(x) {
     if(length(x) < nSubjects) x <- c(x, sample(x, nSubjects - length(x), replace = TRUE))
@@ -559,6 +555,7 @@ flowReMix <- function(formula,
   invCovAvg <- invcov
   invCovVar <- invcov^2
   isingfit <- NULL
+  modelprobs <- rep(1, nSubsets + 1)
 
   # Setting up preAssignment ----------------------
   if(length(cluster_assignment) == 1) {
@@ -625,6 +622,9 @@ flowReMix <- function(formula,
   isingCount <- matrix(0, nrow = nrow(isingCoefs), ncol = ncol(isingCoefs))
   accumList <- list()
   randomOuput <- list()
+  if(!markovChainEM) {
+    rateWeights <- matrix(nrow = iterations - updateLag, ncol = iterations - updateLag)
+  }
 
   # Starting analysis -------------------------------
   if(verbose) print("Starting Stochastic EM")
@@ -634,14 +634,38 @@ flowReMix <- function(formula,
     }
     iterweight <- 1 / max(iter - updateLag + 1, 1)
 
+    # Preparing weights for saEM ----------
+    if(!markovChainEM & iter > updateLag) {
+      if(iter == updateLag + 1) {
+        rateWeights[1, 1] <- 1
+        weightMap <- 1
+      } else {
+        wind <- iter - updateLag
+        rateWeights[wind, 1:(wind - 1)] <- rateWeights[wind - 1, 1:(wind - 1)] * (1 - wind^(-learningRate))
+        rateWeights[wind, wind] <- wind^(-learningRate)
+        sumweights <- cumsum(na.omit(rateWeights[wind, wind:1]))
+        keepLastIterations <- sum(sumweights <= keepPercent & sumweights != 0)
+        weightMap <- rateWeights[wind, 1:wind]
+        print(keepLastIterations)
+      }
+    }
+
     # Refitting Model with current random effects/assignments
     dataByPopulation <- data.frame(rbindlist(databyid))
     dataByPopulation$iteration <- iter
     if(markovChainEM) {
+      if(iter == 1) dataByPopulation$emWeights <- 1
       accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
       accumList[[max(1, iter - updateLag)]] <- dataByPopulation
       accumDat <- data.frame(rbindlist(accumList))
+      if(!markovChainEM & iter > updateLag + 1) {
+        accumDat$emWeight <- weightMap[accumDat$iteration - updateLag]
+        accumDat <- subset(accumDat, accumDat$iteration >= iter - keepLastIterations + 1)
+        print(unique(accumDat$emWeight))
+      } else {
+        accumDat$emWeight <- 1
+      }
       accumDat <- by(accumDat, accumDat$sub.population, function(x) x)
     }
     rm(dataByPopulation)
@@ -664,7 +688,7 @@ flowReMix <- function(formula,
           }
 
           if(popDat[[2]]) {
-            fit <- glm(glmformula, data = popDat[[1]], weights = weights,
+            fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
                        family = "binomial", method = brglmFit)
             return(fit)
           }
@@ -672,11 +696,11 @@ flowReMix <- function(formula,
           fit <- NULL
           try(capture.output(fit <- glmrob(formula = glmformula,
                                         data = popDat[[1]],
-                                        weights = weights,
+                                        weights = weights * emWeights,
                                         family = "binomial")),silent=TRUE)
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popDat[[1]],
-                           weights = weights, family = "binomial"),silent=TRUE)
+                           weights = weights * emWeights, family = "binomial"),silent=TRUE)
             if(is.null(fit)) {
               return(NULL)
             }
@@ -705,7 +729,7 @@ flowReMix <- function(formula,
           }
 
           if(separation[j]) {
-            fit <- glm(glmformula, data = popDat[[1]], weights = weights,
+            fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
                        family = "binomial", method = brglmFit)
             return(fit)
           }
@@ -713,7 +737,8 @@ flowReMix <- function(formula,
           tempfit <- NULL
           try(tempfit <- BBreg(popDat[[1]], glmformula, weights),silent=TRUE)
           if(is.null(tempfit)) {
-            try(fit <- glm(glmformula, family = "binomial", data = popDat[[1]], weights = weights),silent=TRUE)
+            try(fit <- glm(glmformula, family = "binomial", data = popDat[[1]],
+                           weights = weights * emWeights),silent=TRUE)
           } else {
             fit <- tempfit
           }
@@ -737,7 +762,7 @@ flowReMix <- function(formula,
           if(is.null(X)) return(NULL)
           y <- cbind(popDat[[1]]$N - popDat[[1]]$y, popDat[[1]]$y)
           fit <- NULL
-          try(withTimeout(fit <- cv.glmnet(X, y, weights = popDat[[1]]$weights, family = "binomial",
+          try(withTimeout(fit <- cv.glmnet(X, y, weights = popDat[[1]]$weights * popDat[[1]]$emWeights, family = "binomial",
                                                             offset = popDat[[1]]$randomOffset),
                                    timeout = 20, onTimeout = "warning"))
           if(!is.null(fit)) {
@@ -767,7 +792,7 @@ flowReMix <- function(formula,
           }
           tempfit <- NULL
           try(tempfit <- glm(glmformula, family = "binomial", data = popDat[[1]],
-                             weights = weights,
+                             weights = weights * emWeights,
                              method = brglmFit))
           return(tempfit)
         }
@@ -966,12 +991,6 @@ flowReMix <- function(formula,
       names(assignmentList) <- popnames
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
-        if(isingMethod == "raIsing") {
-          # UPDATING PRIOR MODEL SIZE PROBABILITIES
-          tempprobs <- estimateMonotoneProbs(assignmentList, method = "arrange")
-          modelprobs <- (1 - iterweight) * modelprobs + iterweight * tempprobs
-          modelprobs <- modelprobs / sum(modelprobs)
-        }
         if(!isingWprior) {
           isingfit <- raIsing(assignmentList, AND = TRUE,
                               modelprobs = modelprobs,

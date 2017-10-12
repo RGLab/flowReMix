@@ -4,7 +4,8 @@ expit <- function(x) 1 / (1 + exp(-x))
 raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
-                    family = "binomial",verbose=FALSE) {
+                    family = "binomial",verbose=FALSE,
+                    weights = weights) {
   nvars <- ncol(mat)
   if(!is.null(modelprobs) & length(modelprobs) != (ncol(mat) + 1)) {
     warning("modelprobs must be of length ncol(mat) + 1 !")
@@ -61,14 +62,14 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
     if(!cv) {
       netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
-                               intercept = TRUE)
+                               intercept = TRUE, weights = weights)
       logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
       dfs <- netfit$df
       ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
       lambda <- netfit$lambda[which.min(ebic)]
     } else {
       netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
-                                  intercept = TRUE)
+                                  intercept = TRUE, weights = weights)
       lambda <- netfit$lambda.min
     }
     matrow <- rep(0, ncol(mat))
@@ -111,7 +112,8 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 pIsing <- function(mat, AND = TRUE, gamma = 0.9,
                    method = "sparse", cv = FALSE,
                    empBayes = FALSE, preAssignment,
-                   family = "binomial", prevfit,verbose=FALSE) {
+                   family = "binomial", prevfit, verbose=FALSE,
+                   weights = weights) {
   nvars <- ncol(mat)
 
   if(gamma < 0) gamma <- 0

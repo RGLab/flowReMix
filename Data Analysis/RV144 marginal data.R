@@ -37,13 +37,13 @@ data$population <- as.factor(data$population)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 data$treatment2 <- data$treatment
 
-control <- flowReMix_control(updateLag = 2, nsamp = 50, initMHcoef = 1,
-                             keepEach = 10, isingWprior = TRUE,
+control <- flowReMix_control(updateLag = 2, nsamp = 20, initMHcoef = 1,
+                             keepEach = 5, isingWprior = TRUE,
                              nPosteriors = 1, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = 2,
-                             markovChainEM = TRUE,
+                             markovChainEM = FALSE,
                              seed = 10,
                              preAssignCoefs = 1,
                              isingStabilityReps = 5, randStabilityReps = 5)
@@ -58,8 +58,8 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 4, parallel = TRUE,
-                 cluster_assignment = TRUE, keepSamples = FALSE,
+                 iterations = 30, parallel = TRUE,
+                 cluster_assignment = TRUE, keepSamples = TRUE,
                  verbose = TRUE, control = control))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
