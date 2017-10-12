@@ -119,7 +119,10 @@ aggregateModels = function(x, verbose=TRUE){
   output$isingAvg = matrix(map2_dbl(output$isingAvg,this$isingAvg,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingAvg), dimnames = list(rownames(output$isingAvg),colnames(output$isingAvg)))
   output$isingVar = matrix(map2_dbl(output$isingVar,this$isingVar,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingVar), dimnames = list(rownames(output$isingVar),colnames(output$isingVar)))
   output$isingCount = matrix(map2_dbl(output$isingCount,this$isingCount,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingCount), dimnames = list(rownames(output$isingCount),colnames(output$isingCount)))
-  class(output) = c(class(output),"flowReMixAggregate")
+  output$isingStability$network = matrix(map2_dbl(output$isingStability$network, this$isingStability$network, function(x, y)
+    x * (i - 1) / i + y * 1 / i), ncol = ncol(this$isingStability$network), dimnames = list(rownames(this$isingStability$network),
+                                                                                            colnames(this$isingStability$network)))
+class(output) = c(class(output),"flowReMixAggregate")
   return(output)
 }
 
@@ -139,6 +142,7 @@ aggregateModels = function(x, verbose=TRUE){
   post_summary = post_summary%>%spread(statistic,value)
   post_summary
 }
+
 
 .summarizeCoefs <- function(coefList) {
   coefsummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%

@@ -70,6 +70,8 @@
 #'
 #' @param clusterType \code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.
 #'
+#' @param sampleNew \code{logical} should the stability selection draw new samples. Default \code{FALSE}.
+#'
 #' @return An object of type \code{flowReMix_control}.
 #'
 #' @export
@@ -82,7 +84,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               isingWprior = FALSE, zeroPosteriorProbs = FALSE,
                               clusterType = c("AUTO","FORK","SOCK"),
                               isingStabilityReps = 0, randStabilityReps = 0,
-                              learningRate = 1, keepWeightPercent = 1) {
+                              learningRate = 1, keepWeightPercent = 1,sampleNew=FALSE) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
@@ -108,7 +110,7 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  isingStabilityReps = isingStabilityReps,
                  randStabilityReps = randStabilityReps,
                  learningRate = learningRate,
-                 keepWeightPercent = keepWeightPercent)
+                 keepWeightPercent = keepWeightPercent,sampleNew=sampleNew)
   class(object) <- "flowReMix_control"
   return(object)
 }

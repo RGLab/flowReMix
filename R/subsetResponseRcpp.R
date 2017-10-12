@@ -356,6 +356,7 @@ flowReMix <- function(formula,
   zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
   learningRate <- as.numeric(control$learningRate)
   keepWeightPercent <- as.numeric(control$keepWeightPercent)
+  sampleNew = as.logical(control$sampleNew)
 
   if(markovChainEM) {
     saveSamples <- keepSamples
@@ -1147,7 +1148,8 @@ flowReMix <- function(formula,
     result$isingStability <- stabilityGraph(result, type = "ising",
                                             reps = control$isingStabilityReps,
                                             seed = control$seed,
-                                            cpus = cpus)
+                                            cpus = cpus,
+                                            sampleNew = sampleNew)
   }
 
   if(control$randStabilityReps > 0) {
@@ -1155,7 +1157,8 @@ flowReMix <- function(formula,
     result$randomStability <- stabilityGraph(result, type = "randomEffects",
                                             reps = control$randStabilityReps,
                                             seed = control$seed,
-                                            cpus = cpus)
+                                            cpus = cpus,
+                                            sampleNew = sampleNew)
   }
 
   if(!saveSamples) {

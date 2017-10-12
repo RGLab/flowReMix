@@ -12,7 +12,7 @@ flowReMix_control(updateLag = 5, randomAssignProb = 0, nsamp = 20,
   markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = FALSE,
   zeroPosteriorProbs = FALSE, clusterType = c("AUTO", "FORK", "SOCK"),
   isingStabilityReps = 0, randStabilityReps = 0, learningRate = 1,
-  keepWeightPercent = 1)
+  keepWeightPercent = 1, sampleNew = FALSE)
 }
 \arguments{
 \item{updateLag}{number of iterations before the algorithm is assumed to
@@ -79,6 +79,8 @@ will still be used to estimate the Ising model. Default \code{FALSE}. Can be use
 with the prior argument on the Ising model.}
 
 \item{clusterType}{\code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.}
+
+\item{sampleNew}{\code{logical} should the stability selection draw new samples. Default \code{FALSE}.}
 }
 \value{
 An object of type \code{flowReMix_control}.
