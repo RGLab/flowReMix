@@ -643,18 +643,18 @@ flowReMix <- function(formula,
         wind <- iter - updateLag
         rateWeights[wind, 1:(wind - 1)] <- rateWeights[wind - 1, 1:(wind - 1)] * (1 - wind^(-learningRate))
         rateWeights[wind, wind] <- wind^(-learningRate)
-        sumweights <- cumsum(na.omit(rateWeights[wind, wind:1]))
-        keepLastIterations <- sum(sumweights <= keepPercent & sumweights != 0)
+        sumweights <- cumsum(na.omit(rateWeights[wind, 1:wind]))
+        keepLastIterations <- sum(sumweights >= (1 - keepPercent))
         weightMap <- rateWeights[wind, 1:wind]
-        print(keepLastIterations)
+        # print(keepLastIterations)
       }
     }
 
     # Refitting Model with current random effects/assignments
     dataByPopulation <- data.frame(rbindlist(databyid))
     dataByPopulation$iteration <- iter
+    dataByPopulation$emWeights <- 1
     if(markovChainEM) {
-      if(iter == 1) dataByPopulation$emWeights <- 1
       accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
       accumList[[max(1, iter - updateLag)]] <- dataByPopulation
@@ -662,7 +662,7 @@ flowReMix <- function(formula,
       if(!markovChainEM & iter > updateLag + 1) {
         accumDat$emWeight <- weightMap[accumDat$iteration - updateLag]
         accumDat <- subset(accumDat, accumDat$iteration >= iter - keepLastIterations + 1)
-        print(unique(accumDat$emWeight))
+        if(verbose) print(round(unique(accumDat$emWeight), 3))
       } else {
         accumDat$emWeight <- 1
       }
@@ -920,68 +920,40 @@ flowReMix <- function(formula,
     rm(subjectData)
     rm(popInd)
 
-    # Updating Covariance -------------------------
-    if(verbose) print("Estimating Covariance!")
-
-    if(iter == updateLag + 1) {
-      names(randomList) <- names(databyid)
-      if(keepSamples) randomOutput <- randomList
-    } else if(iter > updateLag + 1){
-      names(randomList) <- names(databyid)
-      if(keepSamples) randomOutput <- c(randomOutput, randomList)
-    }
-
-    if(markovChainEM & iter == iterations) {
-      randomOutput <- randomList
-    }
-
-    if(!markovChainEM & iter > updateLag + 1) {
-      randomList <- randomOutput
-    }
-
-    randomList <- do.call("rbind", randomList)
-    oldCovariance <- covariance
-    if(iter > 1) {
-      if(covarianceMethod == "sparse") {
-        pdsoftFit <- NULL
-        try(pdsoftFit <- pdsoft.cv(randomList, init = "dense"))
-        if(is.null(pdsoftFit)) {
-          print("shit")
-        }
-        covariance <- pdsoftFit$sigma
-        invcov <- pdsoftFit$omega
-      } else if(covarianceMethod == "dense") {
-        covariance <- cov.wt(randomList, rep(1, nrow(randomList)), center = centerCovariance)$cov
-        invcov <- solve(covariance)
-      } else if(covarianceMethod == "diagonal") {
-        if(centerCovariance) {
-          randomList <- apply(randomList, 2, function(x) x - mean(x))
-        }
-        covariance <- diag(apply(randomList, 2, function(x) mean(x^2)))
-        invcov <- diag(1 / diag(covariance))
-      }
-      invCovAvg <- invcov * iterweight + invCovAvg * (1 - iterweight)
-      invCovVar <- invcov^2 * iterweight + invCovVar * (1 - iterweight)
-    }
-
     # Updating Ising -----------------------
     if(!mixed) {
       if(verbose) print("Updating Ising!")
 
+      # Saving posterior samples (or not)
       if(iter == updateLag + 1) {
         if(keepSamples) {
+          assignmentList <- lapply(assignmentList, function(x) {attr(x, "iter") <- iter ; return(x)})
           exportAssignment <- assignmentList
           names(exportAssignment) <- names(databyid)
         }
       } else if(iter > updateLag + 1) {
         names(assignmentList) <- names(databyid)
+        assignmentList <- lapply(assignmentList, function(x) {attr(x, "iter") <- iter ; return(x)})
         if(keepSamples) exportAssignment <- c(exportAssignment, assignmentList)
       }
 
+      # Calculating Ising Weights
+      if(!markovChainEM & iter > updateLag + 1) {
+        assignFromIter <- sapply(exportAssignment, function(x) attr(x, "iter"))
+        exportAssignment <- exportAssignment[assignFromIter > iter - keepLastIterations]
+        isingWeights <- assignFromIter[assignFromIter > iter - keepLastIterations]
+        isingWeights <- unlist(as.vector(mapply(function(x, y) rep(x, nrow(y)), isingWeights, exportAssignment, SIMPLIFY = TRUE)))
+        isingWeights <- weightMap[isingWeights - updateLag]
+        # print(unique(isingWeights))
+        # print(sum(unique(isingWeights)))
+      }
+
+      # If saEM then use all previous samples
       if(!markovChainEM & iter > updateLag + 1) {
         assignmentList <- exportAssignment
       }
 
+      # If markov chain EM then start saving samples (or not)
       if(markovChainEM & iter == iterations) {
         exportAssignment <- assignmentList
       }
@@ -990,15 +962,22 @@ flowReMix <- function(formula,
       assignmentList <- data.frame(assignmentList)
       names(assignmentList) <- popnames
 
+      # If markov chain EM or not aggregating then all weights are 1
+      if(markovChainEM | iter <= updateLag + 1) {
+        isingWeights <- rep(1, nrow(assignmentList))
+      }
+
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
         if(!isingWprior) {
           isingfit <- raIsing(assignmentList, AND = TRUE,
                               modelprobs = modelprobs,
-                              minprob = 1 / nSubjects,verbose=verbose)
+                              minprob = 1 / nSubjects, verbose=verbose,
+                              weights = isingWeights)
         } else {
           isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,
-                             prevfit = isingCoefs,verbose=verbose)
+                             prevfit = isingCoefs, verbose=verbose,
+                             weights = isingWeights)
         }
 
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
@@ -1031,6 +1010,51 @@ flowReMix <- function(formula,
       isingCoefs <- NULL
     }
 
+    # Updating Covariance -------------------------
+    if(verbose) print("Estimating Covariance!")
+
+    if(iter == updateLag + 1) {
+      names(randomList) <- names(databyid)
+      if(keepSamples) randomOutput <- randomList
+    } else if(iter > updateLag + 1){
+      names(randomList) <- names(databyid)
+      if(keepSamples) randomOutput <- c(randomOutput, randomList)
+    }
+
+    if(markovChainEM & iter == iterations) {
+      randomOutput <- randomList
+    }
+
+    if(!markovChainEM & iter > updateLag + 1) {
+      randomOutput <- randomOutput[assignFromIter > iter - keepLastIterations]
+      randomList <- randomOutput
+    }
+
+    randomList <- do.call("rbind", randomList)
+    oldCovariance <- covariance
+    if(iter > 1) {
+      if(covarianceMethod == "sparse") {
+        pdsoftFit <- NULL
+        try(pdsoftFit <- pdsoft.cv(randomList, init = "dense"))
+        if(is.null(pdsoftFit)) {
+          print("shit")
+        }
+        covariance <- pdsoftFit$sigma
+        invcov <- pdsoftFit$omega
+      } else if(covarianceMethod == "dense") {
+        covariance <- cov.wt(randomList, rep(1, nrow(randomList)), center = centerCovariance)$cov
+        invcov <- solve(covariance)
+      } else if(covarianceMethod == "diagonal") {
+        if(centerCovariance) {
+          randomList <- apply(randomList, 2, function(x) x - mean(x))
+        }
+        covariance <- diag(apply(randomList, 2, function(x) mean(x^2)))
+        invcov <- diag(1 / diag(covariance))
+      }
+      invCovAvg <- invcov * iterweight + invCovAvg * (1 - iterweight)
+      invCovVar <- invcov^2 * iterweight + invCovVar * (1 - iterweight)
+    }
+
     # Updating MH coefficient ----------------
     ratevec <- numeric(nSubsets)
     for(j in 1:nSubsets) {
@@ -1048,7 +1072,7 @@ flowReMix <- function(formula,
     }
 
     if(verbose) {
-      print(c(iter, levelP = levelProbs))
+      print(round(c(iter, levelP = levelProbs), 3))
       if(betaDispersion) print(c(M = M))
       print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
     }

@@ -76,8 +76,8 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 npost <- 1
 niter <- 30
-control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 2.5,
-                             keepEach = 25,
+control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
+                             keepEach = 10,
                              nPosteriors = npost, centerCovariance = TRUE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -99,7 +99,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                              covariance = "sparse",
                              ising_model = "sparse",
                              regression_method = "robust",
-                             iterations =  niter,
+                             iterations =  30,
                              cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
@@ -190,9 +190,9 @@ rocplot <- plot(fit, target = vaccine, type = "ROC", ncols = 6,
 #           base_height = 6,
 #           base_width = 12)
 
-# rocResults <- summary(fit, target = vaccine, direction = ">", adjust = "BH",
-#                        sortAUC = FALSE)
-# rocResults[order(rocResults$auc, decreasing = TRUE), ]
+rocResults <- summary(fit, target = vaccine, direction = ">", adjust = "BH",
+                       sortAUC = FALSE)
+rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
 # ROC for infection status -------------------
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
