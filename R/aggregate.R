@@ -100,6 +100,8 @@ aggregateModels = function(x, verbose=TRUE){
 #'@importFrom purrr map2_df
 #'@importFrom reshape2 melt
 #'@importFrom plyr ldply
+#'@importFrom tidyr gather
+#'@importFrom tidyr spread
 .averageModels <- function(output,this,i,x) {
   if(!all.equal(output$posteriors[,1],this$posteriors[,1])|!all.equal(output$data,this$data))
     stop("Models ",x[i], " and ", x[i-1]," are not compatible.")
