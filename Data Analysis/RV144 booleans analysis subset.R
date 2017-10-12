@@ -156,8 +156,8 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
 infectResults$responseProb <- colMeans(fit$posteriors[, -1])
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
-# stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
-#                        gamma = 0.25, AND = TRUE)
+stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
+                       gamma = 0.25, AND = TRUE)
 # save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
 threshold <- 0.85

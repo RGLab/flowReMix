@@ -1118,6 +1118,7 @@ flowReMix <- function(formula,
 
   # Preparing flowReMix object --------------------
   result <- list()
+  result$modelFrame <- dat
   result$coefficients <- coefficientsOut
   names(result$coefficients) <- popnames
   result$covariance <- covariance
