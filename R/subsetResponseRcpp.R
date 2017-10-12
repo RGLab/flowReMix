@@ -873,7 +873,7 @@ flowReMix <- function(formula,
       keepcols <- which(names(forcols) %in% c("y", "N", "subpopInd", "nullEta", "altEta"))
       rm(forcols)
     }
-    print(isingCoefs)
+
     listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
