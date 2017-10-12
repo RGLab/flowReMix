@@ -165,6 +165,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       subsetCount = y[popInd == (j + 1)] ;
 
       // integrating densities
+      double mcoef = MHcoef[j] ;
+      mcoef = 1 ;
       for(k = 0; k < 2; k++) {
         if(k == 0) {
           eta = subsetNullEta ;
@@ -178,7 +180,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
           // if(j == 0) {
           //   Rcpp::Rcout<<muHat<<" " ;
           // }
-          vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
+          vsample = rnorm(intSampSize, muHat, sigmaHat * mcoef) ;
         } else {
           prevMuHat = muHat ;
           muHat = mean(etaResid) ;
@@ -189,7 +191,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
           vsample = vsample - prevMuHat + muHat ;
         }
 
-        sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef[j], TRUE) ;
+        sampNormDens = dnorm(vsample, muHat, sigmaHat * mcoef, TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
         randomEta = computeRandomEta(eta, vsample) ;

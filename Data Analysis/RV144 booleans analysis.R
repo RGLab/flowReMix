@@ -78,13 +78,13 @@ npost <- 1
 niter <- 30
 control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
                              keepEach = 10,
-                             nPosteriors = npost, centerCovariance = TRUE,
+                             nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = 4, isingInit = -log(99),
                              ncores = 2,
                              preAssignCoefs = 1,
-                             prior = 4, isingWprior = TRUE,
+                             prior = 1, isingWprior = FALSE,
                              markovChainEM = FALSE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = 0.9)
