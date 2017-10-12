@@ -158,11 +158,11 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         continue ;
       }
 
+      subsetN = N[popInd == (j + 1)];
       sigmaHat = sqrt(covariance(j, j)) ;
       subsetProp = prop[popInd == (j + 1)]  ;
-      empEta = logit(subsetProp + 10e-5) ;
+      empEta = logit(pmax(subsetProp, 1 / subsetN)) ;
       subsetCount = y[popInd == (j + 1)] ;
-      subsetN = N[popInd == (j + 1)];
 
       // integrating densities
       for(k = 0; k < 2; k++) {
@@ -174,12 +174,21 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         etaResid = empEta - eta ;
         if(k == 0) {
           muHat = mean(etaResid) ;
+          muHat = 0;
+          // if(j == 0) {
+          //   Rcpp::Rcout<<muHat<<" " ;
+          // }
           vsample = rnorm(intSampSize, muHat, sigmaHat * MHcoef[j]) ;
         } else {
           prevMuHat = muHat ;
           muHat = mean(etaResid) ;
+          muHat = 0;
+          // if(j == 0) {
+          //   Rcpp::Rcout<<muHat<<" " ;
+          // }
           vsample = vsample - prevMuHat + muHat ;
         }
+
         sampNormDens = dnorm(vsample, muHat, sigmaHat * MHcoef[j], TRUE) ;
         normDens = dnorm(vsample, 0, sigmaHat, TRUE) ;
         importanceWeights = normDens - sampNormDens ;
@@ -195,14 +204,19 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         // int nRespond = sum(assignment) ;
         // double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
         priorProb = expit(sum(isingCoefs(j, _) * assignment) + isingOffset) ;
+        // if(j == 0) {
+        //   Rcpp::Rcout<<priorProb<<" " ;
+        // }
       } else {
         priorProb = 0.5 ;
       }
 
       densityRatio = integratedDensities[0] / integratedDensities[1] * (1.0 - priorProb) / priorProb ;
       pResponder = 1.0 / (1.0 + densityRatio) ;
-      pResponder = std::max(pResponder, randomAssignProb) ;
-      pResponder = std::min(pResponder, 1 - randomAssignProb) ;
+      // if(j == 0) {
+      //   Rcpp::Rcout<<integratedDensities[0]<<" "<<integratedDensities[1]<<" " ;
+      //   Rcpp::Rcout<<pResponder<<"\n " ;
+      // }
 
       if(preAssignment[j] == 1) {
         pResponder = 1 - (1 - pResponder) * preAssignCoef ;
@@ -220,6 +234,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       assignmentMatrix(assignNum++, _) = assignment ;
     }
   }
+  // Rcpp::Rcout<<"\n" ;
 
   return assignmentMatrix;
 }

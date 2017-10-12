@@ -1,4 +1,4 @@
-cpus <- 2
+cpus <- 4
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -52,9 +52,9 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
-configurations <- expand.grid(niters = c(160, 320),
+configurations <- expand.grid(niters = c(40, 80),
                               npost = c(1),
-                              seed = c(1:100))
+                              seed = c(1:50))
 config <- configurations[setting, ]
 niter <- config[[1]]
 npost <- config[[2]]
@@ -62,7 +62,7 @@ seed <- config[[3]]
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 100,
+control <- flowReMix_control(updateLag = 5, nsamp = 100,
                              keepEach = 10, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
@@ -72,7 +72,9 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 100,
                              ncores = cpus, preAssignCoefs = 1,
                              prior = 2, isingWprior = TRUE,
                              markovChainEM = FALSE,
-                             initMethod = "robust")
+                             initMethod = "robust",
+                             learningRate = 0.6, keepWeightPercent = .9,
+                             isingStabilityReps = 200)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -86,21 +88,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              regression_method = "robust",
                              iterations =  niter,
                              cluster_assignment = preAssignment,
-                             parallel = TRUE,
+                             parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_25_niter", niter, "npost", npost, "seed", seed, "c.Robj", sep = "")
+file <- paste("results/rv144_26_niter", niter, "npost", npost, "seed", seed, "c06.rds", sep = "")
 save(fit, file = file)
-
-stab <- stabilityGraph(fit, reps = 200, cpus = round(cpus / 2), type = "ising",
-                       cv = FALSE, gamma = 0.25, AND = TRUE)
-stabfile <- paste("results/rv144_stab_25_niter", niter, "npost", npost,  "seed", seed,"c.Robj", sep = "")
-save(stab, file = stabfile)
-fit$assignmentList <- NULL
-fit$randomEffectSamp <- NULL
-save(fit, file = file)
-
-
-
-
-
-

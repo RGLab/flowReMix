@@ -72,11 +72,13 @@ filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_20__*"))
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_23__*"))[1:197]
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_24__*"))[1:197]
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_25__*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_26__*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
 for(i in 1:length(filenames)) {
   load(file = filenames[[i]])
+  # fit <- readRDS(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
   postList[[i]] <- fit$posteriors[, -1]
 }
@@ -107,10 +109,12 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 # Bootstrapping -------------------------
 # groups <- list(c(1:38), c(1:20), c(21:38))
-groups <- list(c(181:280), c(281:378), c(1:93), c(94:180))
+groups <- list(c(1:47), c(48:96))
 # groups <- list(c(1:98))
 resList <- list()
 rpList <- list()
+auclist <- list()
+problist <- list()
 for(i in 1:length(groups)) {
   temppost <- postList[groups[[i]]]
   aucs <- matrix(nrow = length(temppost), ncol = ncol(fit$posteriors) - 1)
@@ -130,18 +134,33 @@ for(i in 1:length(groups)) {
   rpList[[i]] <- rpQuantiles
   rpList[[i]] <- rpList[[i]][order(resList[[i]][, 3], decreasing = TRUE), ]
   resList[[i]] <- resList[[i]][order(resList[[i]][, 3], decreasing = TRUE), ]
+
+  colnames(aucs) <- colnames(fit$posteriors)[-1]
+  aucs <- data.frame(aucs)
+  auclist[[i]] <- aucs
+  colnames(responseProb) <- colnames(aucs)
+  problist[[i]] <- data.frame(responseProb)
   print(cbind(resList[[i]], rpList[[i]]))
 }
 
-rep1 <- resList[[2]]
-rep2 <- resList[[3]]
-rep1 <- rep1[order(rep2[, 3], decreasing = TRUE), ]
-colnames(rep1) <- paste(50, "iter", colnames(rep1), sep = "")
-colnames(rep2) <- paste(100, "iter", colnames(rep2), sep = "")
-rep <- cbind(rep1, rep2)
-round(rep, 3)
+aucplot <- auclist
+aucplot[[1]]$iterations <- 40
+aucplot[[2]]$iterations <- 80
+aucplot <- do.call("rbind", aucplot)
+aucplot <- melt(aucplot, id = "iterations")
+names(aucplot)[2:3] <- c("subset", "auc")
+ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(iterations))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-names(rpList) <- paste(c(40, 80, 160, 320), "iterations")
+probplot <- problist
+probplot[[1]]$iterations <- 40
+probplot[[2]]$iterations <- 80
+probplot <- do.call("rbind", probplot)
+probplot <- melt(probplot, id = "iterations")
+names(probplot)[2:3] <- c("subset", "responseProb")
+ggplot(probplot) +
+  geom_boxplot(aes(x = subset, y = responseProb, col = factor(iterations), outlier.size = 0.01)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 # Bootstrapping the variabilty of an aggregate fit --------------
 reps <- 100
@@ -182,17 +201,17 @@ names(report) <- c("lci50", "median50", "uci50", "lci100", "median100", "uci100"
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_24__*"))[200:390]
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_stab_23__*"))[1:196]
 filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_stab_25__*"))[c(groups[[4]])]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_26__*"))[67]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 net <- list()
 for(i in 1:length(filenames)) {
   load(file = filenames[[i]])
-  # net[[i]] <- stability$network
+  stab <- fit$isingStability
   net[[i]] <- stab$network
 }
 net <- Reduce("+", net) / length(net)
-stability$network <- net
 stab$network <- net
-plot(stab, threshold = .95, fill = rocResults$auc)
+plot(stab, threshold = .85, fill = rocResults$auc)
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
 

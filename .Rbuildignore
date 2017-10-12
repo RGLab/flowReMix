@@ -6,6 +6,8 @@ figures/*
 Notebooks/*
 prototypes/*
 Data Analysis/*
+Data Analysis/results/*
+Data Analysis/old/*
 presentation/*
 results/*
 Simulations/*

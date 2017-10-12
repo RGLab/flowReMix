@@ -487,6 +487,19 @@ flowReMix <- function(formula,
     stop("`covariance' must be one of sparse, dense or diagonal!")
   }
 
+  if(!markovChainEM & learningRate > 1) {
+    warning("`learningRate' must be between between less or equal to 1 and larger than 0.5! Using learningRate = 1")
+    learningRate <- 1
+  } else if(!markovChainEM & learningRate <= 0.5) {
+    warning("`learningRate' must be between between less or equal to 1 and larger than 0.5! Using learningRate = 0.51")
+    learningRate <- 0.51
+  }
+
+  if(!markovChainEM & keepWeightPercent < 0.1) {
+    warning("`keepWeightPercent must be larger than or equal to 0.1! Using 0.1.")
+    keepWeightPercent <- 0.1
+  }
+
   #### Getting all relevant variables from call --------------------
   # Getting model frame
   dat <- buildFlowFrame(match.call(), data)
@@ -860,6 +873,7 @@ flowReMix <- function(formula,
       keepcols <- which(names(forcols) %in% c("y", "N", "subpopInd", "nullEta", "altEta"))
       rm(forcols)
     }
+    print(isingCoefs)
     listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
@@ -975,7 +989,7 @@ flowReMix <- function(formula,
                               minprob = 1 / nSubjects, verbose=verbose,
                               weights = isingWeights)
         } else {
-          isingfit <- pIsing(assignmentList, AND = TRUE,
+          isingfit <- pIsing(assignmentList, AND = FALSE,
                              preAssignment = preAssignmentMat,
                              prevfit = isingCoefs, verbose=verbose,
                              weights = isingWeights)
