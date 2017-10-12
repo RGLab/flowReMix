@@ -327,8 +327,6 @@ flowReMix <- function(formula,
                       regression_method = c("betabinom", "binom", "sparse", "robust"),
                       iterations = 10, parallel = TRUE, verbose = TRUE,
                       control = NULL, keepSamples = TRUE) {
-  learningRate <- 0.5
-  keepPercent <- 0.9
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()
@@ -356,6 +354,8 @@ flowReMix <- function(formula,
   prior <- as.numeric(control$prior)
   isingWprior <- as.logical(control$isingWprior)
   zeroPosteriorProbs <- as.logical(control$zeroPosteriorProbs)
+  learningRate <- as.numeric(control$learningRate)
+  keepWeightPercent <- as.numeric(control$keepWeightPercent)
 
   if(markovChainEM) {
     saveSamples <- keepSamples
@@ -644,7 +644,7 @@ flowReMix <- function(formula,
         rateWeights[wind, 1:(wind - 1)] <- rateWeights[wind - 1, 1:(wind - 1)] * (1 - wind^(-learningRate))
         rateWeights[wind, wind] <- wind^(-learningRate)
         sumweights <- cumsum(na.omit(rateWeights[wind, 1:wind]))
-        keepLastIterations <- sum(sumweights >= (1 - keepPercent))
+        keepLastIterations <- sum(sumweights >= (1 - keepWeightPercent))
         weightMap <- rateWeights[wind, 1:wind]
         # print(keepLastIterations)
       }

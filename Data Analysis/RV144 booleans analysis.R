@@ -84,9 +84,10 @@ control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
                              lastSample = 4, isingInit = -log(99),
                              ncores = 2,
                              preAssignCoefs = 1,
-                             prior = 1, isingWprior = TRUE,
+                             prior = 4, isingWprior = TRUE,
                              markovChainEM = FALSE,
-                             initMethod = "robust")
+                             initMethod = "robust",
+                             learningRate = 0.6, keepWeightPercent = 0.9)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
