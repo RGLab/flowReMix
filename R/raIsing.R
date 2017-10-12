@@ -4,7 +4,12 @@ expit <- function(x) 1 / (1 + exp(-x))
 raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
-                    family = "binomial",verbose=FALSE) {
+                    family = "binomial",verbose=FALSE,
+                    weights = NULL) {
+  if(is.null(weights)) {
+    weights <- rep(1, nrow(mat))
+  }
+
   nvars <- ncol(mat)
   if(!is.null(modelprobs) & length(modelprobs) != (ncol(mat) + 1)) {
     warning("modelprobs must be of length ncol(mat) + 1 !")
@@ -61,14 +66,14 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
     if(!cv) {
       netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
-                               intercept = TRUE)
+                               intercept = TRUE, weights = weights)
       logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
       dfs <- netfit$df
       ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
       lambda <- netfit$lambda[which.min(ebic)]
     } else {
       netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
-                                  intercept = TRUE)
+                                  intercept = TRUE, weights = weights)
       lambda <- netfit$lambda.min
     }
     matrow <- rep(0, ncol(mat))
@@ -111,7 +116,11 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 pIsing <- function(mat, AND = TRUE, gamma = 0.9,
                    method = "sparse", cv = FALSE,
                    empBayes = FALSE, preAssignment,
-                   family = "binomial", prevfit,verbose=FALSE) {
+                   family = "binomial", prevfit, verbose=FALSE,
+                   weights = NULL) {
+  if(is.null(weights)) {
+    weights <- rep(1, nrow(mat))
+  }
   nvars <- ncol(mat)
 
   if(gamma < 0) gamma <- 0
@@ -135,7 +144,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
     covs <- as.matrix(mat[, -i])
     eta <- as.numeric(covs %*% coefs)
     # if(verbose) cat(pResp, " ")
-    isingOffset[i] <- uniroot(f = function(off) mean(expit(eta + off)) - pResp,
+    isingOffset[i] <- uniroot(f = function(off) weighted.mean(expit(eta + off), w = weights) - pResp,
                               interval = c(-50, 50))$root
   }
   # if(verbose) cat("\n")
@@ -166,14 +175,14 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
     if(!cv) {
       netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
-                               intercept = FALSE)
+                               intercept = FALSE, weights = weights)
       logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
       dfs <- netfit$df
       ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
       lambda <- netfit$lambda[which.min(ebic)]
     } else {
       netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
-                                  intercept = FALSE)
+                                  intercept = FALSE, weights = weights)
       lambda <- netfit$lambda.min
     }
     matrow <- rep(0, ncol(mat))
@@ -213,7 +222,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
       coefs <- as.numeric(isingmat[i, -i])
       covs <- as.matrix(mat[, -i])
       eta <- as.numeric(covs %*% coefs)
-      isingOffset[i] <- uniroot(f = function(off) mean(expit(eta + off)) - targetResp[i],
+      isingOffset[i] <- uniroot(f = function(off) weighted.mean(expit(eta + off), w = weights) - targetResp[i],
                                 interval = c(-50, 50))$root
     }
     diag(isingmat) <- isingOffset
