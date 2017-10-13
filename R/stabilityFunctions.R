@@ -53,7 +53,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   } else {
     mhList <- reConstructMHlist(obj)
     keepEach <- max(obj$control$keepEach, 10)
-    nsamp <- ceiling(reps * keepEach / obj$control$nPosteriors)
+    nsamp <- ceiling(reps * keepEach)
     isingCoefs <- obj$isingAvg
     nSubsets <- length(obj$coefficients)
     intSampSize <- obj$control$intSampSize
@@ -144,12 +144,7 @@ reConstructMHlist <- function(obj) {
   rm(bypop)
   databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
   databyid <- by(databyid, databyid$id, function(x) x)
-
-  if(is.null(obj$preAssignment)) {
-    preAssignment <- do.call("rbind", by(dat, dat$id, autoPreAssign))
-  } else {
-    preAssignment <- obj$preAssignment
-  }
+  preAssignment <- do.call("rbind", by(dat, dat$id, autoPreAssign))
   preAssignment <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
   preAssignment <- by(preAssignment, preAssignment$id, function(x) x)
 
@@ -226,12 +221,13 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 #' @export
 plot.flowReMix_stability <- function(x, ...){
   mc = match.call();
-  threshold = ifelse(is.null(eval(mc$threshold,envir=parent.frame())),0.5,eval(mc$threshold,envir=parent.frame()))
+  threshold = ifelse(is.null(eval(mc$threshold, envir=parent.frame())), 0.5, eval(mc$threshold,envir=parent.frame()))
+  nEdges <- ifelse(is.null(eval(mc$nEdges, envir=parent.frame())), NULL, eval(mc$nEdges,envir=parent.frame()))
   plotAll = ifelse(is.null(eval(mc$plotAll,envir=parent.frame())),FALSE,eval(mc$plotAll,envir=parent.frame()))
   fill = eval(mc$fill,envir=parent.frame())
-  fillName = eval(mc$fillName,envir=parent.frame())
-  fillRange = eval(mc$fillRange,envir=parent.frame())
-  fillPalette = eval(mc$fillPalette,envir=parent.frame())
+  fillName = eval(mc$fillName, envir=parent.frame())
+  fillRange = eval(mc$fillRange, envir=parent.frame())
+  fillPalette = eval(mc$fillPalette, envir=parent.frame())
   title = ifelse(is.null(eval(mc$title,envir=parent.frame())),TRUE,eval(mc$title,envir=parent.frame()))
   label_size = ifelse(is.null(eval(mc$label_size,envir=parent.frame())),1.8,eval(mc$label_size,envir=parent.frame()))
   seed = ifelse(is.null(eval(mc$seed,envir=parent.frame())),100,eval(mc$seed,parent.frame()))
@@ -240,7 +236,14 @@ plot.flowReMix_stability <- function(x, ...){
   requireNamespace("ggplot2")
   measure <- fill
   props <- x$network
-  props[abs(props) < threshold] <- 0
+  if(is.null(nEdges)) {
+    props[abs(props) < threshold] <- 0
+  } else {
+    propVals <- sort(unique(as.vector(abs(props))), decreasing = TRUE)
+    propCounts <- sapply(propVals, function(x) sum(props == x) / 2)
+    threshold <- propVals[min(which(cumsum(propCounts) >= nEdges))]
+    props[abs(props) < threshold] <- 0
+  }
   network <- props
   if(!plotAll) {
     keep <- apply(network, 1, function(x) any(abs(x) >= threshold))

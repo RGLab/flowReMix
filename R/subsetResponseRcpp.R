@@ -357,6 +357,7 @@ flowReMix <- function(formula,
   learningRate <- as.numeric(control$learningRate)
   keepWeightPercent <- as.numeric(control$keepWeightPercent)
   sampleNew = as.logical(control$sampleNew)
+  subsetDiscardThreshold <- control$subsetDiscardThreshold
 
   if(markovChainEM) {
     saveSamples <- keepSamples
@@ -874,6 +875,12 @@ flowReMix <- function(formula,
       rm(forcols)
     }
 
+    if(iter <= 2) {
+      doNotSampleSubset <- rep(FALSE, nSubsets)
+    } else {
+      doNotSampleSubset <- levelProbs < subsetDiscardThreshold
+    }
+
     listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
@@ -885,7 +892,8 @@ flowReMix <- function(formula,
                 isingCoefs, covariance, keepEach, MHcoef,
                 betaDispersion, randomAssignProb, modelprobs,
                 iterAssignCoef, prior, zeroPosteriorProbs,
-                M, invcov, mixed, sampleRandom = TRUE)
+                M, invcov, mixed, sampleRandom = TRUE,
+                doNotSample = doNotSampleSubset)
     }
     # print(mem_used()) #### MEMORY CHECK
 
@@ -1190,7 +1198,11 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                       isingCoefs, covariance, keepEach, MHcoef,
                       betaDispersion, randomAssignProb, modelprobs,
                       iterAssignCoef, prior, zeroPosteriorProbs,
-                      M, invcov, mixed, sampleRandom = TRUE) {
+                      M, invcov, mixed, sampleRandom = TRUE,
+                      doNotSample = NULL) {
+  if(is.null(doNotSample)) {
+    doNotSample <- rep(FALSE, nSubsets)
+  }
   condvar <- 1 / diag(invcov)
   popInd <- subjectData$dat$subpopInd
   N <- subjectData$dat$N
@@ -1210,7 +1222,8 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                        M, betaDispersion,
                                        as.integer(subjectData$pre$assign),
                                        randomAssignProb, modelprobs, iterAssignCoef,
-                                       prior, zeroPosteriorProbs)
+                                       prior, zeroPosteriorProbs,
+                                       doNotSample)
   }
 
   unifVec <- runif(nsamp * nSubsets)

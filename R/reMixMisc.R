@@ -84,7 +84,8 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                               isingWprior = FALSE, zeroPosteriorProbs = FALSE,
                               clusterType = c("AUTO","FORK","SOCK"),
                               isingStabilityReps = 0, randStabilityReps = 0,
-                              learningRate = 1, keepWeightPercent = 1,sampleNew=FALSE) {
+                              learningRate = 1, keepWeightPercent = 1, sampleNew = FALSE,
+                              subsetDiscardThreshold = 0) {
 
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
@@ -110,7 +111,9 @@ flowReMix_control <- function(updateLag = 5, randomAssignProb = 0.0, nsamp = 20,
                  isingStabilityReps = isingStabilityReps,
                  randStabilityReps = randStabilityReps,
                  learningRate = learningRate,
-                 keepWeightPercent = keepWeightPercent,sampleNew=sampleNew)
+                 keepWeightPercent = keepWeightPercent,
+                 sampleNew = sampleNew,
+                 subsetDiscardThreshold = subsetDiscardThreshold)
   class(object) <- "flowReMix_control"
   return(object)
 }

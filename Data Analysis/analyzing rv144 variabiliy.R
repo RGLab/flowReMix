@@ -69,13 +69,18 @@ booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
 
 # Getting result files --------------------------
 filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_27__*")),
-               as.list(dir(path = 'data analysis/results', pattern="rv144_28__*")))
+               as.list(dir(path = 'data analysis/results', pattern="rv144_28__*")))[141:189]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
 for(i in 1:length(filenames)) {
+  if(i == 1) {
+    idLevels <- levels(fit$posteriors$ptid)
+  }
   # readRDS(file = filenames[[i]])
   fit <- readRDS(file = filenames[[i]])
+  fit$posteriors$ptid <- factor(fit$posteriors$ptid, levels = idLevels)
+  fit$posteriors <- fit$posteriors[order(fit$posteriors[, 1]), ]
   post[[i]] <- fit$posteriors[, -1]
   postList[[i]] <- fit$posteriors[, -1]
 }
@@ -106,7 +111,7 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 # Bootstrapping -------------------------
 # groups <- list(c(1:38), c(1:20), c(21:38))
-groups <- list(c(1:46), c(47:50))
+groups <- list(c(1:46), c(47:94), c(95:140), c(141:189))
 # groups <- list(c(1:98))
 resList <- list()
 rpList <- list()
@@ -142,7 +147,9 @@ for(i in 1:length(groups)) {
 
 aucplot <- auclist
 aucplot[[1]]$iterations <- "mc40"
-aucplot[[2]]$iterations <- "sa40"
+aucplot[[2]]$iterations <- "mc80"
+aucplot[[3]]$iterations <- "sa40"
+aucplot[[4]]$iterations <- "sa80"
 aucplot <- do.call("rbind", aucplot)
 aucplot <- melt(aucplot, id = "iterations")
 names(aucplot)[2:3] <- c("subset", "auc")
@@ -151,7 +158,9 @@ ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(iterations)
 
 probplot <- problist
 probplot[[1]]$iterations <- "mc40"
-probplot[[2]]$iterations <- "sa40"
+probplot[[2]]$iterations <- "mc80"
+probplot[[3]]$iterations <- "sa40"
+probplot[[4]]$iterations <- "sa80"
 probplot <- do.call("rbind", probplot)
 probplot <- melt(probplot, id = "iterations")
 names(probplot)[2:3] <- c("subset", "responseProb")
@@ -169,6 +178,7 @@ for(g in 1:length(groups)) {
   for(r in 1:reps) {
     temppost <- postList[groups[[g]]]
     samp <- temppost[sample.int(length(temppost), length(temppost), replace = TRUE)]
+    samp <- samp[sapply(samp, function(x) !is.null(x))]
     samp <- Reduce("+", samp) / length(samp)
     aucs[r, ] <- apply(samp, 2, function(x) roc(infect ~ x)$auc)
     rprobs[r, ] <- colMeans(samp)
@@ -195,22 +205,44 @@ report <- cbind(results[[1]], results[[2]])
 names(report) <- c("lci50", "median50", "uci50", "lci100", "median100", "uci100")
 
 # Concensus graph -----------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_24__*"))[200:390]
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_stab_23__*"))[1:196]
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_stab_25__*"))[c(groups[[4]])]
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_26__*"))[67]
+rocResults <- summary(fit, rocResults, target = vaccine)
+infectResults <- summary(fit, rocResults, target = hiv)
+filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_27__*")),
+               as.list(dir(path = 'data analysis/results', pattern="rv144_28__*")))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 net <- list()
 for(i in 1:length(filenames)) {
-  load(file = filenames[[i]])
-  stab <- fit$isingStability
+  stab <- readRDS(file = filenames[[i]])$isingStability
   net[[i]] <- stab$network
 }
-net <- Reduce("+", net) / length(net)
+net <- Reduce("+", net) / sum(sapply(net, function(x) !is.null(x)))
 stab$network <- net
-plot(stab, threshold = .85, fill = rocResults$auc)
+plot(stab, fill = infectResults$auc, nEdges = 15)
 
 scatter <- plot(fit, type = "scatter", target = vaccine)
+
+# PFS score ---------
+library(magrittr)
+library(dplyr)
+library(tidyr)
+fit$posteriors %>% gather(subset, posterior, -1) %>% mutate(weight = unlist(sapply(strsplit(subset, ","), function(x)
+  length(x) / choose(6, length(x))))) %>% group_by(ptid) %>% select(-subset) %>%
+  summarize(poly = weighted.mean(posterior, weight)) %>% inner_join(
+    rv144_correlates_data %>% select(
+      age,
+      sex,
+      risk.high,
+      risk.medium,
+      IgAprim,
+      V2prim,
+      infect.x,
+      infect.y,
+      ptid = PTID,
+      PFS,
+      FS
+    )
+  ) %>% na.omit() %>% ggplot()+geom_point()+aes(x=PFS,y=poly)+geom_smooth(method="lm")
+
 
 # Analysis for a single fit ----------------------
 # reps <- 200

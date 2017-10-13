@@ -117,7 +117,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 IntegerVector preAssignment,
                                 double randomAssignProb,
                                 NumericVector mprobs, double preAssignCoef,
-                                double prior, bool zeroPosteriorProbs) {
+                                double prior, bool zeroPosteriorProbs,
+                                LogicalVector doNotSample) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -139,7 +140,10 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   double isingOffset = 0 ;
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets ; j++) {
-      if(preAssignment[j] != -1 & preAssignCoef < 10e-4 & !zeroPosteriorProbs) {
+      if(doNotSample[j]) {
+        assignment[j] = 0 ;
+        continue ;
+      } else if(preAssignment[j] != -1 & preAssignCoef < 10e-4 & !zeroPosteriorProbs) {
         assignment[j] = preAssignment[j] ;
         continue;
       }else if(preAssignment[j] == 0 ) {
@@ -166,7 +170,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
 
       // integrating densities
       double mcoef = MHcoef[j] ;
-      mcoef = 1 ;
+      mcoef = 2.5 ;
       for(k = 0; k < 2; k++) {
         if(k == 0) {
           eta = subsetNullEta ;

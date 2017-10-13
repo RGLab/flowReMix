@@ -53,7 +53,7 @@ names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
 configurations <- expand.grid(niters = c(40, 80),
-                              npost = c(1),
+                              npost = c(3),
                               seed = c(1:50))
 config <- configurations[setting, ]
 niter <- config[[1]]
@@ -62,7 +62,7 @@ seed <- config[[3]]
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 50,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50,
                              keepEach = 5, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
@@ -71,10 +71,10 @@ control <- flowReMix_control(updateLag = 5, nsamp = 50,
                              seed = seed,
                              ncores = cpus, preAssignCoefs = 1,
                              prior = 1, isingWprior = FALSE,
-                             markovChainEM = FALSE,
+                             markovChainEM = TRUE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = .9,
-                             lastSample = 20,
+                             lastSample = 100,
                              isingStabilityReps = 200)
 
 booldata$subset <- factor(booldata$subset)

@@ -74,37 +74,38 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 
 # Analysis -------------
 library(flowReMix)
-npost <- 1
-niter <- 60
-control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
-                             keepEach = 10,
+prior <- 0
+npost <- 3
+niter <- 2
+seed <- 155
+cpus <- 2
+control <- flowReMix_control(updateLag = 1, nsamp = 50, initMHcoef = 1,
+                             keepEach = 5, isingWprior = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
-                             maxDispersion = 1000, minDispersion = 10^7,
+                             maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 4, isingInit = -log(99),
-                             ncores = 2,
-                             preAssignCoefs = 1,
-                             prior = 1, isingWprior = FALSE,
-                             markovChainEM = FALSE,
-                             initMethod = "robust",
-                             learningRate = 0.6, keepWeightPercent = 0.9)
+                             initMethod = "robust", ncores = cpus,
+                             markovChainEM = TRUE,
+                             seed = seed, prior = 0,
+                             preAssignCoefs = 1, stabilitySampleNew = TRUE,
+                             learningRate = 0.6, keepWeightPercent = 0.9,
+                             isingStabilityReps = 20, randStabilityReps = 20)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              subject_id = ptid,
                              cell_type = subset,
-                             cluster_variable = stim,
+                             cluster_variable = treatment,
                              data = booldata,
                              covariance = "sparse",
                              ising_model = "sparse",
                              regression_method = "robust",
-                             iterations =  60,
+                             iterations =  niter,
                              cluster_assignment = preAssignment,
-                             parallel = TRUE,
+                             parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-# save(fit, file = "data analysis/results/local_rv144_prior.Robj")
+# save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")
 
 add_ptid <- function(x, subject_id) {
@@ -171,7 +172,8 @@ infect[infect == "PLACEBO"] <- NA
 infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
-                          sortAUC = FALSE, pvalue = "wilcoxon")
+                         sortAUC = FALSE, pvalue = "wilcoxon",
+                         minProbFilter = 0.01)
 infectResults$responseProb <- colMeans(fit$posteriors[, -1])
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 

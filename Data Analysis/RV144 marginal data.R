@@ -37,16 +37,17 @@ data$population <- as.factor(data$population)
 data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 data$treatment2 <- data$treatment
 
-control <- flowReMix_control(updateLag = 1, nsamp = 20, initMHcoef = 1,
-                             keepEach = 5, isingWprior = TRUE,
+control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
+                             keepEach = 5, isingWprior = FALSE,
                              nPosteriors = 1, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = 2,
-                             markovChainEM = FALSE,
+                             markovChainEM = TRUE,
                              seed = 10,
-                             preAssignCoefs = 1,
-                             isingStabilityReps = 5, randStabilityReps = 5)
+                             preAssignCoefs = 1, stabilitySampleNew = TRUE,
+                             learningRate = 0.6, keepWeightPercent = 0.9,
+                             isingStabilityReps = 20, randStabilityReps = 20)
 
 data$stim <- factor(data$stim, levels = c("negctrl", "env"))
 assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))

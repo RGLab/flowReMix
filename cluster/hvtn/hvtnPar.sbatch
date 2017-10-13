@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name HVT60 # Set a name for your job. This is useful if you have multiple jobs queued.
-#SBATCH --partition medium    # Slurm partition to use
-#SBATCH --ntasks 5          # Number of tasks to run. By default, one CPU core will be allocated per task
-#SBATCH --time 0-72:00        # Wall time limit in D-HH:MM
+#SBATCH --partition short    # Slurm partition to use
+#SBATCH --ntasks 8         # Number of tasks to run. By default, one CPU core will be allocated per task
+#SBATCH --time 0-12:00        # Wall time limit in D-HH:MM
 #SBATCH --mem-per-cpu=6000    # Memory limit for each tasks (in MB)
 #SBATCH -o flowout.out     # File to which STDOUT will be written
 #SBATCH -e flowout.out
@@ -12,5 +12,5 @@
 
 module load R
 
-R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" HVTNcluster.R
+R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" HVTNcluster60.R
 
