@@ -75,8 +75,8 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 # Analysis -------------
 library(flowReMix)
 npost <- 1
-niter <- 30
-control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 2.5,
+niter <- 60
+control <- flowReMix_control(updateLag = 5, nsamp = 50, initMHcoef = 2.5,
                              keepEach = 10,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 1000, minDispersion = 10^7,
@@ -84,8 +84,8 @@ control <- flowReMix_control(updateLag = 15, nsamp = 50, initMHcoef = 2.5,
                              lastSample = 4, isingInit = -log(99),
                              ncores = 2,
                              preAssignCoefs = 1,
-                             prior = 0, isingWprior = FALSE,
-                             markovChainEM = TRUE,
+                             prior = 1, isingWprior = FALSE,
+                             markovChainEM = FALSE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = 0.9)
 
@@ -100,7 +100,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                              covariance = "sparse",
                              ising_model = "sparse",
                              regression_method = "robust",
-                             iterations =  30,
+                             iterations =  60,
                              cluster_assignment = preAssignment,
                              parallel = TRUE,
                              verbose = TRUE, control = control))
@@ -175,8 +175,9 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
 infectResults$responseProb <- colMeans(fit$posteriors[, -1])
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
-# stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
-#                        gamma = 0.25, AND = TRUE)
+stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
+                       gamma = 0.25, AND = TRUE)
+plot(stab, threshold = 0.9, fill = infectResults$auc)
 # save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
 threshold <- 0.85

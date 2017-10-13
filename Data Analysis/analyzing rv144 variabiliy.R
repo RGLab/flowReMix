@@ -68,17 +68,14 @@ booldata$subset <- factor(booldata$subset)
 booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
 
 # Getting result files --------------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_20__*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_23__*"))[1:197]
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_24__*"))[1:197]
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_25__*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_26__*"))
+filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_27__*")),
+               as.list(dir(path = 'data analysis/results', pattern="rv144_28__*")))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
 for(i in 1:length(filenames)) {
-  load(file = filenames[[i]])
-  # fit <- readRDS(file = filenames[[i]])
+  # readRDS(file = filenames[[i]])
+  fit <- readRDS(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
   postList[[i]] <- fit$posteriors[, -1]
 }
@@ -109,7 +106,7 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 # Bootstrapping -------------------------
 # groups <- list(c(1:38), c(1:20), c(21:38))
-groups <- list(c(1:47), c(48:96))
+groups <- list(c(1:46), c(47:50))
 # groups <- list(c(1:98))
 resList <- list()
 rpList <- list()
@@ -144,8 +141,8 @@ for(i in 1:length(groups)) {
 }
 
 aucplot <- auclist
-aucplot[[1]]$iterations <- 40
-aucplot[[2]]$iterations <- 80
+aucplot[[1]]$iterations <- "mc40"
+aucplot[[2]]$iterations <- "sa40"
 aucplot <- do.call("rbind", aucplot)
 aucplot <- melt(aucplot, id = "iterations")
 names(aucplot)[2:3] <- c("subset", "auc")
@@ -153,8 +150,8 @@ ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(iterations)
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 probplot <- problist
-probplot[[1]]$iterations <- 40
-probplot[[2]]$iterations <- 80
+probplot[[1]]$iterations <- "mc40"
+probplot[[2]]$iterations <- "sa40"
 probplot <- do.call("rbind", probplot)
 probplot <- melt(probplot, id = "iterations")
 names(probplot)[2:3] <- c("subset", "responseProb")

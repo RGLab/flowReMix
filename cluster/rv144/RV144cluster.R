@@ -62,18 +62,19 @@ seed <- config[[3]]
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 100,
-                             keepEach = 10, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = 5, nsamp = 50,
+                             keepEach = 5, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
-                             randomAssignProb = 10^-8, intSampSize = 50,
+                             randomAssignProb = 10^-8, intSampSize = 100,
                              isingInit = -log(99),
                              seed = seed,
                              ncores = cpus, preAssignCoefs = 1,
-                             prior = 2, isingWprior = TRUE,
+                             prior = 1, isingWprior = FALSE,
                              markovChainEM = FALSE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = .9,
+                             lastSample = 20,
                              isingStabilityReps = 200)
 
 booldata$subset <- factor(booldata$subset)
@@ -90,5 +91,5 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_26_niter", niter, "npost", npost, "seed", seed, "c06.rds", sep = "")
-save(fit, file = file)
+file <- paste("results/rv144_28_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
+saveRDS(fit, file = file)
