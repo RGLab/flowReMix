@@ -214,8 +214,8 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
       }
 
       meanval <- (first + second) / 2
-      # isingmat[u, v] <- meanval
-      # isingmat[v, u] <- meanval
+      isingmat[u, v] <- meanval
+      isingmat[v, u] <- meanval
     }
 
     for(i in 1:ncol(isingmat)) {

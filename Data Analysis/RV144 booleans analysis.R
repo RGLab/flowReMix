@@ -6,6 +6,7 @@ assign <- function(x) {
   return(result)
 }
 
+library(flowReMix)
 require(pROC)
 require(reshape2)
 load("data/rv144_booleans.rda")
@@ -76,20 +77,22 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 prior <- 0
 npost <- 3
-niter <- 2
-seed <- 155
+niter <- 50
+seed <- 235
+lastSample <- 100
 cpus <- 2
-control <- flowReMix_control(updateLag = 1, nsamp = 50, initMHcoef = 1,
-                             keepEach = 5, isingWprior = FALSE,
+zeroPosteriorProbs <- TRUE
+control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
+                             keepEach = 5, isingWprior = TRUE, zeroPosteriorProbs = TRUE,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = cpus,
-                             markovChainEM = TRUE,
-                             seed = seed, prior = 0,
-                             preAssignCoefs = 1, stabilitySampleNew = TRUE,
+                             markovChainEM = FALSE,
+                             seed = seed, prior = 0, lastSample = lastSample,
+                             preAssignCoefs = 0, sampleNew = TRUE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
-                             isingStabilityReps = 20, randStabilityReps = 20)
+                             isingStabilityReps = 200, randStabilityReps = 20)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
