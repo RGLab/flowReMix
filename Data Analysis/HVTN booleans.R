@@ -162,7 +162,7 @@ add_ptid <- function(x, subject_id) {
 }
 
 # filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust10_*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_5__*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_5__*")[1])
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
@@ -195,16 +195,6 @@ infectROC$qvalue[select] <- p.adjust(infectROC$pvalue[select], method = "BH")
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
 sum(infectROC$qvalue < 0.05, na.rm = TRUE)
 
-# stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 2, reps = 10)
-
-# Stability Graphs ---------------
-# load(file = "data analysis/results/stab_hvtn_2_niter30npost3seed10c.Robj")
-# stab <- stability
-# ising <- plot(stab, threshold = 0.8, fill = rocResults$auc)
-# ising
-# ising <- plot(stab, threshold = 0.8, fill = infectROC$auc)
-# ising
-
 library(cowplot)
 # save_plot(ising, filename = "figures/hvtnIsingStb1.pdf",
 #           base_width = 7, base_height = 6)
@@ -213,19 +203,6 @@ library(cowplot)
 # rand <- stability
 # random <- plot(rand, threshold = 0.7, fill = rocResults$auc)
 # random
-
-
-# Scatter plots -----------------------
-scatter <- plot(fit, target = vaccine, type = "scatter", ncol = 11)
-# save_plot("figures/HVTNscatter.pdf", scatter,
-#           base_height = 20,
-#           base_width = 22, limitsize = FALSE)
-
-# FDR curves ----------------
-fdrplot <- plot(fit, target = vaccine, type = "FDR")
-# save_plot("figures/hvtnFDRplot.pdf", fdrplot,
-#           base_height = 20,
-#           base_width = 22, limitsize = FALSE)
 
 # Posterior boxplots ------------------------
 nfunctions <- sapply(strsplit(colnames(fit$posteriors)[-1], "+", fixed = TRUE), function(x) length(x) - 1)
@@ -267,6 +244,33 @@ stimparentbox <- plot(fit, type = "boxplot", target = hiv,
 stimparentbox
 # save_plot("figures/hvtnParentStimBox2.pdf", parentstimbox,
 #           base_width = 10, base_height = 8)
+
+
+# Stability Graphs ---------------
+stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 2, reps = 100)
+# saveRDS(stab, file = "data analysis/results/hvtn_stab_5_niter30npost1seed1sa06.rds")
+# fit$assignmentList <- NULL
+# fit$randomEffectSamp <- NULL
+# saveRDS(fit, file = "data analysis/results/hvtn_5_niter30npost1seed1sa06.rds")
+# load(file = "data analysis/results/stab_hvtn_2_niter30npost3seed10c.Robj")
+threshold <- .9
+ising <- plot(stab, threshold = threshold, fill = rocResults$auc)
+ising
+ising <- plot(stab, threshold = threshold, fill = infectROC$auc)
+ising
+
+
+# Scatter plots -----------------------
+scatter <- plot(fit, target = vaccine, type = "scatter", ncol = 11)
+# save_plot("figures/HVTNscatter.pdf", scatter,
+#           base_height = 20,
+#           base_width = 22, limitsize = FALSE)
+
+# FDR curves ----------------
+fdrplot <- plot(fit, target = vaccine, type = "FDR")
+# save_plot("figures/hvtnFDRplot.pdf", fdrplot,
+#           base_height = 20,
+#           base_width = 22, limitsize = FALSE)
 
 
 # Boxplots for graph clusters -----------

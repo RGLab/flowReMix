@@ -116,7 +116,7 @@ keep <- names(keep[sapply(keep, function(x) x)])
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
-configurations <- expand.grid(niter = c(12),
+configurations <- expand.grid(niter = c(50),
                               seed = 1)
 config <- configurations[setting, ]
 niter <- config[[1]]

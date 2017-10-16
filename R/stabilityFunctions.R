@@ -222,7 +222,6 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
 plot.flowReMix_stability <- function(x, ...){
   mc = match.call();
   threshold = ifelse(is.null(eval(mc$threshold, envir=parent.frame())), 0.5, eval(mc$threshold,envir=parent.frame()))
-  nEdges <- ifelse(is.null(eval(mc$nEdges, envir=parent.frame())), NULL, eval(mc$nEdges,envir=parent.frame()))
   plotAll = ifelse(is.null(eval(mc$plotAll,envir=parent.frame())),FALSE,eval(mc$plotAll,envir=parent.frame()))
   fill = eval(mc$fill,envir=parent.frame())
   fillName = eval(mc$fillName, envir=parent.frame())
@@ -236,7 +235,7 @@ plot.flowReMix_stability <- function(x, ...){
   requireNamespace("ggplot2")
   measure <- fill
   props <- x$network
-  if(is.null(nEdges)) {
+  if(is.null(mc$nEdges)) {
     props[abs(props) < threshold] <- 0
   } else {
     propVals <- sort(unique(as.vector(abs(props))), decreasing = TRUE)
