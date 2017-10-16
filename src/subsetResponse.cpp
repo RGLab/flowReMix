@@ -170,7 +170,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
 
       // integrating densities
       double mcoef = MHcoef[j] ;
-      mcoef = 2.5 ;
+      mcoef = std::max(1.0, MHcoef[j]) ;
       for(k = 0; k < 2; k++) {
         if(k == 0) {
           eta = subsetNullEta ;

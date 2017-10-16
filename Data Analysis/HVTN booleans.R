@@ -162,14 +162,11 @@ add_ptid <- function(x, subject_id) {
 }
 
 # filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust10_*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_2__*"))[1:47]
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_2__*"))[48:88]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_5__*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
-
 post <- list()
 for(i in 1:length(filenames)) {
-  load(file = filenames[[i]])
-  try(fit <- temp)
+  fit <- readRDS(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
 }
 post <- Reduce("+", post) / length(filenames)
@@ -201,21 +198,21 @@ sum(infectROC$qvalue < 0.05, na.rm = TRUE)
 # stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 2, reps = 10)
 
 # Stability Graphs ---------------
-load(file = "data analysis/results/stab_hvtn_2_niter30npost3seed10c.Robj")
-stab <- stability
-ising <- plot(stab, threshold = 0.8, fill = rocResults$auc)
-ising
-ising <- plot(stab, threshold = 0.8, fill = infectROC$auc)
-ising
+# load(file = "data analysis/results/stab_hvtn_2_niter30npost3seed10c.Robj")
+# stab <- stability
+# ising <- plot(stab, threshold = 0.8, fill = rocResults$auc)
+# ising
+# ising <- plot(stab, threshold = 0.8, fill = infectROC$auc)
+# ising
 
 library(cowplot)
 # save_plot(ising, filename = "figures/hvtnIsingStb1.pdf",
 #           base_width = 7, base_height = 6)
 
-load(file = "data analysis/results/hvtnAggreageRandom1.Robj")
-rand <- stability
-random <- plot(rand, threshold = 0.7, fill = rocResults$auc)
-random
+# load(file = "data analysis/results/hvtnAggreageRandom1.Robj")
+# rand <- stability
+# random <- plot(rand, threshold = 0.7, fill = rocResults$auc)
+# random
 
 
 # Scatter plots -----------------------
@@ -266,7 +263,7 @@ stimparent <- lapply(split(subsetDat$subset, paste(subsetDat$stimGroup, subsetDa
 stimparentbox <- plot(fit, type = "boxplot", target = hiv,
                       groups = stimparent, weights = weightList,
                       test = "wilcoxon", jitter = FALSE,
-                      ncol = 4)
+                      ncol = 3)
 stimparentbox
 # save_plot("figures/hvtnParentStimBox2.pdf", parentstimbox,
 #           base_width = 10, base_height = 8)

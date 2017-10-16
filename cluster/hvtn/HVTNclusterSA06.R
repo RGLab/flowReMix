@@ -117,7 +117,7 @@ subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
 configurations <- expand.grid(niter = c(30, 60),
-                              seed = 1:100)
+                              seed = 1:3)
 config <- configurations[setting, ]
 niter <- config[[1]]
 seed <- config[[2]]
@@ -155,10 +155,10 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_4_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
+file <- paste("results/hvtn_5_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
 saveRDS(object = fit, file = file)
 
-file <- paste("results/hvtn_stab_4_niter", niter, "npost", npost, "seed", seed, "sa06.Robj", sep = "")
+file <- paste("results/hvtn_stab_5_niter", niter, "npost", npost, "seed", seed, "sa06.Robj", sep = "")
 stab <- stabilityGraph(fit, type = "ising", cpus = round(cpus/2), AND = TRUE,
                        gamma = 0.25, reps = 200, cv = FALSE)
 saveRDS(object = stab, file = file)

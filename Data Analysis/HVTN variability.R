@@ -125,14 +125,14 @@ subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 
 # Loading files ----------------------
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_2_*"))[1:88]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_4_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
 rm(temp)
 for(i in 1:length(filenames)) {
-  load(file = filenames[[i]])
-  try(fit <- temp)
+  fit <- readRDS(file = filenames[[i]])
+  # try(fit <- temp)
   post[[i]] <- fit$posteriors[, -1]
   postList[[i]] <- fit$posteriors[, -1]
 }
@@ -147,8 +147,7 @@ postid <- fit$posteriors[, 1, drop = FALSE]
 hiv <- merge(postid, hiv)
 
 # Variability at the fit level --------------------
-groups <- list(c(1:47), c(48:88), c(1:88))
-groups <- list(c(1:47), c(48:88))
+groups <- list(c(1:37))
 resList <- list()
 rpList <- list()
 auclist <- list()
@@ -186,7 +185,7 @@ library(dplyr)
 library(reshape2)
 aucplot <- auclist
 aucplot[[1]]$iterations <- 30
-aucplot[[2]]$iterations <- 60
+# aucplot[[2]]$iterations <- 60
 aucplot <- do.call("rbind", aucplot)
 aucplot <- melt(aucplot, id = "iterations")
 names(aucplot)[2:3] <- c("subset", "auc")
@@ -205,6 +204,7 @@ ggplot(probplot) +
 
 # Graphical models -----------------
 filenames <- as.list(dir(path = 'data analysis/results', pattern="stab_hvtn_2_*"))[1:47]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="stab_hvtn_2_*"))[48:88]
 filenames <- as.list(dir(path = 'data analysis/results', pattern="stab_hvtn_2_*"))[48:88]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 net <- list()

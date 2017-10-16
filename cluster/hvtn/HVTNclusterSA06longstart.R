@@ -117,16 +117,16 @@ subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
 configurations <- expand.grid(niter = c(30, 60),
-                              seed = 1:100)
+                              seed = 1:4)
 config <- configurations[setting, ]
 niter <- config[[1]]
 seed <- config[[2]]
-npost <- 1
+npost <- 2
 
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 50,
-                             keepEach = 5, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50,
+                             keepEach = 10, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 100,
@@ -155,17 +155,17 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_4_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
+file <- paste("results/hvtn_5_niter", niter, "npost", npost, "seed", seed, "SAls.rds", sep = "")
 saveRDS(object = fit, file = file)
 
-file <- paste("results/hvtn_stab_4_niter", niter, "npost", npost, "seed", seed, "sa06.Robj", sep = "")
+file <- paste("results/hvtn_stab_5_niter", niter, "npost", npost, "seed", seed, "SAls.rds", sep = "")
 stab <- stabilityGraph(fit, type = "ising", cpus = round(cpus/2), AND = TRUE,
                        gamma = 0.25, reps = 200, cv = FALSE)
 saveRDS(object = stab, file = file)
 
 fit$randomEffectSamp <- NULL
 fit$assignmentList <- NULL
-file <- paste("results/hvtn_4_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
+file <- paste("results/hvtn_5_niter", niter, "npost", npost, "seed", seed, "SAls.rds", sep = "")
 saveRDS(object = fit, file = file)
 
 

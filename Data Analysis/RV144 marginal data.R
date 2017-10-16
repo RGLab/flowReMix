@@ -45,7 +45,7 @@ control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
                              initMethod = "robust", ncores = 2,
                              markovChainEM = TRUE,
                              seed = 10,
-                             preAssignCoefs = 1, stabilitySampleNew = TRUE,
+                             preAssignCoefs = 1, sampleNew = TRUE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
                              isingStabilityReps = 20, randStabilityReps = 20)
 

@@ -157,10 +157,10 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  verbose = TRUE, control = control)
 
 file <- paste("results/hvtn_4_niter", niter, "npost", npost, "seed", seed, "sa06.Robj", sep = "")
-save(fit, filenames)
+save(fit, file = file)
 
 file <- paste("results/hvtn_4_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
-saveRDS(fit, file = file)
+saveRDS(object = fit, file = file)
 
 
 print("WTF?!")
