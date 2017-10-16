@@ -182,7 +182,7 @@ infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
                        gamma = 0.25, AND = TRUE)
-plot(stab, threshold = 0.9, fill = infectResults$auc)
+plot(fit$isingStability, threshold = 0.9, fill = infectResults$auc)
 # save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
 threshold <- 0.85

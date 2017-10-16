@@ -995,7 +995,7 @@ flowReMix <- function(formula,
           isingfit <- raIsing(assignmentList, AND = TRUE,
                               modelprobs = modelprobs,
                               minprob = 1 / nSubjects, verbose=verbose,
-                              weights = isingWeights)
+                              weights = isingWeights, parallel = parallel)
         } else {
           isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,

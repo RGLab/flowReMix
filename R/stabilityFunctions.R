@@ -40,6 +40,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
         stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
       }
       samples <- obj$assignmentList
+      names(samples) <- names(obj$randomEffectSamp)
       family <- "binomial"
     } else if(type == "randomEffects") {
       if(is.null(obj$randomEffectSamp)) {
@@ -97,22 +98,19 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 
   nsubsets <- ncol(samples[[1]])
 
+  if(!sampleNew) {
+    matlist <- lapply(1:reps, function(i, samples) t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE])), samples)
+  } else {
+    matlist <- lapply(1:reps, function(i, samples)  t(sapply(samples, function(x) x[i, , drop = FALSE])), samples)
+  }
+
   # perc <- 0.1
   # pb <-  progress::progress_bar$new(total = reps);
-  cluster_res = foreach(i = 1:reps) %dorng% {
-    if(!sampleNew) {
-      mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
-    } else {
-      mat <- t(sapply(samples, function(x) x[i, , drop = FALSE]))
-    }
+  cluster_res = foreach(mat = matlist) %dorng% {
     colnames(mat) <- subsets
     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
-                     method = "sparse", cv = cv)
+                     method = "sparse", cv = cv, parallel = FALSE)
     countCovar <- (coefs != 0) * sign(coefs)
-    # if(i / reps > perc & perc < 1) {
-    #   cat(perc * 100, "% ", sep = "")
-    #   perc <- perc + 0.1
-    # }
     return(countCovar)
   }
   countCovar = Reduce(x = cluster_res, f=`+`)
@@ -238,6 +236,7 @@ plot.flowReMix_stability <- function(x, ...){
   if(is.null(mc$nEdges)) {
     props[abs(props) < threshold] <- 0
   } else {
+    nEdges <- mc$nEdges
     propVals <- sort(unique(as.vector(abs(props))), decreasing = TRUE)
     propCounts <- sapply(propVals, function(x) sum(props == x) / 2)
     threshold <- propVals[min(which(cumsum(propCounts) >= nEdges))]

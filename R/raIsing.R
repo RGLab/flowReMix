@@ -5,7 +5,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
                     family = "binomial",verbose=FALSE,
-                    weights = NULL) {
+                    weights = NULL, parallel = FALSE) {
   if(is.null(weights)) {
     weights <- rep(1, nrow(mat))
   }
@@ -20,72 +20,17 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
   offsets <- diff(log(modelprobs))
 
   if(gamma < 0) gamma <- 0
-  if(foreach::getDoParWorkers() == 1) {
-    foreach::registerDoSEQ()
-  }
 
   if(is.null(minprob)) {
     minprob <- 1 / nrow(mat)
   }
 
-  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
-    y <- as.vector(mat[, j])
-    X <- as.matrix(mat[, -j])
-    xcols <- colSums(X)
-    if(family == "binomial") {
-      regX <- X[, xcols >= 4]
-    } else {
-      regX <- X
-    }
-
-    if(sum(y == 0) < 8 & family == "binomial") {
-      p <- min(mean(y), 1 - minprob)
-      row <- rep(0, ncol(mat))
-      coef <- log(p / (1 - p))
-      row[j] <- coef
-      return(row)
-    } else if(sum(y == 1) < 8 & family == "binomial") {
-      p <- max(mean(y), minprob)
-      row <- rep(0, ncol(mat))
-      coef <- log(p / (1 - p))
-      row[j] <- coef
-      return(row)
-    } else if(ncol(X) < 2) {
-      p <- mean(y)
-      row <- rep(0, ncol(mat))
-      log(p / (1 - p))
-      row[j] <- coef
-      return(row)
-    }
-
-    if(method == "raIsing") {
-      off <- offsets[rowSums(X) + 1]
-    } else {
-      off <- NULL
-    }
-
-    if(!cv) {
-      netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
-                               intercept = TRUE, weights = weights)
-      logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
-      dfs <- netfit$df
-      ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
-      lambda <- netfit$lambda[which.min(ebic)]
-    } else {
-      netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
-                                  intercept = TRUE, weights = weights)
-      lambda <- netfit$lambda.min
-    }
-    matrow <- rep(0, ncol(mat))
-    coefs <- rep(0, ncol(mat))
-    if(family == "binomial") {
-      coefs[c(1, which(xcols >= 4) + 1)] <- coef(netfit, s = lambda)
-    } else {
-      coefs <- coef(netfit, s = lambda)
-    }
-    matrow[-j] <- coefs[-1]
-    matrow[j] <- coefs[1]
-    return(matrow)
+  if(parallel) {
+    isingmat <- do.call("rbind", mclapply(1:ncol(mat), getNeighborhood, mat, family, off,
+                                          gamma, weights, cv, method, minprob))
+  } else {
+    isingmat <- do.call("rbind", lapply(1:ncol(mat), getNeighborhood, mat, family, off,
+                                        gamma, weights, cv, method, minprob))
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
@@ -124,9 +69,6 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   nvars <- ncol(mat)
 
   if(gamma < 0) gamma <- 0
-  if(foreach::getDoParWorkers() == 1) {
-    foreach::registerDoSEQ()
-  }
 
   # Computing Diagonal -----------
   minProb <- 1 / nrow(mat)
@@ -229,4 +171,64 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   }
 
   return(isingmat)
+}
+
+getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, minprob) {
+  y <- as.vector(mat[, j])
+  X <- as.matrix(mat[, -j])
+  xcols <- colSums(X)
+  if(family == "binomial") {
+    regX <- X[, xcols >= 4]
+  } else {
+    regX <- X
+  }
+
+  if(sum(y == 0) < 8 & family == "binomial") {
+    p <- min(mean(y), 1 - minprob)
+    row <- rep(0, ncol(mat))
+    coef <- log(p / (1 - p))
+    row[j] <- coef
+    return(row)
+  } else if(sum(y == 1) < 8 & family == "binomial") {
+    p <- max(mean(y), minprob)
+    row <- rep(0, ncol(mat))
+    coef <- log(p / (1 - p))
+    row[j] <- coef
+    return(row)
+  } else if(ncol(X) < 2) {
+    p <- mean(y)
+    row <- rep(0, ncol(mat))
+    log(p / (1 - p))
+    row[j] <- coef
+    return(row)
+  }
+
+  if(method == "raIsing") {
+    off <- offsets[rowSums(X) + 1]
+  } else {
+    off <- NULL
+  }
+
+  if(!cv) {
+    netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
+                             intercept = TRUE, weights = weights)
+    logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
+    dfs <- netfit$df
+    ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
+    lambda <- netfit$lambda[which.min(ebic)]
+  } else {
+    netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
+                                intercept = TRUE, weights = weights)
+    lambda <- netfit$lambda.min
+  }
+  matrow <- rep(0, ncol(mat))
+  coefs <- rep(0, ncol(mat))
+  if(family == "binomial") {
+    coefs[c(1, which(xcols >= 4) + 1)] <- coef(netfit, s = lambda)
+  } else {
+    coefs <- coef(netfit, s = lambda)
+  }
+  matrow[-j] <- coefs[-1]
+  matrow[j] <- coefs[1]
+  return(matrow)
 }

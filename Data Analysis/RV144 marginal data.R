@@ -38,7 +38,7 @@ data <- data[order(data$population, data$ptid, data$stim, decreasing = FALSE), ]
 data$treatment2 <- data$treatment
 
 control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
-                             keepEach = 5, isingWprior = FALSE,
+                             keepEach = 5, isingWprior = TRUE,
                              nPosteriors = 1, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -47,7 +47,7 @@ control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
                              seed = 10,
                              preAssignCoefs = 1, sampleNew = TRUE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
-                             isingStabilityReps = 20, randStabilityReps = 20)
+                             isingStabilityReps = 10, randStabilityReps = 10)
 
 data$stim <- factor(data$stim, levels = c("negctrl", "env"))
 assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))
@@ -59,8 +59,8 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 10, parallel = TRUE,
-                 cluster_assignment = TRUE, keepSamples = FALSE,
+                 iterations = 4, parallel = TRUE,
+                 cluster_assignment = TRUE, keepSamples = TRUE,
                  verbose = TRUE, control = control))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
@@ -93,8 +93,7 @@ plot(fit, type = "boxplot", target = vaccine,
      test = "wilcoxon", ncol = 4)
 
 # Graphical Models ----------------------
-stability <- stabilityGraph(fit, type = "ising", cv = FALSE,
-                            reps = 100, cpus = 2)
+stability <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2)
 plot(stability, fill = roctab$auc)
 
 random <- stabilityGraph(fit, type = "randomEffects", cv = FALSE,
