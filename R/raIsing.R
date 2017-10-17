@@ -25,74 +25,14 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     minprob <- 1 / nrow(mat)
   }
 
-# <<<<<<< HEAD
-#   isingmat <- foreach(j = 1:ncol(mat), .combine = rbind,.export = "mat") %dorng% {
-#     y <- as.vector(mat[, j])
-#     X <- as.matrix(mat[, -j])
-#     xcols <- colSums(X)
-#     if(family == "binomial") {
-#       regX <- X[, xcols >= 4]
-#     } else {
-#       regX <- X
-#     }
-#
-#     if(sum(y == 0) < 8 & family == "binomial") {
-#       p <- min(mean(y), 1 - minprob)
-#       row <- rep(0, ncol(mat))
-#       coef <- log(p / (1 - p))
-#       row[j] <- coef
-#       return(row)
-#     } else if(sum(y == 1) < 8 & family == "binomial") {
-#       p <- max(mean(y), minprob)
-#       row <- rep(0, ncol(mat))
-#       coef <- log(p / (1 - p))
-#       row[j] <- coef
-#       return(row)
-#     } else if(ncol(X) < 2) {
-#       p <- mean(y)
-#       row <- rep(0, ncol(mat))
-#       log(p / (1 - p))
-#       row[j] <- coef
-#       return(row)
-#     }
-#
-#     if(method == "raIsing") {
-#       off <- offsets[rowSums(X) + 1]
-#     } else {
-#       off <- NULL
-#     }
-#
-#     if(!cv) {
-#       netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
-#                                intercept = TRUE, weights = weights)
-#       logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
-#       dfs <- netfit$df
-#       ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
-#       lambda <- netfit$lambda[which.min(ebic)]
-#     } else {
-#       netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
-#                                   intercept = TRUE, weights = weights)
-#       lambda <- netfit$lambda.min
-#     }
-#     matrow <- rep(0, ncol(mat))
-#     coefs <- rep(0, ncol(mat))
-#     if(family == "binomial") {
-#       coefs[c(1, which(xcols >= 4) + 1)] <- coef(netfit, s = lambda)
-#     } else {
-#       coefs <- coef(netfit, s = lambda)
-#     }
-#     matrow[-j] <- coefs[-1]
-#     matrow[j] <- coefs[1]
-#     return(matrow)
-# =======
-  # if(parallel) {
-    # isingmat <- do.call("rbind", mclapply(1:ncol(mat), getNeighborhood, mat, family, off,
-                                          # gamma, weights, cv, method, minprob))
-  # } else {
+
+  if(parallel) {
+  isingmat <- do.call("rbind", mclapply(1:ncol(mat), getNeighborhood, mat, family, off,
+  gamma, weights, cv, method, minprob))
+  } else {
     isingmat <- do.call("rbind", lapply(1:ncol(mat), getNeighborhood, mat, family, off,
                                         gamma, weights, cv, method, minprob))
-# >>>>>>> 70f29b580acf25f0a1fd11f2d9e1181ac3ba5cb2
-  # }
+  }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
   nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), , drop = FALSE]

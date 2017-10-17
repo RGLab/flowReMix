@@ -129,7 +129,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     countCovar = list()
     for(i in seq.int(x)){
       coefs = raIsing(mats[[x[i]]], AND = AND, gamma = gamma, family = family,
-                      method = "sparse", cv = cv)
+                      method = "sparse", cv = cv, parallel=FALSE) #otherwise we have a double parallel loop
       countCovar[[i]] = (coefs !=0 * sign(coefs))
     }
     countCovar
