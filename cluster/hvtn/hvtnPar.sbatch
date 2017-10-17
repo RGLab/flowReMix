@@ -12,5 +12,5 @@
 
 module load R
 
-R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" HVTNclusterSAtest50.R
+R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" HVTNclusterSAtest80.R
 
