@@ -28,7 +28,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     minprob <- 1 / nrow(mat)
   }
 
-  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
+  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind,.export = "mat") %dorng% {
     y <- as.vector(mat[, j])
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)

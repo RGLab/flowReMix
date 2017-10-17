@@ -15,6 +15,8 @@
 #' @importFrom viridis plasma
 #' @importFrom igraph graph.adjacency
 #' @import doParallel
+#' @importFrom parallel splitIndices
+#' @importFrom parallel mclapply
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
@@ -99,24 +101,59 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 
   # perc <- 0.1
   # pb <-  progress::progress_bar$new(total = reps);
-  cluster_res = foreach(i = 1:reps) %dorng% {
-    if(!sampleNew) {
-      mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
-    } else {
-      mat <- t(sapply(samples, function(x) x[i, , drop = FALSE]))
-    }
-    colnames(mat) <- subsets
-    coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
-                     method = "sparse", cv = cv)
-    countCovar <- (coefs != 0) * sign(coefs)
-    # if(i / reps > perc & perc < 1) {
-    #   cat(perc * 100, "% ", sep = "")
-    #   perc <- perc + 0.1
-    # }
-    return(countCovar)
+
+    inds = splitIndices(reps,cpus)
+    RNGkind("L'Ecuyer-CMRG")
+    set.seed(seed)
+  if(sampleNew){
+    mats = Reduce(mclapply(inds,function(x){
+      mats=list()
+      for(i in seq.int(x)){
+        mats[[i]]=Reduce(x = Map(samples,f = function(y,j=x[i])y[j,,drop=FALSE]),f= rbind)
+        colnames(mats[[i]])=subsets
+      }
+      mats
+    }),f=c)
+  }else{
+    mats = Reduce(mclapply(inds,function(x){
+      mats=list()
+      for(i in seq.int(x)){
+        mats[[i]]=Reduce(x = Map(samples,f = function(y)y[sample(1:nrow(y),1),,drop=FALSE]),f= rbind)
+        colnames(mats[[i]])=subsets
+      }
+      mats
+    },mc.cores=cpus),f=c)
   }
-  countCovar = Reduce(x = cluster_res, f=`+`)
-  stopImplicitCluster()
+    inds = parallel::splitIndices(reps,cpus)
+  cluster_res = Reduce(mclapply(inds,function(x){
+    countCovar = list()
+    for(i in seq.int(x)){
+      coefs = raIsing(mats[[x[i]]], AND = AND, gamma = gamma, family = family,
+                      method = "sparse", cv = cv)
+      countCovar[[i]] = (coefs !=0 * sign(coefs))
+    }
+    countCovar
+  }, mc.cores=cpus), f = c)
+  countCovar = Reduce(x=cluster_res,f=`+`)
+
+  # cluster_res = foreach(i = 1:reps,.export="samples") %:% {
+  #   if(!sampleNew) {
+  #     mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
+  #   } else {
+  #     mat <- t(sapply(samples, function(x) x[i, , drop = FALSE]))
+  #   }
+  #   colnames(mat) <- subsets
+  #   coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
+  #                    method = "sparse", cv = cv)
+  #   countCovar <- (coefs != 0) * sign(coefs)
+  #   # if(i / reps > perc & perc < 1) {
+  #   #   cat(perc * 100, "% ", sep = "")
+  #   #   perc <- perc + 0.1
+  #   # }
+  #   return(countCovar)
+  # }
+  # countCovar = Reduce(x = cluster_res, f=`+`)
+  # stopImplicitCluster()
 
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
