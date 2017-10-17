@@ -100,15 +100,6 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
 
   nsubsets <- ncol(samples[[1]])
 
-  # if(!sampleNew) {
-  #   matlist <- lapply(1:reps, function(i, samples) t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE])), samples)
-  # } else {
-  #   matlist <- lapply(1:reps, function(i, samples)  t(sapply(samples, function(x) x[i, , drop = FALSE])), samples)
-  # }
-
-  # perc <- 0.1
-  # pb <-  progress::progress_bar$new(total = reps);
-# <<<<<<< HEAD
 
     inds = splitIndices(reps,cpus)
     RNGkind("L'Ecuyer-CMRG")
@@ -131,14 +122,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
       }
       mats
     },mc.cores=cpus),f=c)
-# =======
-#   cluster_res = foreach(mat = matlist) %dorng% {
-#     colnames(mat) <- subsets
-#     coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
-#                      method = "sparse", cv = cv, parallel = FALSE)
-#     countCovar <- (coefs != 0) * sign(coefs)
-#     return(countCovar)
-# >>>>>>> 70f29b580acf25f0a1fd11f2d9e1181ac3ba5cb2
+
   }
     inds = parallel::splitIndices(reps,cpus)
   cluster_res = Reduce(mclapply(inds,function(x){
@@ -152,24 +136,6 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   }, mc.cores=cpus), f = c)
   countCovar = Reduce(x=cluster_res,f=`+`)
 
-  # cluster_res = foreach(i = 1:reps,.export="samples") %:% {
-  #   if(!sampleNew) {
-  #     mat <- t(sapply(samples, function(x) x[sample(1:nrow(x), 1), ,drop=FALSE]))
-  #   } else {
-  #     mat <- t(sapply(samples, function(x) x[i, , drop = FALSE]))
-  #   }
-  #   colnames(mat) <- subsets
-  #   coefs <- raIsing(mat, AND = AND, gamma = gamma, family = family,
-  #                    method = "sparse", cv = cv)
-  #   countCovar <- (coefs != 0) * sign(coefs)
-  #   # if(i / reps > perc & perc < 1) {
-  #   #   cat(perc * 100, "% ", sep = "")
-  #   #   perc <- perc + 0.1
-  #   # }
-  #   return(countCovar)
-  # }
-  # countCovar = Reduce(x = cluster_res, f=`+`)
-  # stopImplicitCluster()
 
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
