@@ -27,8 +27,9 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
 
   if(parallel) {
-  isingmat <- do.call("rbind", mclapply(1:ncol(mat), getNeighborhood, mat, family, off,
-  gamma, weights, cv, method, minprob))
+    isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
+      getNeighborhood(j, mat, family, off, gamma, weights, cv, method, minprob)
+    }
   } else {
     isingmat <- do.call("rbind", lapply(1:ncol(mat), getNeighborhood, mat, family, off,
                                         gamma, weights, cv, method, minprob))

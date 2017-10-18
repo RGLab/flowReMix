@@ -162,7 +162,7 @@ add_ptid <- function(x, subject_id) {
 }
 
 # filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust10_*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_5__*")[3])
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_7__*")[12])
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
@@ -248,14 +248,15 @@ stimparentbox
 
 # Stability Graphs ---------------
 system.time(stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 1, reps = 100))
-saveRDS(stab, file = "data analysis/results/hvtn_stab_5_niter30npost1seed3sa06.rds")
-fit$assignmentList <- NULL
-fit$randomEffectSamp <- NULL
-saveRDS(fit, file = "data analysis/results/hvtn_5_niter30npost1seed3sa06.rds")
-threshold <- .9
-ising <- plot(stab, threshold = threshold, fill = rocResults$auc)
+# saveRDS(stab, file = "data analysis/results/hvtn_stab_5_niter30npost1seed3sa06.rds")
+# fit$assignmentList <- NULL
+# fit$randomEffectSamp <- NULL
+# saveRDS(fit, file = "data analysis/results/hvtn_5_niter30npost1seed3sa06.rds")
+stab <- fit$stabilityGraph
+edges <- 10
+ising <- plot(stab, nEdges = 30, fill = rocResults$auc)
 ising
-ising <- plot(stab, threshold = threshold, fill = infectROC$auc)
+ising <- plot(stab, nEdges = 75, fill = infectROC$auc)
 ising
 
 

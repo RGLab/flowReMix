@@ -72,8 +72,11 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     dispersion <- obj$dispersion
     invcov <- obj$invCovAvg
     mixed <- is.null(obj$isingAvg)
-    MHresult <- foreach(subjectData = mhList) %dorng% {
-      flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
+    inds <- splitIndices(length(mhList), cpus)
+    mhList <- lapply(inds, function(x) mhList[x])
+    MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
+      lapply(sublist, function(subjectData) {
+        flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
                 intSampSize = intSampSize, isingCoefs = isingCoefs,
                 covariance = cov, keepEach = keepEach,
                 MHcoef = MHcoef, betaDispersion = TRUE,
@@ -81,6 +84,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                 iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
                 M = dispersion, invcov = invcov, mixed = mixed,
                 sampleRandom = (type != "ising"))
+      })
     }
     if(type == "ising") {
       samples <- lapply(MHresult, function(x) x$assign)
@@ -89,54 +93,35 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
       samples <- lapply(MHresult, function(x) x$rand)
       family <- "gaussian"
     }
-    names(samples) <- sapply(mhList, function(x) x$pre$id[1])
   }
 
-  names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
-  samples <- lapply(unique(names(samples)), function(x) {
-    do.call("rbind", samples[names(samples) == x])
-  })
+  if(!sampleNew) {
+    names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
+    samples <- lapply(unique(names(samples)), function(x) {
+      do.call("rbind", samples[names(samples) == x])
+    })
+  }
   subsets <- names(obj$coefficients)
-
   nsubsets <- ncol(samples[[1]])
 
-
-    inds = splitIndices(reps,cpus)
-    RNGkind("L'Ecuyer-CMRG")
-    set.seed(seed)
-  if(sampleNew){
-    mats = Reduce(mclapply(inds,function(x){
-      mats=list()
-      for(i in seq.int(x)){
-        mats[[i]]=Reduce(x = Map(samples,f = function(y,j=x[i])y[j,,drop=FALSE]),f= rbind)
-        colnames(mats[[i]])=subsets
-      }
-      mats
-    }),f=c)
-  }else{
-    mats = Reduce(mclapply(inds,function(x){
-      mats=list()
-      for(i in seq.int(x)){
-        mats[[i]]=Reduce(x = Map(samples,f = function(y)y[sample(1:nrow(y),1),,drop=FALSE]),f= rbind)
-        colnames(mats[[i]])=subsets
-      }
-      mats
-    },mc.cores=cpus),f=c)
-
+  if(sampleNew) {
+    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[i, , drop = FALSE])))
+  } else {
+    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[sample.int(nrow(samp), 1), , drop = FALSE])))
   }
-    inds = parallel::splitIndices(reps,cpus)
-  cluster_res = Reduce(mclapply(inds,function(x){
-    countCovar = list()
-    for(i in seq.int(x)){
-      coefs = raIsing(mats[[x[i]]], AND = AND, gamma = gamma, family = family,
-                      method = "sparse", cv = cv, parallel=FALSE) #otherwise we have a double parallel loop
-      countCovar[[i]] = (coefs !=0 * sign(coefs))
-    }
-    countCovar
-  }, mc.cores=cpus), f = c)
-  countCovar = Reduce(x=cluster_res,f=`+`)
 
+  inds = splitIndices(reps, cpus)
+  samples <- lapply(inds, function(x) samples[x])
+  set.seed(seed)
 
+  cluster_res <- foreach(matrices = samples, .combine = c) %dorng% {
+    countCovar <- lapply(matrices, function(mat)
+      raIsing(mat, AND = AND, gamma = gamma, family = family,
+              method = "sparse", cv = cv, parallel = FALSE) != 0)
+    return(countCovar)
+  }
+
+  countCovar <- Reduce(cluster_res, f = "+") / reps
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
   rownames(props) <- colnames(props)

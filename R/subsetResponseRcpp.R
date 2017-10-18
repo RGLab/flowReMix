@@ -399,6 +399,7 @@ flowReMix <- function(formula,
       }
     }
   } else {
+    ncores <- 1
     registerDoSEQ()
     if(!is.null(control$seed)){
       set.seed(control$seed)
@@ -885,15 +886,18 @@ flowReMix <- function(formula,
                                                       pre = preAssignment[[i]],
                                                       rand = estimatedRandomEffects[i, ],
                                                       index = i), keepcols)
+    inds <- splitIndices(length(listForMH), ncores)
+    listForMH <- lapply(inds, function(x) listForMH[x])
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
-    MHresult <- foreach(subjectData = listForMH) %dorng% {
+    MHresult <- foreach(sublist = listForMH, .combine = c) %dorng% {
+      lapply(sublist, function(subjectData) {
       flowSstep(subjectData, nsamp, nSubsets, intSampSize,
                 isingCoefs, covariance, keepEach, MHcoef,
                 betaDispersion, randomAssignProb, modelprobs,
                 iterAssignCoef, prior, zeroPosteriorProbs,
                 M, invcov, mixed, sampleRandom = TRUE,
-                doNotSample = doNotSampleSubset)
+                doNotSample = doNotSampleSubset)})
     }
     # print(mem_used()) #### MEMORY CHECK
 
