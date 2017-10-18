@@ -146,23 +146,11 @@ preAssign <- do.call("rbind", preAssign)
 #                  verbose = TRUE, control = control)
 
 
-# Post-hoc assignment -------------------
-# subjects <- unique(preAssign$ptid)
-# for(i in 1:length(subjects)) {
-#   row <- which(fit$posteriors$ptid == subjects[i])
-#   assign <- subset(preAssign, ptid == subjects[i])
-#   matching <- match(colnames(fit$posteriors[, -1]), assign[, 2])
-#   index <- which(assign[matching, 3] == 0) + 1
-#   fit$posteriors[row, index] <- fit$posteriors[row, index] / 100
-# }
-
-add_ptid <- function(x, subject_id) {
-  x$subject_id <- match.call()$subject_id
-  return(x)
-}
-
-# filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust10_*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_7__*")[12])
+# Loading files -------------------
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_8__*"))
+select1 <- sapply(filenames, function(x) length(grep("prior1", x) > 0)) == 1
+select2 <- sapply(filenames, function(x) length(grep("niter60", x) > 0)) == 1
+filenames <- filenames[select1 & select2]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
@@ -172,6 +160,8 @@ for(i in 1:length(filenames)) {
 post <- Reduce("+", post) / length(filenames)
 fit$data <- subsetDat
 fit$posteriors[, -1] <- post
+print(filenames)
+hist(colMeans(fit$posteriors[, -1]))
 
 # ROC plots -----------------------------
 require(pROC)
@@ -186,10 +176,7 @@ hiv[vaccine == 0] <- NA
 infectROC <- summary(fit, type = "ROC",
                      target = hiv, direction = ">", adjust = "BH",
                      sortAUC = FALSE)
-level <- .999
-post <- fit$posteriors[, -1]
-nresponders <- t(apply(post, 2, function(x) cumsum(sort(1 - x))))
-select <- nresponders[, 1] < level
+select <- infectROC$responseProb > 0.01
 infectROC$qvalue[!select] <- NA
 infectROC$qvalue[select] <- p.adjust(infectROC$pvalue[select], method = "BH")
 infectROC[order(infectROC$auc, decreasing = TRUE), ]
@@ -247,7 +234,7 @@ stimparentbox
 
 
 # Stability Graphs ---------------
-system.time(stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 1, reps = 100))
+# system.time(stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 1, reps = 100))
 # saveRDS(stab, file = "data analysis/results/hvtn_stab_5_niter30npost1seed3sa06.rds")
 # fit$assignmentList <- NULL
 # fit$randomEffectSamp <- NULL

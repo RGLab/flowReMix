@@ -9,7 +9,7 @@ flowReMix(formula, subject_id, cell_type = NULL, cluster_variable,
   covariance = c("sparse", "dense", "diagonal"), ising_model = c("sparse",
   "dense", "none"), regression_method = c("betabinom", "binom", "sparse",
   "robust"), iterations = 10, parallel = TRUE, verbose = TRUE,
-  control = NULL, keepSamples = TRUE)
+  control = NULL, keepSamples = TRUE, newSampler = FALSE)
 }
 \arguments{
 \item{formula}{an object of class \code{\link[stats]{formula}}. The response

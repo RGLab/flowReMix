@@ -8,9 +8,9 @@
 #SBATCH -e err/flowout_%j.out
 #SBATCH --mail-type=ALL       # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=amitmeir@uw.edu # Email to which notifications will be sent
-#SBATCH --array=2-32
+#SBATCH --array=1-120
 
 module load R
 
-R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" HVTNclusterTest.R
+R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" HVTNclusterSA4.R
 

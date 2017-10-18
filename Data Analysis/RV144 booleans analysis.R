@@ -76,23 +76,23 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 # Analysis -------------
 library(flowReMix)
 prior <- 0
-npost <- 3
-niter <- 50
-seed <- 235
-lastSample <- 100
+npost <- 1
+niter <- 30
+seed <- 2
+lastSample <- NULL
 cpus <- 2
-zeroPosteriorProbs <- TRUE
-control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
-                             keepEach = 5, isingWprior = TRUE, zeroPosteriorProbs = TRUE,
+control <- flowReMix_control(updateLag = 10, nsamp = 100, initMHcoef = 1,
+                             keepEach = 10, isingWprior = FALSE, zeroPosteriorProbs = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = cpus,
-                             markovChainEM = FALSE,
+                             markovChainEM = TRUE,
                              seed = seed, prior = 0, lastSample = lastSample,
-                             preAssignCoefs = 0, sampleNew = TRUE,
+                             preAssignCoefs = 1, sampleNew = FALSE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
-                             isingStabilityReps = 200, randStabilityReps = 20)
+                             isingStabilityReps = 0, randStabilityReps = 0,
+                             isingInit = -7)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -106,33 +106,33 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              regression_method = "robust",
                              iterations =  niter,
                              cluster_assignment = preAssignment,
-                             parallel = TRUE, keepSamples = FALSE,
-                             verbose = TRUE, control = control))
+                             parallel = TRUE, keepSamples = TRUE,
+                             verbose = TRUE, control = control,
+                             newSampler = TRUE))
 # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")
 
-add_ptid <- function(x, subject_id) {
-  x$subject_id <- match.call()$subject_id
-  return(x)
-}
+# add_ptid <- function(x, subject_id) {
+#   x$subject_id <- match.call()$subject_id
+#   return(x)
+# }
+#
+# filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
+# filenames <- c(filenames, filenames2)
+# filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
+# post <- list()
+# postList <- list()
+# for(i in 1:length(filenames)) {
+#   load(file = filenames[[i]])
+#   post[[i]] <- fit$posteriors[, -1]
+#   postList[[i]] <- fit$posteriors[, -1]
+# }
+# post <- Reduce("+", post) / length(filenames)
+# fit$data <- booldata
+# fit <- add_ptid(fit, ptid)
+# fit$posteriors[, -1] <- post
+# fit$data <- booldata
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
-filenames <- c(filenames, filenames2)
-filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
-post <- list()
-postList <- list()
-for(i in 1:length(filenames)) {
-  load(file = filenames[[i]])
-  post[[i]] <- fit$posteriors[, -1]
-  postList[[i]] <- fit$posteriors[, -1]
-}
-post <- Reduce("+", post) / length(filenames)
-fit$data <- booldata
-fit <- add_ptid(fit, ptid)
-fit$posteriors[, -1] <- post
-
-
-fit$data <- booldata
 # Plots -------------
 scatter <- plot(fit, type = "scatter", target = vaccine)
 rocplot <- plot(fit, type = "ROC", target = vaccine, direction = "<")
@@ -182,46 +182,9 @@ infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
                        gamma = 0.25, AND = TRUE)
-plot(stab, threshold = 0.9, fill = infectResults$auc)
+plot(stab, threshold = 0.85, fill = infectResults$auc)
 # save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
-threshold <- 0.85
-load(file = "data analysis/results/rv144_15_niter30npost2_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_15_niter45npost2_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_15_niter60npost2_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_15_niter45npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_15_niter60npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = threshold, seed = 1)
-load(file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.9, seed = 1)
-load(file = "data analysis/results/rv144_16_niter30npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-load(file = "data analysis/results/rv144_16_niter30npost6_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.82, seed = 1)
-load(file = "data analysis/results/rv144_16_niter60npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-
-load(file = "data analysis/results/rv144_18_niter50npost2_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-load(file = "data analysis/results/rv144_18_niter50npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-load(file = "data analysis/results/rv144_18_niter50npost6_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-load(file = "data analysis/results/rv144_18_niter100npost2_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.92, seed = 1)
-load(file = "data analysis/results/rv144_18_niter100npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.92, seed = 1)
-load(file = "data analysis/results/rv144_18_niter100npost6_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-load(file = "data analysis/results/rv144_18_niter200npost2_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-load(file = "data analysis/results/rv144_18_niter200npost4_stab.Robj")
-plot(stab, fill = rocResults$auc, threshold = 0.85, seed = 1)
-
 
 
 #######################
