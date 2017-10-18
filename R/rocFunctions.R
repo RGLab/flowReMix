@@ -1,6 +1,6 @@
 #' @import ggplot2
 #' @import dplyr
-plotROC <- function(obj, target, direction = ">",
+plotROC <- function(obj, target, direction = "auto",
                     ncols = 5,
                     thresholdPalette = NULL,
                     subsets = NULL, varname = NULL) {
@@ -23,7 +23,7 @@ plotROC <- function(obj, target, direction = ">",
   plotList <- list()
   aucs <- numeric(p)
   for(i in 1:p) {
-    rocfit <- pROC::roc(target ~ I(1-post[, i]), smooth = FALSE,
+    rocfit <- pROC::roc(target ~ post[, i], smooth = FALSE,
                         direction = direction)
     aucs[i] <- rocfit$auc
     fpr <-  1 - rocfit$specificities
@@ -46,7 +46,7 @@ plotROC <- function(obj, target, direction = ">",
   plotdat <- plotdat[order(plotdat$threshold, decreasing = TRUE), ]
    # ggplot(subset(plotdat, plotdat$subset == unique(plotdat$subset)[[4]])) +
   figure <- ggplot(plotdat) +
-    geom_step(aes(x = fpr, y = sens, col = 1-threshold)) +
+    geom_step(aes(x = fpr, y = sens, col = threshold)) +
     facet_wrap(~ subset, ncol = ncols) + theme_bw() +
     xlab("False Positive Rate") + ylab("True Positive Rate") +
     geom_abline(intercept = 0, slope = 1, linetype = 2, colour = "grey") +
@@ -81,7 +81,7 @@ rocTable <- function(obj, target, direction = "auto", adjust = "BH",
   p <- ncol(post)
   aucs <- numeric(p)
   for(i in 1:p) {
-    rocfit <- pROC::roc(target ~ post[, i],direction=direction)
+    rocfit <- pROC::roc(target ~ post[, i])
     aucs[i] <- rocfit$auc
   }
   n0 <- sum(target == uniqVals[1])
