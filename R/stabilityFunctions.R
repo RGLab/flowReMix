@@ -121,7 +121,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     return(countCovar)
   }
 
-  countCovar <- Reduce(cluster_res, f = "+") / reps
+  countCovar <- Reduce(cluster_res, f = "+")
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
   rownames(props) <- colnames(props)

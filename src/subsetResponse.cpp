@@ -17,6 +17,19 @@ double unifZeroOne() {
   return rand() / (RAND_MAX + 1.) ;
 }
 
+void copyVec(NumericVector from, NumericVector to) {
+  for(int i = 0 ; i < from.length() ; i++) {
+    to[i] = from[i] ;
+  }
+}
+
+void copyVec(IntegerVector from, IntegerVector to) {
+  for(int i = 0 ; i < from.length() ; i++) {
+    to[i] = from[i] ;
+  }
+}
+
+
 NumericVector logit(NumericVector p) {
   NumericVector result = log(p / (1.0 - p)) ;
   return result ;
@@ -237,10 +250,13 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       }
     }
     if((m % keepEach) == 0) {
-      assignmentMatrix(assignNum++, _) = assignment ;
+      for(int i = 0 ; i < assignment.length() ; i ++ ){
+        assignmentMatrix(assignNum, i) = assignment[i] ;
+      }
+      assignNum++ ;
     }
   }
-  // Rcpp::Rcout<<"\n" ;
+
 
   return assignmentMatrix;
 }
@@ -340,10 +356,126 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
     }
 
     if((m % keepEach) == 0) {
-      sampleMatrix(assignNum++, _) = randomEst ;
+      for(int i = 0 ; i < randomEst.length() ; i ++ ){
+        sampleMatrix(assignNum, i) = randomEst[i] ;
+      }
+      assignNum++ ;
     }
   }
 
   return sampleMatrix ;
 }
+
+// [[Rcpp::export]]
+void newMHsampler(NumericMatrix assign, NumericMatrix random,
+                  NumericVector initAssign, NumericVector initRand,
+                  NumericVector y, NumericVector N,
+                  int keepEach, double prior,
+                  NumericMatrix isingCoefs,
+                  IntegerVector preAssignment,
+                  NumericMatrix invcov, NumericVector condvar,
+                  NumericVector dispersion,
+                  NumericVector nullEta, NumericVector altEta,
+                  IntegerVector popInd,
+                  NumericVector MHattempts, NumericVector MHsuccess,
+                  NumericVector MHcoef) {
+  NumericVector cAssign = clone(initAssign) ;
+  NumericVector cRand = clone(initRand) ;
+  NumericVector eta ;
+  NumericVector subsetN, subsetCount ;
+  double sconst;
+
+  int nSubsets = assign.ncol() ;
+  int row = 0 ;
+  int iteration = 0 ;
+  int zProposal ;
+  int prevAssign ;
+  double isingProb, isingOffset ;
+  double randProposal ;
+  double proposalDensity, prevDensity, MHratio ;
+  double condMean ;
+
+  while(row < assign.nrow()) {
+    iteration++ ;
+    for(int i = 0 ; i < nSubsets ; i++) {
+      if((preAssignment[i] != -1) & (prior > 1000)) {
+        cAssign[i] = preAssignment[i] ;
+        continue ;
+      }else if(preAssignment[i] == 0 ) {
+        isingOffset = -prior ;
+      } else if(preAssignment[i] == 1) {
+        isingOffset = prior ;
+      } else {
+        isingOffset = 0 ;
+      }
+      sconst = std::max(MHcoef[i], 1.0) ;
+
+      // Getting relevant quantities
+      subsetN = N[popInd == (i + 1)];
+      subsetCount = y[popInd == (i + 1)] ;
+
+      // Sampling assignment
+      prevAssign = cAssign[i] ;
+      cAssign[i] = 1 ;
+      isingProb = expit(sum(isingCoefs(i, _) * cAssign) + isingOffset) ;
+      cAssign[i] = prevAssign ;
+      zProposal = R::rbinom(1, isingProb) ;
+
+
+      // Sampling random effect
+      condMean = computeConditionalMean(i, condvar, invcov, cRand) ;
+      randProposal = R::rnorm(condMean, sconst * std::sqrt(condvar[i])) ;
+
+      // Computing MH ratio
+      if(zProposal < 0.5) {
+        eta = nullEta[popInd == (i + 1)] ;
+      } else {
+        eta = altEta[popInd == (i + 1)] ;
+      }
+      proposalDensity = binomDensityForMH(subsetCount, subsetN, eta, randProposal, dispersion[i], true) ;
+      proposalDensity -= R::dnorm(randProposal, condMean, sconst * std::sqrt(condvar[i]), 1) ;
+      proposalDensity += R::dnorm(randProposal, condMean, std::sqrt(condvar[i]), 1) ;
+
+      if(cAssign[i] <  0.5) {
+        eta = nullEta[popInd == (i + 1)] ;
+      } else {
+        eta = altEta[popInd == (i + 1)] ;
+      }
+      prevDensity = binomDensityForMH(subsetCount, subsetN, eta, cRand[i], dispersion[i], true) ;
+      prevDensity -= R::dnorm(cRand[i], condMean, sconst * std::sqrt(condvar[i]), 1) ;
+      prevDensity += R::dnorm(cRand[i], condMean, std::sqrt(condvar[i]), 1) ;
+
+      MHratio = std::exp(proposalDensity - prevDensity) ;
+
+      // Rejecting/accepting
+      MHattempts[i] += 1 ;
+      if(runif(1)[0] < MHratio) {
+        MHsuccess[i] += 1 ;
+        cAssign[i] = zProposal;
+        cRand[i] = randProposal ;
+      }
+    }
+
+    if(iteration % keepEach == 0) {
+      //Rcpp::Rcout<<cAssign[0]<<" "<<cRand[0]<<"\n" ;
+      for(int i = 0 ; i < cAssign.length() ; i ++ ){
+        assign(row, i) = cAssign[i] ;
+        random(row, i) = cRand[i] ;
+      }
+      row++ ;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 

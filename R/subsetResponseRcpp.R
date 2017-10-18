@@ -326,7 +326,8 @@ flowReMix <- function(formula,
                       ising_model = c("sparse", "dense", "none"),
                       regression_method = c("betabinom", "binom", "sparse", "robust"),
                       iterations = 10, parallel = TRUE, verbose = TRUE,
-                      control = NULL, keepSamples = TRUE) {
+                      control = NULL, keepSamples = TRUE,
+                      newSampler = FALSE) {
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()
@@ -882,22 +883,49 @@ flowReMix <- function(formula,
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
 
-    listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
-                                                      pre = preAssignment[[i]],
-                                                      rand = estimatedRandomEffects[i, ],
-                                                      index = i), keepcols)
+    if(!newSampler) {
+      listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
+                                                                  pre = preAssignment[[i]],
+                                                                  rand = estimatedRandomEffects[i, ],
+                                                                  index = i), keepcols)
+    } else {
+      listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
+                                                                  pre = preAssignment[[i]],
+                                                                  rand = estimatedRandomEffects[i, ],
+                                                                  assign = clusterAssignments[i, ],
+                                                                  index = i), keepcols)
+
+    }
+
+    if(newSampler & iter == 1) {
+      settingNsamp <- nsamp
+      nsamp <- 2 * nsamp
+    } else if(newSampler & iter == 2) {
+      nsamp <- settingNsamp
+    }
+
     inds <- splitIndices(length(listForMH), ncores)
     listForMH <- lapply(inds, function(x) listForMH[x])
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
     MHresult <- foreach(sublist = listForMH, .combine = c) %dorng% {
       lapply(sublist, function(subjectData) {
-      flowSstep(subjectData, nsamp, nSubsets, intSampSize,
-                isingCoefs, covariance, keepEach, MHcoef,
-                betaDispersion, randomAssignProb, modelprobs,
-                iterAssignCoef, prior, zeroPosteriorProbs,
-                M, invcov, mixed, sampleRandom = TRUE,
-                doNotSample = doNotSampleSubset)})
+        if(!newSampler) {
+          flowSstep(subjectData, nsamp, nSubsets, intSampSize,
+                    isingCoefs, covariance, keepEach, MHcoef,
+                    betaDispersion, randomAssignProb, modelprobs,
+                    iterAssignCoef, prior, zeroPosteriorProbs,
+                    M, invcov, mixed, sampleRandom = TRUE,
+                    doNotSample = doNotSampleSubset)
+        } else {
+          newSstep(subjectData, nsamp, nSubsets, intSampSize,
+                    isingCoefs, covariance, keepEach, MHcoef,
+                    betaDispersion, randomAssignProb, modelprobs,
+                    iterAssignCoef, prior, zeroPosteriorProbs,
+                    M, invcov, mixed, sampleRandom = TRUE,
+                    doNotSample = doNotSampleSubset)
+        }
+      })
     }
     # print(mem_used()) #### MEMORY CHECK
 
@@ -1084,18 +1112,28 @@ flowReMix <- function(formula,
 
     # Updating MH coefficient ----------------
     ratevec <- numeric(nSubsets)
+    if(newSampler) {
+      targetRate <- max(min(2 / keepEach, 0.4), 0.234)
+    } else {
+      targetRate <- 0.234
+    }
+
     for(j in 1:nSubsets) {
       MHrate <- MHrates[j]
       ratevec[j] <- MHrate
-      if(MHrate > .285) {
+      if(MHrate > targetRate + 0.05) {
         MHcoef[j] <- MHcoef[j] * 1.5
-      } else if(MHrate > 0.234) {
+      } else if(MHrate > targetRate) {
         MHcoef[j] <- MHcoef[j] * 1.1
-      } else if(MHrate < .185) {
+      } else if(MHrate < targetRate - 0.05) {
         MHcoef[j] <- MHcoef[j] * .5
       } else {
         MHcoef[j] <- MHcoef[j] * .90
       }
+    }
+
+    if(newSampler) {
+      MHcoef <- pmax(MHcoef, 1)
     }
 
     if(verbose) {
@@ -1130,7 +1168,7 @@ flowReMix <- function(formula,
 
   # Preparing flowReMix object --------------------
   result <- list()
-  result$modelFrame <- dat
+  # result$modelFrame <- dat
   result$coefficients <- coefficientsOut
   names(result$coefficients) <- popnames
   result$covariance <- covariance
@@ -1256,6 +1294,37 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
     randomMat <- NULL
   }
   return(list(assign = assignmentMat, rand = randomMat,
+              rate = MHsuccess / MHattempts))
+}
+
+newSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
+                     isingCoefs, covariance, keepEach, MHcoef,
+                     betaDispersion, randomAssignProb, modelprobs,
+                     iterAssignCoef, prior, zeroPosteriorProbs,
+                     M, invcov, mixed, sampleRandom = TRUE,
+                     doNotSample = NULL) {
+  condvar <- 1 / diag(invcov)
+  popInd <- subjectData$dat$subpopInd
+  N <- subjectData$dat$N
+  y <- subjectData$dat$y
+
+  initAssign <- as.vector(subjectData$assign)
+  initRand <- as.numeric(subjectData$rand)
+
+  MHattempts <- rep(0, nSubsets)
+  MHsuccess <- rep(0, nSubsets)
+
+  assign <- matrix(7, nrow = ceiling(nsamp / keepEach), ncol = nSubsets)
+  random <- matrix(7, nrow = ceiling(nsamp / keepEach), ncol = nSubsets)
+  newMHsampler(assign, random, initAssign, initRand,
+               y, N, keepEach, prior, isingCoefs,
+               as.integer(subjectData$pre$assign),
+               invcov, condvar, M,
+               subjectData$dat$nullEta, subjectData$dat$altEta,
+               as.integer(popInd),
+               MHattempts, MHsuccess, MHcoef)
+
+  return(list(assign = assign, rand = random,
               rate = MHsuccess / MHattempts))
 }
 
