@@ -117,7 +117,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   cluster_res <- foreach(matrices = samples, .combine = c) %dorng% {
     countCovar <- lapply(matrices, function(mat)
       raIsing(mat, AND = AND, gamma = gamma, family = family,
-              method = "sparse", cv = cv, parallel = FALSE))
+              method = "sparse", cv = cv, parallel = FALSE) != 0)
     return(countCovar)
   }
 

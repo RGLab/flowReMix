@@ -1,4 +1,4 @@
-cpus <- 14
+cpus <- 7
 print(cpus)
 
 args <- commandArgs(TRUE)
@@ -117,23 +117,35 @@ subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
 configurations <- expand.grid(niter = c(30, 60),
-                              seed = 1:30)
+                              seed = 1:10,
+                              prior = c(0, 2, 4),
+                              method = c("SA", "MC"))
 config <- configurations[setting, ]
 niter <- config[[1]]
 seed <- config[[2]]
-npost <- 3
+prior <- config[[3]]
+method <- config[[4]]
+if(method == "MC") {
+  npost <- 3
+  lag <- round(niter / 2)
+  keepeach <- 5
+} else {
+  lag <- 5
+  npost <- 1
+  keepeach <- 10
+}
 
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 50,
-                             keepEach = 10, initMHcoef = 2.5,
+control <- flowReMix_control(updateLag = lag, nsamp = 50,
+                             keepEach = keepeach, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 100,
                              isingInit = -log(99),
                              seed = seed,
                              ncores = cpus, preAssignCoefs = 1,
-                             prior = 1, isingWprior = FALSE,
+                             prior = prior, isingWprior = FALSE,
                              markovChainEM = TRUE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = 0.9)
@@ -155,7 +167,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_7_niter", niter, "npost", npost, "seed", seed, "SA06.rds", sep = "")
+file <- paste("results/hvtn_7_niter", niter, "npost", npost, "seed", seed, "prior", prior, method, ".rds", sep = "")
 saveRDS(object = fit, file = file)
 stab <- stabilityGraph(fit, type = "ising", cpus = cpus, AND = TRUE,
                        gamma = 0.25, reps = 200, cv = FALSE)

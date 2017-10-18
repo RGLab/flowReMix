@@ -162,7 +162,7 @@ add_ptid <- function(x, subject_id) {
 }
 
 # filenames <- as.list(dir(path = 'data analysis/results', pattern="HVTNclust10_*"))
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_6__*")[10])
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_7__*")[12])
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
@@ -252,9 +252,9 @@ system.time(stab <- stabilityGraph(fit, type = "ising", gamma = 0.25, cpus = 1, 
 # fit$assignmentList <- NULL
 # fit$randomEffectSamp <- NULL
 # saveRDS(fit, file = "data analysis/results/hvtn_5_niter30npost1seed3sa06.rds")
-stab <- readRDS(file = "data analysis/results/hvtn_stab_6_niter50npost1seed1SAtest.rds")
+stab <- fit$stabilityGraph
 edges <- 10
-ising <- plot(stab, nEdges = 65, fill = rocResults$auc)
+ising <- plot(stab, nEdges = 30, fill = rocResults$auc)
 ising
 ising <- plot(stab, nEdges = 75, fill = infectROC$auc)
 ising

@@ -67,7 +67,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo random.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed indepdent.Robj")
 
-system.time(stab <- stabilityGraph(fit, sampleNew = FALSE, reps = 10, cpus = 2))
+system.time(stab <- stabilityGraph(fit, sampleNew = FALSE, reps = 100, cpus = 2))
 system.time(stab <- stabilityGraph(fit, sampleNew = TRUE, reps = 10))
 
 # Scatter plots -----------------
