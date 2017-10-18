@@ -1,6 +1,6 @@
 #' @import ggplot2
 #' @import dplyr
-plotROC <- function(obj, target, direction = "<",
+plotROC <- function(obj, target, direction = ">",
                     ncols = 5,
                     thresholdPalette = NULL,
                     subsets = NULL, varname = NULL) {
@@ -56,7 +56,7 @@ plotROC <- function(obj, target, direction = "<",
   return(figure)
 }
 
-rocTable <- function(obj, target, direction = "<", adjust = "BH",
+rocTable <- function(obj, target, direction = "auto", adjust = "BH",
                      pvalue = c("wilcoxon", "logistic", "ttest"),
                      sortAUC = FALSE, ...) {
   mc = match.call()
@@ -81,7 +81,7 @@ rocTable <- function(obj, target, direction = "<", adjust = "BH",
   p <- ncol(post)
   aucs <- numeric(p)
   for(i in 1:p) {
-    rocfit <- pROC::roc(target ~ I(1-post[, i]),direction=direction)
+    rocfit <- pROC::roc(target ~ post[, i],direction=direction)
     aucs[i] <- rocfit$auc
   }
   n0 <- sum(target == uniqVals[1])
