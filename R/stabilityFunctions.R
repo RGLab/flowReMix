@@ -342,7 +342,6 @@ plot.flowReMix_stability <- function(x, ...){
 getGraphComponents <- function(obj, threshold = 0.5,
                                minsize = 2, groupNames = NULL) {
   # Finding groups -------------
-  reqiureNamespace(igraph)
   network <- obj$network
   network[abs(network) < threshold] <- 0
   network[network != 0] <- 1
