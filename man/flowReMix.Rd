@@ -5,11 +5,11 @@
 \title{Fitting a Mixture of Mixed Effect Models for Binomial Data}
 \usage{
 flowReMix(formula, subject_id, cell_type = NULL, cluster_variable,
-  data = parent.frame(), cluster_assignment = NULL, weights = NULL,
+  data = parent.frame(), cluster_assignment = TRUE, weights = NULL,
   covariance = c("sparse", "dense", "diagonal"), ising_model = c("sparse",
   "dense", "none"), regression_method = c("betabinom", "binom", "sparse",
-  "robust"), iterations = 10, parallel = TRUE, verbose = TRUE,
-  control = NULL, keepSamples = TRUE, newSampler = FALSE)
+  "robust"), iterations = 80, parallel = TRUE, verbose = FALSE,
+  control = NULL, keepSamples = FALSE, newSampler = FALSE)
 }
 \arguments{
 \item{formula}{an object of class \code{\link[stats]{formula}}. The response

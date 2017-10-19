@@ -94,8 +94,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // newMHsampler
-void newMHsampler(NumericMatrix assign, NumericMatrix random, NumericVector initAssign, NumericVector initRand, NumericVector y, NumericVector N, int keepEach, double prior, NumericMatrix isingCoefs, IntegerVector preAssignment, NumericMatrix invcov, NumericVector condvar, NumericVector dispersion, NumericVector nullEta, NumericVector altEta, IntegerVector popInd, NumericVector MHattempts, NumericVector MHsuccess, NumericVector MHcoef);
-RcppExport SEXP _flowReMix_newMHsampler(SEXP assignSEXP, SEXP randomSEXP, SEXP initAssignSEXP, SEXP initRandSEXP, SEXP ySEXP, SEXP NSEXP, SEXP keepEachSEXP, SEXP priorSEXP, SEXP isingCoefsSEXP, SEXP preAssignmentSEXP, SEXP invcovSEXP, SEXP condvarSEXP, SEXP dispersionSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP popIndSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP MHcoefSEXP) {
+void newMHsampler(NumericMatrix assign, NumericMatrix random, NumericVector initAssign, NumericVector initRand, NumericVector y, NumericVector N, int keepEach, double prior, NumericMatrix isingCoefs, IntegerVector preAssignment, NumericMatrix invcov, NumericMatrix covariance, NumericVector condvar, NumericVector dispersion, NumericVector nullEta, NumericVector altEta, IntegerVector popInd, NumericVector MHattempts, NumericVector MHsuccess, NumericVector MHcoef);
+RcppExport SEXP _flowReMix_newMHsampler(SEXP assignSEXP, SEXP randomSEXP, SEXP initAssignSEXP, SEXP initRandSEXP, SEXP ySEXP, SEXP NSEXP, SEXP keepEachSEXP, SEXP priorSEXP, SEXP isingCoefsSEXP, SEXP preAssignmentSEXP, SEXP invcovSEXP, SEXP covarianceSEXP, SEXP condvarSEXP, SEXP dispersionSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP popIndSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP MHcoefSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type assign(assignSEXP);
@@ -109,6 +109,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericMatrix >::type isingCoefs(isingCoefsSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type preAssignment(preAssignmentSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type invcov(invcovSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type covariance(covarianceSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type condvar(condvarSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type nullEta(nullEtaSEXP);
@@ -117,7 +118,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type MHattempts(MHattemptsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHsuccess(MHsuccessSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHcoef(MHcoefSEXP);
-    newMHsampler(assign, random, initAssign, initRand, y, N, keepEach, prior, isingCoefs, preAssignment, invcov, condvar, dispersion, nullEta, altEta, popInd, MHattempts, MHsuccess, MHcoef);
+    newMHsampler(assign, random, initAssign, initRand, y, N, keepEach, prior, isingCoefs, preAssignment, invcov, covariance, condvar, dispersion, nullEta, altEta, popInd, MHattempts, MHsuccess, MHcoef);
     return R_NilValue;
 END_RCPP
 }
@@ -127,7 +128,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_flowReMix_setNumericVectorToZero", (DL_FUNC) &_flowReMix_setNumericVectorToZero, 1},
     {"_flowReMix_subsetAssignGibbs", (DL_FUNC) &_flowReMix_subsetAssignGibbs, 24},
     {"_flowReMix_simRandomEffectCoordinateMH", (DL_FUNC) &_flowReMix_simRandomEffectCoordinateMH, 19},
-    {"_flowReMix_newMHsampler", (DL_FUNC) &_flowReMix_newMHsampler, 19},
+    {"_flowReMix_newMHsampler", (DL_FUNC) &_flowReMix_newMHsampler, 20},
     {NULL, NULL, 0}
 };
 
