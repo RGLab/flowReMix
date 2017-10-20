@@ -81,8 +81,8 @@ niter <- 30
 seed <- 2
 lastSample <- NULL
 cpus <- 2
-control <- flowReMix_control(updateLag = 10, nsamp = 100, initMHcoef = 1,
-                             keepEach = 10, isingWprior = FALSE, zeroPosteriorProbs = FALSE,
+control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
+                             keepEach = 5, isingWprior = FALSE, zeroPosteriorProbs = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -182,7 +182,7 @@ infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
                        gamma = 0.25, AND = TRUE)
-plot(stab, threshold = 0.85, fill = infectResults$auc)
+plot(stab, threshold = .85, fill = infectResults$auc)
 # save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
 

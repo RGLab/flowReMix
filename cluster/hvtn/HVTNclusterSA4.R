@@ -116,23 +116,23 @@ keep <- names(keep[sapply(keep, function(x) x)])
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
-configurations <- expand.grid(niter = c(30, 60),
-                              seed = 1:10,
-                              prior = c(0, 2),
-                              method = c("LS", "SA", "MC"))
+configurations <- expand.grid(method = c("SA", "MC"),
+                              seed = 1:50,
+                              prior = c(0),
+                              niter = c(35, 70))
 config <- configurations[setting, ]
-niter <- config[[1]]
-seed <- config[[2]]
-prior <- config[[3]]
-method <- config[[4]]
+niter <- config[["niter"]]
+seed <- config[["seed"]]
+prior <- config[["prior"]]
+method <- config[["method"]]
 if(method == "MC") {
-  npost <- 1
+  npost <- 2
   lag <- round(niter / 2)
   keepeach <- 5
   mcEM <- TRUE
 } else if(method == "SA") {
   npost <- 1
-  lag <- 5
+  lag <- 8
   keepeach <- 10
   mcEM <- FALSE
 } else if(method == "LS") {
@@ -149,10 +149,9 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 100,
-                             isingInit = -log(99),
-                             seed = seed,
+                             seed = seed, zeroPosteriorProbs = FALSE,
                              ncores = cpus, preAssignCoefs = 1,
-                             prior = prior, isingWprior = FALSE,
+                             prior = prior, isingWprior = TRUE,
                              markovChainEM = mcEM,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = 0.9)
@@ -174,13 +173,14 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = preAssign,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_9_niter", niter, "npost", npost, "seed", seed, "prior", prior, method, ".rds", sep = "")
+file <- paste("results/hvtn_12_niter", niter, "npost", npost, "seed", seed, "prior", prior, method, ".rds", sep = "")
 saveRDS(object = fit, file = file)
 stab <- stabilityGraph(fit, type = "ising", cpus = cpus, AND = TRUE,
                        gamma = 0.25, reps = 200, cv = FALSE)
 fit$stabilityGraph <- stab
 fit$randomEffectSamp <- NULL
 fit$assignmentList <- NULL
+fit$data <- NULL
 saveRDS(object = fit, file = file)
 
 

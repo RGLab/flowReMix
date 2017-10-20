@@ -1146,7 +1146,7 @@ flowReMix <- function(formula,
     if(verbose) {
       print(round(c(iter, levelP = levelProbs), 3))
       if(betaDispersion) print(c(M = M))
-      print(round(rbind(MH = MHcoef, ratevec = ratevec), 3))
+      print(round(rbind(MH = MHcoef, ratevec = ratevec, var = diag(covariance)), 3))
     }
   }
 
