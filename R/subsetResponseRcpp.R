@@ -360,6 +360,17 @@ flowReMix <- function(formula,
   sampleNew = as.logical(control$sampleNew)
   subsetDiscardThreshold <- control$subsetDiscardThreshold
 
+  subjid = as.character(substitute(subject_id))
+  ctype  = as.character(substitute(cell_type))
+  S1 = try(dataReplicates*nlevels(factor(get(x=subjid,pos=data))), silent=TRUE)
+  S2 = try(nlevels(factor(get(x=ctype,pos=data))),silent=TRUE)
+  if(inherits(S1,"try-error")|inherits(S2,"try-error")){
+    stop(paste0("Failed to find ",subjid," or ",ctype," in data"), call. = FALSE)
+  }
+  if(S1 <= S2){
+    stop(paste0("nPosteriors * nSubjects should be greater than nSubsets. \n nPosteriors * nsubjects = ",S1,"\n nsubsets = ",S2,"\n Try increasing nPosteriors,  currently: ",dataReplicates,"\n"), call. = FALSE)
+  }
+
   if(markovChainEM) {
     saveSamples <- keepSamples
   } else {
