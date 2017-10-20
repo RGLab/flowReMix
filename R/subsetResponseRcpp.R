@@ -1143,10 +1143,6 @@ flowReMix <- function(formula,
       }
     }
 
-    if(newSampler) {
-      MHcoef <- pmax(MHcoef, 1)
-    }
-
     if(verbose) {
       print(round(c(iter, levelP = levelProbs), 3))
       if(betaDispersion) print(c(M = M))
@@ -1330,7 +1326,7 @@ newSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   newMHsampler(assign, random, initAssign, initRand,
                y, N, keepEach, prior, isingCoefs,
                as.integer(subjectData$pre$assign),
-               invcov, condvar, M,
+               invcov, covariance, condvar, M,
                subjectData$dat$nullEta, subjectData$dat$altEta,
                as.integer(popInd),
                MHattempts, MHsuccess, MHcoef)
