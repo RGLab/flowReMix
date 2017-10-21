@@ -1263,9 +1263,12 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
     assignmentMat <- matrix(0, nrow = ceiling(nsamp / keepEach), ncol = nSubsets)
-    subsetAssignGibbs(assignmentMat, y, prop, N, isingCoefs,
+    subsetAssignGibbs(assignmentMat,
+                      y, prop, N,
+                      isingCoefs,
                       subjectData$dat$nullEta, subjectData$dat$altEta,
-                      covariance, nsamp, nSubsets, keepEach, intSampSize,
+                      covariance,
+                      nsamp, nSubsets, keepEach, intSampSize,
                       MHcoef, as.integer(popInd), unifVec, normVec,
                       M, betaDispersion, as.integer(subjectData$pre$assign),
                       randomAssignProb, modelprobs, iterAssignCoef,

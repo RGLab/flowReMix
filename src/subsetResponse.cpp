@@ -118,20 +118,21 @@ void setNumericVectorToZero(NumericVector x) {
 }
 
 // [[Rcpp::export]]
-NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVector N,
-                                NumericMatrix isingCoefs,
-                                NumericVector nullEta, NumericVector altEta,
-                                NumericMatrix covariance,
-                                int nsamp, int nSubsets, int keepEach, int intSampSize,
-                                NumericVector MHcoef,
-                                IntegerVector popInd,
-                                NumericVector unifVec, NumericVector normVec,
-                                NumericVector dispersion, bool betaDispersion,
-                                IntegerVector preAssignment,
-                                double randomAssignProb,
-                                NumericVector mprobs, double preAssignCoef,
-                                double prior, bool zeroPosteriorProbs,
-                                LogicalVector doNotSample) {
+void subsetAssignGibbs(NumericMatrix assignmentMatrix,
+                       NumericVector y, NumericVector prop, NumericVector N,
+                       NumericMatrix isingCoefs,
+                       NumericVector nullEta, NumericVector altEta,
+                       NumericMatrix covariance,
+                       int nsamp, int nSubsets, int keepEach, int intSampSize,
+                       NumericVector MHcoef,
+                       IntegerVector popInd,
+                       NumericVector unifVec, NumericVector normVec,
+                       NumericVector dispersion, bool betaDispersion,
+                       IntegerVector preAssignment,
+                       double randomAssignProb,
+                       NumericVector mprobs, double preAssignCoef,
+                       double prior, bool zeroPosteriorProbs,
+                       LogicalVector doNotSample) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -140,18 +141,19 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericVector integratedDensities;
   double sigmaHat, muHat, prevMuHat ;
   double priorProb, densityRatio, pResponder ;
-  int k, j, m;
+  int k, j;
 
-  int assignNum = 0;
   NumericMatrix clusterDensities(2, intSampSize) ;
   NumericVector iterPosteriors(nSubsets) ;
   nsamp = floor(nsamp / keepEach) * keepEach ;
-  NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
   NumericVector assignment(nSubsets) ;
 
   int unifPosition = 0 ;
   double isingOffset = 0 ;
-  for(m = 0; m < nsamp ; m++) {
+  int m = -1 ;
+  int assignNum = 0;
+  while(assignNum < assignmentMatrix.nrow()) {
+    m++ ;
     for(j = 0; j < nSubsets ; j++) {
       if(doNotSample[j]) {
         assignment[j] = 0 ;
@@ -194,17 +196,11 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         if(k == 0) {
           muHat = mean(etaResid) ;
           muHat = 0;
-          // if(j == 0) {
-          //   Rcpp::Rcout<<muHat<<" " ;
-          // }
           vsample = rnorm(intSampSize, muHat, sigmaHat * mcoef) ;
         } else {
           prevMuHat = muHat ;
           muHat = mean(etaResid) ;
           muHat = 0;
-          // if(j == 0) {
-          //   Rcpp::Rcout<<muHat<<" " ;
-          // }
           vsample = vsample - prevMuHat + muHat ;
         }
 
@@ -218,24 +214,11 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       }
 
       integratedDensities = computeIntegratedDensities(clusterDensities) ;
-      if(m >= 0) {
-        assignment[j] = 1 ;
-        // int nRespond = sum(assignment) ;
-        // double multiadjust = std::log(mprobs[nRespond]) - std::log(mprobs[nRespond - 1]) ;
-        priorProb = expit(sum(isingCoefs(j, _) * assignment) + isingOffset) ;
-        // if(j == 0) {
-        //   Rcpp::Rcout<<priorProb<<" " ;
-        // }
-      } else {
-        priorProb = 0.5 ;
-      }
+      assignment[j] = 1 ;
+      priorProb = expit(sum(isingCoefs(j, _) * assignment) + isingOffset) ;
 
       densityRatio = integratedDensities[0] / integratedDensities[1] * (1.0 - priorProb) / priorProb ;
       pResponder = 1.0 / (1.0 + densityRatio) ;
-      // if(j == 0) {
-      //   Rcpp::Rcout<<integratedDensities[0]<<" "<<integratedDensities[1]<<" " ;
-      //   Rcpp::Rcout<<pResponder<<"\n " ;
-      // }
 
       if(preAssignment[j] == 1) {
         pResponder = 1 - (1 - pResponder) * preAssignCoef ;
@@ -256,9 +239,6 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
       assignNum++ ;
     }
   }
-
-
-  return assignmentMatrix;
 }
 
 
@@ -299,33 +279,25 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
 
 // [[Rcpp::export]]
-NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
-                              int i, int nsamp, int nSubsets,
-                              NumericVector MHcoef,
-                              IntegerVector assignment,
-                              IntegerVector popInd,
-                              NumericVector eta,
-                              NumericVector randomEst,
-                              NumericVector condvar,
-                              NumericMatrix covariance,
-                              NumericMatrix invcov,
-                              NumericVector MHattempts, NumericVector MHsuccess,
-                              NumericVector unifVec,
-                              NumericVector dispersion, bool betaDispersion,
-                              int keepEach) {
-  int m, j ;
+void simRandomEffectCoordinateMH(NumericMatrix sampleMatrix, NumericVector y, NumericVector N,
+                                 int i, int nsamp, int nSubsets,
+                                 NumericVector MHcoef, IntegerVector assignment,
+                                 IntegerVector popInd, NumericVector eta,
+                                 NumericVector randomEst, NumericVector condvar,
+                                 NumericMatrix covariance, NumericMatrix invcov,
+                                 NumericVector MHattempts, NumericVector MHsuccess,
+                                 NumericVector dispersion, bool betaDispersion,
+                                 int keepEach) {
+  int j ;
   NumericVector subsetEta ;
   NumericVector subsetCount, subsetN ;
   double current, proposal, sqrtsig ;
   double condmean, newdens, olddens ;
 
-  int unifIndex = 0;
-
-  nsamp = floor(nsamp / keepEach) * keepEach ;
-  NumericMatrix sampleMatrix(int(nsamp / keepEach), nSubsets) ;
   int assignNum = 0 ;
-
-  for(m = 0; m < nsamp ; m++) {
+  int m = 0 ;
+  while(assignNum < sampleMatrix.nrow()) {
+    m++ ;
     for(j = 0; j < nSubsets; j++) {
       MHattempts[j] +=  1 ;
       subsetEta = eta[popInd == (j + 1)] ;
@@ -349,7 +321,7 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
       newdens = newdens + R::dnorm(proposal, condmean, sqrt(condvar[j]), TRUE) ;
       olddens = olddens + R::dnorm(current, condmean, sqrt(condvar[j]), TRUE) ;
 
-      if(unifVec[unifIndex++] < std::exp(newdens - olddens))  {
+      if(runif(1)[0] < std::exp(newdens - olddens))  {
         randomEst[j] = proposal ;
         MHsuccess[j] += 1 ;
       }
@@ -362,8 +334,6 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
       assignNum++ ;
     }
   }
-
-  return sampleMatrix ;
 }
 
 // [[Rcpp::export]]
