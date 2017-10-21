@@ -9,12 +9,12 @@ setNumericVectorToZero <- function(x) {
     invisible(.Call('_flowReMix_setNumericVectorToZero', PACKAGE = 'flowReMix', x))
 }
 
-subsetAssignGibbs <- function(y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs, preAssignCoef, prior, zeroPosteriorProbs, doNotSample) {
-    .Call('_flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs, preAssignCoef, prior, zeroPosteriorProbs, doNotSample)
+subsetAssignGibbs <- function(assignmentMatrix, y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs, preAssignCoef, prior, zeroPosteriorProbs, doNotSample) {
+    invisible(.Call('_flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', assignmentMatrix, y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs, preAssignCoef, prior, zeroPosteriorProbs, doNotSample))
 }
 
-simRandomEffectCoordinateMH <- function(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach) {
-    .Call('_flowReMix_simRandomEffectCoordinateMH', PACKAGE = 'flowReMix', y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach)
+simRandomEffectCoordinateMH <- function(sampleMatrix, y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, dispersion, betaDispersion, keepEach) {
+    invisible(.Call('_flowReMix_simRandomEffectCoordinateMH', PACKAGE = 'flowReMix', sampleMatrix, y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, dispersion, betaDispersion, keepEach))
 }
 
 newMHsampler <- function(assign, random, initAssign, initRand, y, N, keepEach, prior, isingCoefs, preAssignment, invcov, covariance, condvar, dispersion, nullEta, altEta, popInd, MHattempts, MHsuccess, MHcoef) {

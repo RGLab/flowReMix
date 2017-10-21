@@ -1262,20 +1262,16 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
-    assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
-                                       subjectData$dat$nullEta, subjectData$dat$altEta,
-                                       covariance, nsamp, nSubsets, keepEach, intSampSize,
-                                       MHcoef,
-                                       as.integer(popInd),
-                                       unifVec, normVec,
-                                       M, betaDispersion,
-                                       as.integer(subjectData$pre$assign),
-                                       randomAssignProb, modelprobs, iterAssignCoef,
-                                       prior, zeroPosteriorProbs,
-                                       doNotSample)
+    assignmentMat <- matrix(0, nrow = ceiling(nsamp / keepEach), ncol = nSubsets)
+    subsetAssignGibbs(assignmentMat, y, prop, N, isingCoefs,
+                      subjectData$dat$nullEta, subjectData$dat$altEta,
+                      covariance, nsamp, nSubsets, keepEach, intSampSize,
+                      MHcoef, as.integer(popInd), unifVec, normVec,
+                      M, betaDispersion, as.integer(subjectData$pre$assign),
+                      randomAssignProb, modelprobs, iterAssignCoef,
+                      prior, zeroPosteriorProbs, doNotSample)
   }
 
-  unifVec <- runif(nsamp * nSubsets)
   eta <- subjectData$dat$nullEta
   assignment <- as.vector(assignmentMat[nrow(assignmentMat), ])
   responderSubset <- popInd %in% which(assignment == 1)
@@ -1285,18 +1281,15 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   MHattempts <- rep(0, nSubsets)
   MHsuccess <- rep(0, nSubsets)
   if(sampleRandom) {
-    randomMat <- simRandomEffectCoordinateMH(y, N,
-                                             subjectData$index,
-                                             nsamp, nSubsets, MHcoef,
-                                             as.vector(assignment),
-                                             as.integer(popInd),
-                                             as.numeric(eta),
-                                             randomEst,
-                                             as.numeric(condvar), covariance, invcov,
-                                             MHattempts, MHsuccess,
-                                             unifVec,
-                                             M, betaDispersion,
-                                             keepEach)
+    randomMat <- matrix(0, nrow = ceiling(nsamp / keepEach), ncol = nSubsets)
+    simRandomEffectCoordinateMH(randomMat, y, N,
+                                subjectData$index,
+                                nsamp, nSubsets, MHcoef,
+                                as.vector(assignment),
+                                as.integer(popInd), as.numeric(eta),
+                                randomEst, as.numeric(condvar), covariance, invcov,
+                                MHattempts, MHsuccess,
+                                M, betaDispersion, keepEach)
   } else {
     randomMat <- NULL
   }

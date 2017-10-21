@@ -122,9 +122,9 @@ subsetDat$vaccine <- 1 - subsetDat$control
 
 # Fitting the model ------------------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 5, nsamp = 30, initMHcoef = 2.5,
-                             keepEach = 3,
-                             markovChainEM = FALSE,
+control <- flowReMix_control(updateLag = 5, nsamp = 60, initMHcoef = 2.5,
+                             keepEach = 6, isingWprior = FALSE,
+                             markovChainEM = FALSE, zeroPosteriorProbs = FALSE,
                              nPosteriors = 1, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
@@ -133,27 +133,27 @@ control <- flowReMix_control(updateLag = 5, nsamp = 30, initMHcoef = 2.5,
 
 subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
-# preAssign <- by(subsetDat, subsetDat$ptid, assign)
-# preAssign <- do.call("rbind", preAssign)
-# fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
-#                  subject_id = ptid,
-#                  cell_type = subset,
-#                  cluster_variable = stim,
-#                  data = subsetDat,
-#                  covariance = "sparse",
-#                  ising_model = "sparse",
-#                  regression_method = "robust",
-#                  iterations = 30,
-#                  parallel = TRUE,
-#                  verbose = TRUE, control = control,
-#                  newSampler = TRUE)
+preAssign <- by(subsetDat, subsetDat$ptid, assign)
+preAssign <- do.call("rbind", preAssign)
+fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+                 subject_id = ptid,
+                 cell_type = subset,
+                 cluster_variable = stim,
+                 data = subsetDat,
+                 covariance = "sparse",
+                 ising_model = "sparse",
+                 regression_method = "robust",
+                 iterations = 30,
+                 parallel = TRUE,
+                 verbose = TRUE, control = control,
+                 newSampler = TRUE)
 
 
 # Loading files -------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_11__*"))
-# select1 <- sapply(filenames, function(x) length(grep("prior1", x) > 0)) == 1
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12__*"))
+select1 <- sapply(filenames, function(x) length(grep("SA", x) > 0)) == 1
 select2 <- sapply(filenames, function(x) length(grep("niter35", x) > 0)) == 1
-filenames <- filenames[select2]
+filenames <- filenames[select2 & select1]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
