@@ -31,92 +31,92 @@ BEGIN_RCPP
 END_RCPP
 }
 // subsetAssignGibbs
-void subsetAssignGibbs(NumericMatrix assignmentMatrix, NumericVector y, NumericVector prop, NumericVector N, NumericMatrix isingCoefs, NumericVector nullEta, NumericVector altEta, NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, NumericVector MHcoef, IntegerVector popInd, NumericVector unifVec, NumericVector normVec, NumericVector dispersion, bool betaDispersion, IntegerVector preAssignment, double randomAssignProb, NumericVector mprobs, double preAssignCoef, double prior, bool zeroPosteriorProbs, LogicalVector doNotSample);
+void subsetAssignGibbs(NumericMatrix assignmentMatrix, const NumericVector y, const NumericVector prop, NumericVector N, const NumericMatrix isingCoefs, const NumericVector nullEta, const NumericVector altEta, const NumericMatrix covariance, int nsamp, int nSubsets, int keepEach, int intSampSize, const NumericVector MHcoef, const IntegerVector popInd, const NumericVector unifVec, const NumericVector normVec, const NumericVector dispersion, bool betaDispersion, const IntegerVector preAssignment, double randomAssignProb, const NumericVector mprobs, double preAssignCoef, double prior, bool zeroPosteriorProbs, const LogicalVector doNotSample);
 RcppExport SEXP _flowReMix_subsetAssignGibbs(SEXP assignmentMatrixSEXP, SEXP ySEXP, SEXP propSEXP, SEXP NSEXP, SEXP isingCoefsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP covarianceSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP keepEachSEXP, SEXP intSampSizeSEXP, SEXP MHcoefSEXP, SEXP popIndSEXP, SEXP unifVecSEXP, SEXP normVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP preAssignmentSEXP, SEXP randomAssignProbSEXP, SEXP mprobsSEXP, SEXP preAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP doNotSampleSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type assignmentMatrix(assignmentMatrixSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type prop(propSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type prop(propSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type N(NSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type isingCoefs(isingCoefsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type nullEta(nullEtaSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type altEta(altEtaSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type isingCoefs(isingCoefsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type nullEta(nullEtaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type altEta(altEtaSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type covariance(covarianceSEXP);
     Rcpp::traits::input_parameter< int >::type nsamp(nsampSEXP);
     Rcpp::traits::input_parameter< int >::type nSubsets(nSubsetsSEXP);
     Rcpp::traits::input_parameter< int >::type keepEach(keepEachSEXP);
     Rcpp::traits::input_parameter< int >::type intSampSize(intSampSizeSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type MHcoef(MHcoefSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type unifVec(unifVecSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type normVec(normVecSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type MHcoef(MHcoefSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type popInd(popIndSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type unifVec(unifVecSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type normVec(normVecSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type dispersion(dispersionSEXP);
     Rcpp::traits::input_parameter< bool >::type betaDispersion(betaDispersionSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type preAssignment(preAssignmentSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type preAssignment(preAssignmentSEXP);
     Rcpp::traits::input_parameter< double >::type randomAssignProb(randomAssignProbSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type mprobs(mprobsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type mprobs(mprobsSEXP);
     Rcpp::traits::input_parameter< double >::type preAssignCoef(preAssignCoefSEXP);
     Rcpp::traits::input_parameter< double >::type prior(priorSEXP);
     Rcpp::traits::input_parameter< bool >::type zeroPosteriorProbs(zeroPosteriorProbsSEXP);
-    Rcpp::traits::input_parameter< LogicalVector >::type doNotSample(doNotSampleSEXP);
+    Rcpp::traits::input_parameter< const LogicalVector >::type doNotSample(doNotSampleSEXP);
     subsetAssignGibbs(assignmentMatrix, y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs, preAssignCoef, prior, zeroPosteriorProbs, doNotSample);
     return R_NilValue;
 END_RCPP
 }
 // simRandomEffectCoordinateMH
-void simRandomEffectCoordinateMH(NumericMatrix sampleMatrix, NumericVector y, NumericVector N, int i, int nsamp, int nSubsets, NumericVector MHcoef, IntegerVector assignment, IntegerVector popInd, NumericVector eta, NumericVector randomEst, NumericVector condvar, NumericMatrix covariance, NumericMatrix invcov, NumericVector MHattempts, NumericVector MHsuccess, NumericVector dispersion, bool betaDispersion, int keepEach);
-RcppExport SEXP _flowReMix_simRandomEffectCoordinateMH(SEXP sampleMatrixSEXP, SEXP ySEXP, SEXP NSEXP, SEXP iSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP MHcoefSEXP, SEXP assignmentSEXP, SEXP popIndSEXP, SEXP etaSEXP, SEXP randomEstSEXP, SEXP condvarSEXP, SEXP covarianceSEXP, SEXP invcovSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP keepEachSEXP) {
+void simRandomEffectCoordinateMH(NumericMatrix sampleMatrix, const NumericVector y, const NumericVector N, int i, int nsamp, int nSubsets, const NumericVector MHcoef, const IntegerVector assignment, const IntegerVector popInd, const NumericVector eta, const NumericVector randomEstt, const NumericVector condvar, const NumericMatrix covariance, const NumericMatrix invcov, NumericVector MHattempts, NumericVector MHsuccess, const NumericVector dispersion, bool betaDispersion, int keepEach);
+RcppExport SEXP _flowReMix_simRandomEffectCoordinateMH(SEXP sampleMatrixSEXP, SEXP ySEXP, SEXP NSEXP, SEXP iSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP MHcoefSEXP, SEXP assignmentSEXP, SEXP popIndSEXP, SEXP etaSEXP, SEXP randomEsttSEXP, SEXP condvarSEXP, SEXP covarianceSEXP, SEXP invcovSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP keepEachSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type sampleMatrix(sampleMatrixSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type N(NSEXP);
     Rcpp::traits::input_parameter< int >::type i(iSEXP);
     Rcpp::traits::input_parameter< int >::type nsamp(nsampSEXP);
     Rcpp::traits::input_parameter< int >::type nSubsets(nSubsetsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type MHcoef(MHcoefSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type assignment(assignmentSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type eta(etaSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type randomEst(randomEstSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type condvar(condvarSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type covariance(covarianceSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type invcov(invcovSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type MHcoef(MHcoefSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type assignment(assignmentSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type popInd(popIndSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type randomEstt(randomEsttSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type condvar(condvarSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type invcov(invcovSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHattempts(MHattemptsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHsuccess(MHsuccessSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type dispersion(dispersionSEXP);
     Rcpp::traits::input_parameter< bool >::type betaDispersion(betaDispersionSEXP);
     Rcpp::traits::input_parameter< int >::type keepEach(keepEachSEXP);
-    simRandomEffectCoordinateMH(sampleMatrix, y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, dispersion, betaDispersion, keepEach);
+    simRandomEffectCoordinateMH(sampleMatrix, y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEstt, condvar, covariance, invcov, MHattempts, MHsuccess, dispersion, betaDispersion, keepEach);
     return R_NilValue;
 END_RCPP
 }
 // newMHsampler
-void newMHsampler(NumericMatrix assign, NumericMatrix random, NumericVector initAssign, NumericVector initRand, NumericVector y, NumericVector N, int keepEach, double prior, NumericMatrix isingCoefs, IntegerVector preAssignment, NumericMatrix invcov, NumericMatrix covariance, NumericVector condvar, NumericVector dispersion, NumericVector nullEta, NumericVector altEta, IntegerVector popInd, NumericVector MHattempts, NumericVector MHsuccess, NumericVector MHcoef);
+void newMHsampler(NumericMatrix assign, NumericMatrix random, const NumericVector initAssign, const NumericVector initRand, const NumericVector y, const NumericVector N, int keepEach, double prior, const NumericMatrix isingCoefs, const IntegerVector preAssignment, const NumericMatrix invcov, const NumericMatrix covariance, const NumericVector condvar, const NumericVector dispersion, const NumericVector nullEta, const NumericVector altEta, const IntegerVector popInd, NumericVector MHattempts, NumericVector MHsuccess, const NumericVector MHcoef);
 RcppExport SEXP _flowReMix_newMHsampler(SEXP assignSEXP, SEXP randomSEXP, SEXP initAssignSEXP, SEXP initRandSEXP, SEXP ySEXP, SEXP NSEXP, SEXP keepEachSEXP, SEXP priorSEXP, SEXP isingCoefsSEXP, SEXP preAssignmentSEXP, SEXP invcovSEXP, SEXP covarianceSEXP, SEXP condvarSEXP, SEXP dispersionSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP popIndSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP MHcoefSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type assign(assignSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type random(randomSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type initAssign(initAssignSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type initRand(initRandSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type initAssign(initAssignSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type initRand(initRandSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type N(NSEXP);
     Rcpp::traits::input_parameter< int >::type keepEach(keepEachSEXP);
     Rcpp::traits::input_parameter< double >::type prior(priorSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type isingCoefs(isingCoefsSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type preAssignment(preAssignmentSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type invcov(invcovSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type covariance(covarianceSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type condvar(condvarSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type nullEta(nullEtaSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type altEta(altEtaSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type isingCoefs(isingCoefsSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type preAssignment(preAssignmentSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type invcov(invcovSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type condvar(condvarSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type dispersion(dispersionSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type nullEta(nullEtaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type altEta(altEtaSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type popInd(popIndSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHattempts(MHattemptsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type MHsuccess(MHsuccessSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type MHcoef(MHcoefSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type MHcoef(MHcoefSEXP);
     newMHsampler(assign, random, initAssign, initRand, y, N, keepEach, prior, isingCoefs, preAssignment, invcov, covariance, condvar, dispersion, nullEta, altEta, popInd, MHattempts, MHsuccess, MHcoef);
     return R_NilValue;
 END_RCPP

@@ -144,16 +144,19 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  ising_model = "sparse",
                  regression_method = "robust",
                  iterations = 30,
-                 parallel = TRUE,
+                 parallel = FALSE,
                  verbose = TRUE, control = control,
                  newSampler = TRUE)
 
 
 # Loading files -------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12__*"))
+filenames <- as.list(c(dir(path = 'data analysis/results', pattern="hvtn_13__*"),
+                       dir(path = 'data analysis/results', pattern="hvtn_12__*")))
 select1 <- sapply(filenames, function(x) length(grep("SA", x) > 0)) == 1
-select2 <- sapply(filenames, function(x) length(grep("niter35", x) > 0)) == 1
-filenames <- filenames[select2 & select1]
+select2 <- sapply(filenames, function(x) length(grep("niter70", x) > 0)) == 1
+select3 <- sapply(filenames, function(x) length(grep("_13_", x) > 0)) == 1
+select4 <- sapply(filenames, function(x) length(grep("prior2", x) > 0)) == 1
+filenames <- filenames[select2 & select1 & select3 & select4]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
@@ -244,7 +247,7 @@ stimparentbox
 # saveRDS(fit, file = "data analysis/results/hvtn_5_niter30npost1seed3sa06.rds")
 stab <- fit$stabilityGraph
 edges <- 10
-ising <- plot(stab, nEdges = 30, fill = rocResults$auc)
+ising <- plot(stab, nEdges = 75, fill = rocResults$auc)
 ising
 ising <- plot(stab, nEdges = 75, fill = infectROC$auc)
 ising

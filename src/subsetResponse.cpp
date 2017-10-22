@@ -119,20 +119,20 @@ void setNumericVectorToZero(NumericVector x) {
 
 // [[Rcpp::export]]
 void subsetAssignGibbs(NumericMatrix assignmentMatrix,
-                       NumericVector y, NumericVector prop, NumericVector N,
-                       NumericMatrix isingCoefs,
-                       NumericVector nullEta, NumericVector altEta,
-                       NumericMatrix covariance,
+                       const NumericVector y, const NumericVector prop, NumericVector N,
+                       const NumericMatrix isingCoefs,
+                       const NumericVector nullEta, const NumericVector altEta,
+                       const NumericMatrix covariance,
                        int nsamp, int nSubsets, int keepEach, int intSampSize,
-                       NumericVector MHcoef,
-                       IntegerVector popInd,
-                       NumericVector unifVec, NumericVector normVec,
-                       NumericVector dispersion, bool betaDispersion,
-                       IntegerVector preAssignment,
+                       const NumericVector MHcoef,
+                       const IntegerVector popInd,
+                       const NumericVector unifVec, const NumericVector normVec,
+                       const NumericVector dispersion, bool betaDispersion,
+                       const IntegerVector preAssignment,
                        double randomAssignProb,
-                       NumericVector mprobs, double preAssignCoef,
+                       const NumericVector mprobs, double preAssignCoef,
                        double prior, bool zeroPosteriorProbs,
-                       LogicalVector doNotSample) {
+                       const LogicalVector doNotSample) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -279,20 +279,22 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
 
 // [[Rcpp::export]]
-void simRandomEffectCoordinateMH(NumericMatrix sampleMatrix, NumericVector y, NumericVector N,
+void simRandomEffectCoordinateMH(NumericMatrix sampleMatrix,
+                                 const NumericVector y, const NumericVector N,
                                  int i, int nsamp, int nSubsets,
-                                 NumericVector MHcoef, IntegerVector assignment,
-                                 IntegerVector popInd, NumericVector eta,
-                                 NumericVector randomEst, NumericVector condvar,
-                                 NumericMatrix covariance, NumericMatrix invcov,
+                                 const NumericVector MHcoef, const IntegerVector assignment,
+                                 const IntegerVector popInd, const NumericVector eta,
+                                 const NumericVector randomEstt, const NumericVector condvar,
+                                 const NumericMatrix covariance, const NumericMatrix invcov,
                                  NumericVector MHattempts, NumericVector MHsuccess,
-                                 NumericVector dispersion, bool betaDispersion,
+                                 const NumericVector dispersion, bool betaDispersion,
                                  int keepEach) {
   int j ;
   NumericVector subsetEta ;
   NumericVector subsetCount, subsetN ;
   double current, proposal, sqrtsig ;
   double condmean, newdens, olddens ;
+  NumericVector randomEst = clone(randomEstt) ;
 
   int assignNum = 0 ;
   int m = 0 ;
@@ -338,18 +340,18 @@ void simRandomEffectCoordinateMH(NumericMatrix sampleMatrix, NumericVector y, Nu
 
 // [[Rcpp::export]]
 void newMHsampler(NumericMatrix assign, NumericMatrix random,
-                  NumericVector initAssign, NumericVector initRand,
-                  NumericVector y, NumericVector N,
+                  const NumericVector initAssign, const NumericVector initRand,
+                  const NumericVector y, const NumericVector N,
                   int keepEach, double prior,
-                  NumericMatrix isingCoefs,
-                  IntegerVector preAssignment,
-                  NumericMatrix invcov, NumericMatrix covariance,
-                  NumericVector condvar,
-                  NumericVector dispersion,
-                  NumericVector nullEta, NumericVector altEta,
-                  IntegerVector popInd,
+                  const NumericMatrix isingCoefs,
+                  const IntegerVector preAssignment,
+                  const NumericMatrix invcov, const NumericMatrix covariance,
+                  const NumericVector condvar,
+                  const NumericVector dispersion,
+                  const NumericVector nullEta, const NumericVector altEta,
+                  const IntegerVector popInd,
                   NumericVector MHattempts, NumericVector MHsuccess,
-                  NumericVector MHcoef) {
+                  const NumericVector MHcoef) {
   NumericVector cAssign = clone(initAssign) ;
   NumericVector cRand = clone(initRand) ;
   NumericVector eta ;
