@@ -11,9 +11,11 @@ autoPreAssign <- function(x) {
   } else {
     baseline <- levels(x$treatmentvar)[1]
   }
-  assign <- as.numeric(by(x, x$sub.population, function(y) min(y$prop[y$treatmentvar == baseline]) < max(y$prop[y$treatmentvar != baseline])))
-  assign[assign == 1] <- -1
-  result <- data.frame(id = x$id[1], subset = unique(x$sub.population), assign = assign)
+  assign <- by(x, x$sub.population, function(y) min(y$prop[y$treatmentvar == baseline]) < max(y$prop[y$treatmentvar != baseline]))
+  subsets <- names(assign)
+  assign <- as.numeric(assign)
+  assign <- -assign
+  result <- data.frame(id = x$id[1], subset = subsets, assign = assign)
   return(result)
 }
 
