@@ -8,7 +8,7 @@
 #'@export
 aggregateModels = function(x, verbose=TRUE){
   if(is.list(x)){
-      if(!all(flatten(map(.x = x, .f = function(z)inherits(z,"flowReMix"))))){
+      if(!all(unlist(flatten(map(.x = x, .f = function(z)inherits(z,"flowReMix")))))){
         stop("x must be a list of flowReMix model fits.", call. = FALSE)
       }
     TYPE = "list"
@@ -145,9 +145,14 @@ class(output) = c(class(output),"flowReMixAggregate")
 
 
 .summarizeCoefs <- function(coefList) {
-  coefsummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
-    do({.describe(.$effect)
-    })
+  # coefsummaries = ldply(flatten(coefList)) %>% gather(coef, effect, -.id) %>% group_by(.id, coef) %>%
+  #   do({.describe(.$effect)
+  #   })
+  coefsummaries = Map(
+    flatten(coefList),
+    f = function(x)
+      gather(ldply(x), column, effect, -.id) %>% rename(coef = .id) %>% select(-column)
+  ) %>% ldply %>% group_by(.id, coef) %>% do(.describe(.$effect))
   colnames(coefsummaries)[1] = "subset"
   coefsummaries
 }
