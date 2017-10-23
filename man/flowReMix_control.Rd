@@ -5,12 +5,12 @@
 \title{Auxiliary for Controlling flowReMix Fitting.}
 \usage{
 flowReMix_control(updateLag = 10, randomAssignProb = 1e-08, nsamp = 50,
-  lastSample = 100, initMHcoef = 2.5, nPosteriors = 3,
+  lastSample = NULL, initMHcoef = 2.5, nPosteriors = 3,
   maxDispersion = 10^3, minDispersion = 10^7, isingInit = -4.59512,
   keepEach = 5, centerCovariance = FALSE, intSampSize = 100,
   initMethod = "robust", ncores = NULL, preAssignCoefs = 1,
-  markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = TRUE,
-  zeroPosteriorProbs = TRUE, clusterType = c("AUTO", "FORK", "SOCK"),
+  markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = FALSE,
+  zeroPosteriorProbs = FALSE, clusterType = c("AUTO", "FORK", "SOCK"),
   isingStabilityReps = 200, randStabilityReps = 0, learningRate = 0.6,
   keepWeightPercent = 0.9, sampleNew = FALSE, subsetDiscardThreshold = 0)
 }

@@ -150,10 +150,11 @@ subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 
 
 # Loading files -------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_11__*"))
-# select1 <- sapply(filenames, function(x) length(grep("prior1", x) > 0)) == 1
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12__*"))
+select1 <- sapply(filenames, function(x) length(grep("prior0", x) > 0)) == 1
 select2 <- sapply(filenames, function(x) length(grep("niter35", x) > 0)) == 1
-filenames <- filenames[select2]
+select3 <- sapply(filenames, function(x) length(grep("SA", x) > 0)) == 1
+filenames <- filenames[select1 & select2 & select3]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
@@ -244,9 +245,9 @@ stimparentbox
 # saveRDS(fit, file = "data analysis/results/hvtn_5_niter30npost1seed3sa06.rds")
 stab <- fit$stabilityGraph
 edges <- 10
-ising <- plot(stab, nEdges = 30, fill = rocResults$auc)
+ising <- plot(stab, threshold = 0.9, fill = rocResults$auc)
 ising
-ising <- plot(stab, nEdges = 75, fill = infectROC$auc)
+ising <- plot(stab, threshold = 0.9, fill = infectROC$auc, layout = "kamadakawai")
 ising
 
 

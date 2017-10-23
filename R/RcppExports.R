@@ -13,8 +13,8 @@ subsetAssignGibbs <- function(y, prop, N, isingCoefs, nullEta, altEta, covarianc
     .Call('_flowReMix_subsetAssignGibbs', PACKAGE = 'flowReMix', y, prop, N, isingCoefs, nullEta, altEta, covariance, nsamp, nSubsets, keepEach, intSampSize, MHcoef, popInd, unifVec, normVec, dispersion, betaDispersion, preAssignment, randomAssignProb, mprobs, preAssignCoef, prior, zeroPosteriorProbs, doNotSample)
 }
 
-simRandomEffectCoordinateMH <- function(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach) {
-    .Call('_flowReMix_simRandomEffectCoordinateMH', PACKAGE = 'flowReMix', y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach)
+simRandomEffectCoordinateMH <- function(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEstt, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach) {
+    .Call('_flowReMix_simRandomEffectCoordinateMH', PACKAGE = 'flowReMix', y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEstt, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach)
 }
 
 newMHsampler <- function(assign, random, initAssign, initRand, y, N, keepEach, prior, isingCoefs, preAssignment, invcov, covariance, condvar, dispersion, nullEta, altEta, popInd, MHattempts, MHsuccess, MHcoef) {

@@ -305,7 +305,7 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
                               IntegerVector assignment,
                               IntegerVector popInd,
                               NumericVector eta,
-                              NumericVector randomEst,
+                              NumericVector randomEstt,
                               NumericVector condvar,
                               NumericMatrix covariance,
                               NumericMatrix invcov,
@@ -318,6 +318,7 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
   NumericVector subsetCount, subsetN ;
   double current, proposal, sqrtsig ;
   double condmean, newdens, olddens ;
+  NumericVector randomEst = clone(randomEstt) ;
 
   int unifIndex = 0;
 

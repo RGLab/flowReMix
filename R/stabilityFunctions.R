@@ -232,6 +232,8 @@ plot.flowReMix_stability <- function(x, ...){
   fillRange = eval(mc$fillRange, envir=parent.frame())
   fillPalette = eval(mc$fillPalette, envir=parent.frame())
   title = ifelse(is.null(eval(mc$title,envir=parent.frame())),TRUE,eval(mc$title,envir=parent.frame()))
+  layout <- ifelse(is.null(eval(mc$layout,envir=parent.frame())), "fruchtermanreingold", eval(mc$layout, envir=parent.frame()))
+  layout.par <- mc$layout.par
   label_size = ifelse(is.null(eval(mc$label_size,envir=parent.frame())),1.8,eval(mc$label_size,envir=parent.frame()))
   seed = ifelse(is.null(eval(mc$seed,envir=parent.frame())),100,eval(mc$seed,parent.frame()))
 
@@ -255,7 +257,8 @@ plot.flowReMix_stability <- function(x, ...){
   network <- network[keep, keep]
   net <- network::network(props)
   subsets <- colnames(props)
-  nodes <- GGally::ggnet2(network, label = subsets[keep])$data
+  nodes <- GGally::ggnet2(network, label = subsets[keep], mode = layout,
+                          layout.par = layout.par)$data
   edges <- matrix(nrow = sum(network != 0)/2, ncol = 5)
 
   p <- nrow(network)
