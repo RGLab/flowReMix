@@ -65,8 +65,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // simRandomEffectCoordinateMH
-NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N, int i, int nsamp, int nSubsets, NumericVector MHcoef, IntegerVector assignment, IntegerVector popInd, NumericVector eta, NumericVector randomEst, NumericVector condvar, NumericMatrix covariance, NumericMatrix invcov, NumericVector MHattempts, NumericVector MHsuccess, NumericVector unifVec, NumericVector dispersion, bool betaDispersion, int keepEach);
-RcppExport SEXP _flowReMix_simRandomEffectCoordinateMH(SEXP ySEXP, SEXP NSEXP, SEXP iSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP MHcoefSEXP, SEXP assignmentSEXP, SEXP popIndSEXP, SEXP etaSEXP, SEXP randomEstSEXP, SEXP condvarSEXP, SEXP covarianceSEXP, SEXP invcovSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP unifVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP keepEachSEXP) {
+NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N, int i, int nsamp, int nSubsets, NumericVector MHcoef, IntegerVector assignment, IntegerVector popInd, NumericVector eta, NumericVector randomEstt, NumericVector condvar, NumericMatrix covariance, NumericMatrix invcov, NumericVector MHattempts, NumericVector MHsuccess, NumericVector unifVec, NumericVector dispersion, bool betaDispersion, int keepEach);
+RcppExport SEXP _flowReMix_simRandomEffectCoordinateMH(SEXP ySEXP, SEXP NSEXP, SEXP iSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP MHcoefSEXP, SEXP assignmentSEXP, SEXP popIndSEXP, SEXP etaSEXP, SEXP randomEsttSEXP, SEXP condvarSEXP, SEXP covarianceSEXP, SEXP invcovSEXP, SEXP MHattemptsSEXP, SEXP MHsuccessSEXP, SEXP unifVecSEXP, SEXP dispersionSEXP, SEXP betaDispersionSEXP, SEXP keepEachSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -79,7 +79,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< IntegerVector >::type assignment(assignmentSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type popInd(popIndSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type eta(etaSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type randomEst(randomEstSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type randomEstt(randomEsttSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type condvar(condvarSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type covariance(covarianceSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type invcov(invcovSEXP);
@@ -89,7 +89,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type dispersion(dispersionSEXP);
     Rcpp::traits::input_parameter< bool >::type betaDispersion(betaDispersionSEXP);
     Rcpp::traits::input_parameter< int >::type keepEach(keepEachSEXP);
-    rcpp_result_gen = Rcpp::wrap(simRandomEffectCoordinateMH(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEst, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach));
+    rcpp_result_gen = Rcpp::wrap(simRandomEffectCoordinateMH(y, N, i, nsamp, nSubsets, MHcoef, assignment, popInd, eta, randomEstt, condvar, covariance, invcov, MHattempts, MHsuccess, unifVec, dispersion, betaDispersion, keepEach));
     return rcpp_result_gen;
 END_RCPP
 }

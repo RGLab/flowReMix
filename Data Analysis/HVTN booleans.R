@@ -150,7 +150,7 @@ subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 
 
 # Loading files -------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_11__*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_13__*"))
 # select1 <- sapply(filenames, function(x) length(grep("prior1", x) > 0)) == 1
 select2 <- sapply(filenames, function(x) length(grep("niter35", x) > 0)) == 1
 filenames <- filenames[select2]

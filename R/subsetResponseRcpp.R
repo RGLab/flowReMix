@@ -943,6 +943,7 @@ flowReMix <- function(formula,
     assignmentList <- lapply(MHresult, function(x) x$assign)
     MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
     randomList <- lapply(MHresult, function(x) x$rand)
+    rm(MHresult)
 
     for(i in 1:nSubjects) {
       assignmentMat <- assignmentList[[i]]
