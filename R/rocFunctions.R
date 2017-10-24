@@ -241,6 +241,8 @@ plotScatter <- function(obj, subsets = NULL,
                            trtprop = mean(prop))
   forplot <- merge(ctrl, treat)
   forplot$shape <- factor(forplot$shape)
+  if(!is.null(subsets))
+    forplot=forplot%>%filter(sub.population%in%subsets)
   figure <- ggplot(forplot)
   if(is.null(target)) {
     figure <- figure + geom_point(aes(x = log(ctrlprop), y = log(trtprop),
