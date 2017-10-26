@@ -87,6 +87,9 @@ flowReMix_control <- function(updateLag = 10, randomAssignProb = 1e-8, nsamp = 5
                               learningRate = 0.6, keepWeightPercent = 0.9, sampleNew = FALSE,
                               subsetDiscardThreshold = 0) {
 
+  if(is.null(lastSample)) {
+    lastSample <- ceiling(nsamp / keepEach * nPosteriors)
+  }
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
                  nsamp = nsamp,

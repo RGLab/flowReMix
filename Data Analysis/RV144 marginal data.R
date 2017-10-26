@@ -116,3 +116,6 @@ plot(stability, fill = roctab$auc)
 random <- stabilityGraph(fit, type = "randomEffects", cv = FALSE,
                             reps = 50, cpus = 2)
 plot(random, fill = roctab$auc, threshold = 0.01)
+
+# Generarting simulation object ---------
+sim <- flowFitToSim(fit)

@@ -125,7 +125,7 @@ subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 
 # Loading files ----------------------
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_4_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
@@ -147,7 +147,9 @@ postid <- fit$posteriors[, 1, drop = FALSE]
 hiv <- merge(postid, hiv)
 
 # Variability at the fit level --------------------
-groups <- list(c(1:37))
+it35 <- sapply(filenames, grepl, pattern = "35")
+sa <- sapply(filenames, grepl, pattern = "SA")
+groups <- list(which(it35 & sa), which(it35 & !sa))
 resList <- list()
 rpList <- list()
 auclist <- list()
@@ -184,19 +186,19 @@ for(i in 1:length(groups)) {
 library(dplyr)
 library(reshape2)
 aucplot <- auclist
-aucplot[[1]]$iterations <- 30
-# aucplot[[2]]$iterations <- 60
+aucplot[[1]]$group <- "sa35"
+aucplot[[2]]$group <- "mc35"
 aucplot <- do.call("rbind", aucplot)
-aucplot <- melt(aucplot, id = "iterations")
+aucplot <- melt(aucplot, id = "group")
 names(aucplot)[2:3] <- c("subset", "auc")
-ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(iterations))) +
+ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = group)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 probplot <- problist
-probplot[[1]]$iterations <- 30
-probplot[[2]]$iterations <- 60
+probplot[[1]]$group <- "sa35"
+probplot[[2]]$group <- "mc35"
 probplot <- do.call("rbind", probplot)
-probplot <- melt(probplot, id = "iterations")
+probplot <- melt(probplot, id = "group")
 names(probplot)[2:3] <- c("subset", "responseProb")
 ggplot(probplot) +
   geom_boxplot(aes(x = subset, y = responseProb, col = factor(iterations), outlier.size = 0.01)) +
