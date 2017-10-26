@@ -119,3 +119,10 @@ plot(random, fill = roctab$auc, threshold = 0.01)
 
 # Generarting simulation object ---------
 sim <- flowFitToSim(fit)
+sim <- generateFlowDataset(sim, 100)
+simfit <- fitFlowSim(sim)
+
+
+
+
+

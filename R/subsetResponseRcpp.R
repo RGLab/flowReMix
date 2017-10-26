@@ -518,7 +518,9 @@ flowReMix <- function(formula,
 
   #### Getting all relevant variables from call --------------------
   # Getting model frame
-  dat <- buildFlowFrame(match.call(), data)
+  tempcall <- match.call()
+  tempcall$formula <- formula
+  dat <- buildFlowFrame(tempcall, data)
   subpopInd <- dat$subpopInd
   uniqueSubpop <- dat$uniqueSubpop
   baseline <- dat$baseline
@@ -1340,7 +1342,7 @@ newSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
 
 # A fuction for constructing the data.frame used within the flowReMix iterations ----------
 buildFlowFrame <- function(call, data) {
-  formula <- call$formula
+  formula <- eval(call$formula, envir = parent.frame())
   dat <- model.frame(formula, data, na.action=na.pass)
   n <- dim(dat)[1]
 
