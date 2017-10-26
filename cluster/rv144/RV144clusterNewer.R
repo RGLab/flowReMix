@@ -1,4 +1,4 @@
-cpus <- 1
+cpus <- 3
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -57,9 +57,11 @@ configurations <- expand.grid(niters = c(40, 80),
                               prior = c(0, 2),
                               method = c("SA", "MC"))
 config <- configurations[setting, ]
-niter <- config["niters"]
-seed <- config["seed"]
-prior <- config["prior"]
+print(config)
+niter <- as.numeric(config["niters"])
+seed <- as.numeric(config["seed"])
+prior <- as.numeric(config["prior"])
+method <- config["method"]
 if(method == "SA") {
   npost <- 1
   lag <- 10
@@ -73,7 +75,7 @@ if(method == "SA") {
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLaglag, nsamp = 200,
+control <- flowReMix_control(updateLag = lag, nsamp = 200,
                              keepEach = 10, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
@@ -102,5 +104,6 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = TRUE,
                              parallel = FALSE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_29_niter", niter, "npost", npost, "seed", seed, method,".rds", sep = "")
+file <- paste("results/rv144_31_niter", niter, "npost", npost, "seed", seed, method,".rds", sep = "")
+print(file)
 saveRDS(fit, file = file)

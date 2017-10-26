@@ -17,9 +17,11 @@ getExpression <- function(str) {
 
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
-  assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != 0]) > min(y$prop[y$stim == 0])))
+  assign <- (by(x, x$subset, function(y) median(y$prop[y$stim != 0]) > median(y$prop[y$stim == 0])))
+  subsets <- names(assign)
+  assign <- as.numeric(assign)
   assign[assign == 1] <- -1
-  result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
+  result <- data.frame(ptid = x$ptid[1], subset = subsets, assign = assign)
   return(result)
 }
 
@@ -133,8 +135,9 @@ control <- flowReMix_control(updateLag = 5, nsamp = 30, initMHcoef = 2.5,
 
 subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
-# preAssign <- by(subsetDat, subsetDat$ptid, assign)
-# preAssign <- do.call("rbind", preAssign)
+subsetDat <- subsetDat %>% group_by(ptid,population,stim,stimGroup,parent) %>% filter(collection.num==max(collection.num))
+preAssign <- by(subsetDat, subsetDat$ptid, assign)
+preAssign <- do.call("rbind", preAssign)
 # fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 #                  subject_id = ptid,
 #                  cell_type = subset,
@@ -150,7 +153,7 @@ subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 
 
 # Loading files -------------------
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12__*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_13__*"))
 select1 <- sapply(filenames, function(x) length(grep("prior0", x) > 0)) == 1
 select2 <- sapply(filenames, function(x) length(grep("niter35", x) > 0)) == 1
 select3 <- sapply(filenames, function(x) length(grep("SA", x) > 0)) == 1
@@ -166,6 +169,19 @@ fit$data <- subsetDat
 fit$posteriors[, -1] <- post
 print(filenames)
 hist(colMeans(fit$posteriors[, -1]))
+
+# Zero Posterior Probs ---------------
+post <- fit$posteriors[, -1]
+if(FALSE) {
+  for(i in 1:nrow(fit$posteriors)) {
+    temp <- subset(preAssign, ptid == fit$posteriors[i, 1])
+    temp[, 2] <- as.character(temp[, 2])
+    match <- match(names(fit$posteriors)[-1], temp[, 2])
+    post[i, temp[match, 3] == 0] <- 0
+    cbind(names(post), temp[match, 2])
+  }
+}
+fit$posteriors[, -1] <- post
 
 # ROC plots -----------------------------
 require(pROC)
@@ -253,9 +269,9 @@ ising
 
 # Scatter plots -----------------------
 scatter <- plot(fit, target = vaccine, type = "scatter", ncol = 11)
-# save_plot("figures/HVTNscatter.pdf", scatter,
-#           base_height = 20,
-#           base_width = 22, limitsize = FALSE)
+save_plot("figures/HVTNscatter.pdf", scatter,
+          base_height = 20,
+          base_width = 22, limitsize = FALSE)
 
 # FDR curves ----------------
 fdrplot <- plot(fit, target = vaccine, type = "FDR")
