@@ -95,7 +95,6 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     }
   }
 
-  sampLegend <- obj$sampLegend
   bigassign <- as.big.matrix(obj$assignmentList)
   subsets <- names(obj$coefficients)
   nsubsets <- ncol(samples[[1]])
@@ -103,22 +102,23 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   if(sampleNew) {
     samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[i, , drop = FALSE])))
   } else {
-    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[sample.int(nrow(samp), 1), , drop = FALSE])))
+    sampLegend <- obj$sampLegend
+    samples <- sapply(unique(sampLegend$id), function(x) {
+      sample(which(sampLegend$id == x), reps, replace = TRUE)
+      })
   }
 
   inds = splitIndices(reps, cpus)
-  samples <- lapply(inds, function(x) samples[x])
-  set.seed(seed)
+  sampit <- iter(samples, by = "row")
 
-  cluster_res <- foreach(matrices = samples, .combine = c) %dorng% {
-    countCovar <- lapply(matrices, function(mat)
-      raIsing(mat, AND = AND, gamma = gamma, family = family,
-              method = "sparse", cv = cv, parallel = FALSE) != 0)
-    return(countCovar)
+  cluster_res <- foreach(i = 1:nrow(samples), .combine = "+") %dorng% {
+    samp <- samples[i, ]
+    raIsing(bigassign, AND = AND, gamma = gamma, family = family,
+            method = "sparse", cv = cv, parallel = FALSE,
+            subsamp = samp, nSubsets = ncol(bigassign), nSubjects = length(samp)) != 0
   }
 
-  countCovar <- Reduce(cluster_res, f = "+")
-  props <- countCovar / reps
+  props <- cluster_res / reps
   colnames(props) <- names(obj$coefficients)
   rownames(props) <- colnames(props)
   diag(props) <- 0

@@ -1044,7 +1044,8 @@ flowReMix <- function(formula,
                               modelprobs = NULL, minprob = 1 / nSubjects,
                               method = "sparse", cv = FALSE,
                               family = "binomial",verbose = FALSE,
-                              parallel = parallel)
+                              parallel = parallel, subsamp = NULL,
+                              nSubsets = nSubsets, nSubjects = nSubjects)
         } else {
           isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,

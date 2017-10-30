@@ -5,8 +5,9 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
                     family = "binomial",verbose=FALSE,
-                    parallel = FALSE) {
-  nvars <- ncol(mat) - 3
+                    parallel = FALSE, subsamp = NULL,
+                    nSubsets, nSubjects) {
+  nvars <- nSubsets
   if(gamma < 0) gamma <- 0
 
   if(is.null(minprob)) {
@@ -15,11 +16,13 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
   if(parallel) {
     isingmat <- foreach(j = 1:nvars, .combine = rbind) %dorng% {
-      getNeighborhood(j, mat, family, off = 0, gamma, cv, method, minprob)
+      getNeighborhood(j, mat, family, off = 0, gamma, cv, method, minprob,
+                      subsamp = subsamp, nSubsets, nSubjets)
     }
   } else {
     isingmat <- do.call("rbind", lapply(1:nvars, getNeighborhood, mat, family, off = 0,
-                                        gamma, cv, method, minprob))
+                                        gamma, cv, method, minprob,
+                                        subsamp = subsamp, nSubsets, nSubjects))
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
@@ -225,9 +228,7 @@ bigGetNeighborhood <- function(j, mat, family, off, gamma, cv, method, minprob,
 }
 
 getNeighborhood <- function(j, mat, family, off = 0, gamma, cv, method, minprob,
-                            subsamp = NULL) {
-  nSubsets <- ncol(mat) - 3
-  nSubjects <- length(unique(mat[, nSubsets + 1]))
+                            nSubsets, nSubjects, subsamp = NULL) {
   maxrow <- max(which(!is.na(mat[, 1])))
   submat <- sub.big.matrix(mat, firstRow = 1, firstCol = 1,
                            lastRow = maxrow, lastCol = nSubsets)
