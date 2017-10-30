@@ -26,7 +26,13 @@ Imports: Rcpp,
     igraph,
     doRNG,
     R.utils,
-    sna 
+    sna,
+    IsingSampler,
+    mvtnorm,
+    plyr,
+    purrr,
+    reshape2,
+    tidyr 
 Suggests: pROC,
     reshape2,
     testthat

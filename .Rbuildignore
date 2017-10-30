@@ -1,6 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-data/*
 data-raw/*
 figures/*
 Notebooks/*
@@ -14,8 +13,11 @@ Simulations/*
 tables/*
 write-ups/*
 Notebooks/*
+summarize.R
+summarizeAggregates.R
 experimental malaria figure.pdf
 experimental malaria plot2.pdf
 cluster
 porotypes
 plot2.pdf
+./*.rds

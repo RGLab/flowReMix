@@ -55,6 +55,8 @@ the optimization algorithm runs.}
 \item{control}{an optional object of \code{\link{flowReMix_control}} class.}
 
 \item{keepSamples}{\code{logical} whether to keep all the samples. Fitted object takes more memory. Default TRUE.}
+
+\item{newSampler}{\code{logical} use the new sampler.. may or may not work. Default FALSE}
 }
 \value{
 \code{flowReMix} returns an object of class \code{flowReMix} which

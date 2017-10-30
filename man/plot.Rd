@@ -22,12 +22,18 @@ Generate a plot of a flowReMix model fit. Various plot types are supported.
 }
 }
 \examples{
+library(ggplot2)
 data(fit505)
-plot(fit505,target=vaccine,type="scatter",subsets=getSubsets(fit505)[1:4])+facet_wrap(~sub.population,ncol=2)
-plot(fit505,target=vaccine,type = "boxplot", jitter=TRUE,test="none",group = list(getSubsets(fit505)[1:4]),varname="vaccination")
-plot(getIsing(fit505),threshold=0.9,fill=summary(fit505,target=vaccine)$auc)
-plot(fit505,target=vaccine,type = "ROC", subsets = getSubsets(fit505)[3:4],varname="vaccination")
-plot(fit505,target=vaccine,type = "FDR", subsets = getSubsets(fit505)[3:4],varname="vaccination")
+plot(fit505,target=vaccine,type="scatter",subsets=getSubsets(fit505)[1:4])+
+     facet_wrap(~sub.population,ncol=2)
+plot(fit505,target=vaccine,type = "boxplot", jitter=TRUE,test="none",
+     group = list(getSubsets(fit505)[1:4]),varname="vaccination")
+plot(getIsing(fit505),threshold=0.9,
+     fill=summary(fit505,target=vaccine)$auc)
+plot(fit505,target=vaccine,type = "ROC",
+     subsets = getSubsets(fit505)[3:4],varname="vaccination")
+plot(fit505,target=vaccine,type = "FDR",
+     subsets = getSubsets(fit505)[3:4],varname="vaccination")
 
 
 }

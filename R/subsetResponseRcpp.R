@@ -197,6 +197,8 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @param keepSamples \code{logical} whether to keep all the samples. Fitted object takes more memory. Default TRUE.
 #'
+#' @param newSampler \code{logical} use the new sampler.. may or may not work. Default FALSE
+#'
 #' @details flowReMix fits a mixture of mixed effects regression models for
 #'   binomial data. Accordingly, the response supplied in the \code{formula}
 #'   must contain be a two column matrix the first column of which is the number

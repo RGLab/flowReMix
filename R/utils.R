@@ -1,3 +1,7 @@
+#'@importFrom stats model.frame model.matrix na.omit na.pass quantile sd
+#'@importFrom utils getFromNamespace
+NULL
+
 .isFlowRemix = function(x){
   if(!inherits(x,"flowReMix")){
     stop("x must be a flowReMix object.",call. = FALSE)
@@ -110,6 +114,8 @@ weightForPFS = function(x, M = NULL, parser = degreeFromStringFun){
 #' @param M \code{numeric} the max possible cell subset degree, the number of functions measured.
 #' @param stimVar \code{name} Unquoted  name of the stimulation variable in the data. e.g. stim
 #' @param parentVar \code{name} Unquoted name of the parent cell population variable in the data. e.g. parent
+#' @param outcomeVar \code{name} Unquoted name of the outcome variable in the data. If provided, the scores will be merged with the data using the \code{subject_id}
+#' @param ... additional arguments passed to weightForPFS.
 #' @details
 #' Requires that the data table has a variable for stimulation and for cell population parent.
 #'

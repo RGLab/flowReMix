@@ -16,6 +16,10 @@ flowReMixPFS(x, M, stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
 \item{stimVar}{\code{name} Unquoted  name of the stimulation variable in the data. e.g. stim}
 
 \item{parentVar}{\code{name} Unquoted name of the parent cell population variable in the data. e.g. parent}
+
+\item{outcomeVar}{\code{name} Unquoted name of the outcome variable in the data. If provided, the scores will be merged with the data using the \code{subject_id}}
+
+\item{...}{additional arguments passed to weightForPFS.}
 }
 \value{
 \code{data.frame} of polyfunctionality scores for each cell subset and subject, weighted appropriately.
