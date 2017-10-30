@@ -77,12 +77,13 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 prior <- 0
 npost <- 1
-niter <- 30
+niter <- 100
 seed <- 2
 lastSample <- NULL
 cpus <- 2
-control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
-                             keepEach = 5, isingWprior = FALSE, zeroPosteriorProbs = FALSE,
+control <- flowReMix_control(updateLag = 10, nsamp = 40, initMHcoef = 1,
+                             keepEach = 40, isingWprior = FALSE,
+                             zeroPosteriorProbs = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
