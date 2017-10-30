@@ -12,6 +12,15 @@
 #' @usage
 #'   \method{plot}{flowReMix}(x,...)
 #' @export
+#' @examples
+#' data(fit505)
+#' plot(fit505,target=vaccine,type="scatter",subsets=getSubsets(fit505)[1:4])+facet_wrap(~sub.population,ncol=2)
+#' plot(fit505,target=vaccine,type = "boxplot", jitter=TRUE,test="none",group = list(getSubsets(fit505)[1:4]),varname="vaccination")
+#' plot(getIsing(fit505),threshold=0.9,fill=summary(fit505,target=vaccine)$auc)
+#' plot(fit505,target=vaccine,type = "ROC", subsets = getSubsets(fit505)[3:4],varname="vaccination")
+#' plot(fit505,target=vaccine,type = "FDR", subsets = getSubsets(fit505)[3:4],varname="vaccination")
+#'
+#'
 plot.flowReMix <- function(x,...){
   mc = match.call()
   if(!is.null(mc$target)){
@@ -34,9 +43,10 @@ plot.flowReMix <- function(x,...){
 
   if(type == "FDR") {
     table <- fdrTable(obj=x, target = target)
-    mc[[1]] = as.name("plot")
-    mc$obj = table
-    mc$target = NULL
+    mc[[1]] = getFromNamespace("plot.flowReMix_fdrTable",ns = "flowReMix")
+    mc$subsets = eval(mc$subsets)
+    mc$x = table
+    mc$obj = NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "ROC") {
     # mc[[1]] = as.name("flowReMix:::plotROC")
