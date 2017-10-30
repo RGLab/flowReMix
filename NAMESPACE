@@ -10,12 +10,9 @@ export(fitFlowSim)
 export(flowFitToSim)
 export(flowReMix)
 export(flowReMix_control)
-<<<<<<< HEAD
 export(getPosteriors)
 export(getSubsets)
-=======
 export(generateFlowDataset)
->>>>>>> a31f48e4e97ca941077a81562ca8603e6da4c3bb
 export(stabilityGraph)
 import(IsingSampler)
 import(doParallel)
