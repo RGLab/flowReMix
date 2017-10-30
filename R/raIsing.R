@@ -5,34 +5,21 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
                     family = "binomial",verbose=FALSE,
-                    weights = NULL, parallel = FALSE) {
-  if(is.null(weights)) {
-    weights <- rep(1, nrow(mat))
-  }
-
-  nvars <- ncol(mat)
-  if(!is.null(modelprobs) & length(modelprobs) != (ncol(mat) + 1)) {
-    warning("modelprobs must be of length ncol(mat) + 1 !")
-  }
-  if(is.null(modelprobs)) {
-    modelprobs <- (1 + nvars)^-1 / choose(nvars, 0:nvars)
-  }
-  offsets <- diff(log(modelprobs))
-
+                    parallel = FALSE) {
+  nvars <- ncol(mat) - 3
   if(gamma < 0) gamma <- 0
 
   if(is.null(minprob)) {
     minprob <- 1 / nrow(mat)
   }
 
-
   if(parallel) {
-    isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
-      getNeighborhood(j, mat, family, off, gamma, weights, cv, method, minprob)
+    isingmat <- foreach(j = 1:nvars, .combine = rbind) %dorng% {
+      getNeighborhood(j, mat, family, off = 0, gamma, cv, method, minprob)
     }
   } else {
-    isingmat <- do.call("rbind", lapply(1:ncol(mat), getNeighborhood, mat, family, off,
-                                        gamma, weights, cv, method, minprob))
+    isingmat <- do.call("rbind", lapply(1:nvars, getNeighborhood, mat, family, off = 0,
+                                        gamma, cv, method, minprob))
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
@@ -175,15 +162,20 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   return(isingmat)
 }
 
-getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, minprob) {
-  y <- as.vector(mat[, j])
-  X <- as.matrix(mat[, -j])
-  xcols <- colSums(X)
-  if(family == "binomial") {
-    regX <- X[, xcols >= 4]
-  } else {
-    regX <- X
+bigGetNeighborhood <- function(j, mat, family, off, gamma, cv, method, minprob,
+                               cpus = 1) {
+  nSubsets <- ncol(mat) - 3
+  lastrow <- max(which(!is.na(mat[, 1])))
+  nSubjects <- max(mat[, ncol(mat) - 2], na.rm = TRUE)
+  X <- sub.big.matrix(mat, firstCol = 1, lastCol = nSubsets, lastRow = lastrow)
+  neworder <- c(j, (1:nSubsets)[-j])
+  if(j != 1) {
+    X[, c(1, j)] <- X[, c(j, 1)]
   }
+  y <- X[, 1]
+  regX <- sub.big.matrix(X, firstCol = 2)
+
+  weights <- mat[1:lastrow, ncol(mat)]
 
   if(sum(y == 0) < 8 & family == "binomial") {
     p <- min(mean(y), 1 - minprob)
@@ -211,20 +203,83 @@ getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, min
     off <- NULL
   }
 
+  rowinds <- sample.int(nrow(regX), replace = TRUE, prob = weights)
+  if(!cv) {
+    netfit <- biglasso(X = regX, y = y, family = family, row.idx = rowinds)
+    logliks <- - netfit$loss
+    dfs <- ncol(regX) - netfit$rejections
+    ebic <- -2 * logliks + dfs * log(nrow(X) * ncol(regX)^gamma)
+    lambda <- netfit$lambda[which.min(ebic)]
+  } else {
+    netfit <- cv.biglasso(regX, y, family = family,  row.idx = rowinds, ncores = cpus)
+    lambda <- netfit$lambda.min
+  }
+  matrow <- rep(0, ncol(X))
+  coefs <- as.numeric(coef(netfit, lambda = lambda))
+  matrow <- coefs
+  if(j != 1) {
+    matrow[c(j, 1)] <- matrow[c(1, j)]
+    X[, c(j, 1)] <- X[, c(1, j)]
+  }
+  return(matrow)
+}
+
+getNeighborhood <- function(j, mat, family, off = 0, gamma, cv, method, minprob,
+                            subsamp = NULL) {
+  nSubsets <- ncol(mat) - 3
+  nSubjects <- length(unique(mat[, nSubsets + 1]))
+  maxrow <- max(which(!is.na(mat[, 1])))
+  submat <- sub.big.matrix(mat, firstRow = 1, firstCol = 1,
+                           lastRow = maxrow, lastCol = nSubsets)
+  if(is.null(subsamp)) {
+    nIsingSamples <- sum(mat[1:maxrow, nSubsets + 2] == max(mat[1:maxrow, nSubsets + 2]))
+    subsamp <- sample.int(maxrow, nIsingSamples, prob = mat[1:maxrow, nSubsets + 3])
+  }
+
+  off <- rep(off, length(subsamp))
+  y <- as.vector(submat[subsamp, j])
+  X <- as.matrix(submat[subsamp, (1:nSubsets)[-j]])
+  xcols <- colSums(X)
+  if(family == "binomial") {
+    regX <- X[, xcols >= 4]
+  } else {
+    regX <- X
+  }
+
+  if(sum(y == 0) < 8 & family == "binomial") {
+    p <- min(mean(y), 1 - minprob)
+    row <- rep(0, ncol(mat))
+    coef <- log(p / (1 - p))
+    row[j] <- coef
+    return(row)
+  } else if(sum(y == 1) < 8 & family == "binomial") {
+    p <- max(mean(y), minprob)
+    row <- rep(0, ncol(mat))
+    coef <- log(p / (1 - p))
+    row[j] <- coef
+    return(row)
+  } else if(ncol(X) < 2) {
+    p <- mean(y)
+    row <- rep(0, ncol(mat))
+    log(p / (1 - p))
+    row[j] <- coef
+    return(row)
+  }
+
   if(!cv) {
     netfit <- glmnet::glmnet(regX, y, family = family, offset = off,
-                             intercept = TRUE, weights = weights)
+                             intercept = TRUE)
     logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
     dfs <- netfit$df
     ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
     lambda <- netfit$lambda[which.min(ebic)]
   } else {
     netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,
-                                intercept = TRUE, weights = weights)
+                                intercept = TRUE)
     lambda <- netfit$lambda.min
   }
-  matrow <- rep(0, ncol(mat))
-  coefs <- rep(0, ncol(mat))
+  matrow <- rep(0, nSubsets)
+  coefs <- rep(0, nSubsets)
   if(family == "binomial") {
     coefs[c(1, which(xcols >= 4) + 1)] <- coef(netfit, s = lambda)
   } else {
@@ -234,3 +289,57 @@ getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, min
   matrow[j] <- coefs[1]
   return(matrow)
 }
+
+bigIsing <- function(mat, AND = TRUE, gamma = 0.9,
+                     modelprobs = NULL, minprob = NULL,
+                     method = "sparse", cv = FALSE,
+                     family = "binomial", verbose=FALSE,
+                     parallel = FALSE, cpus = 1) {
+  if(is.null(weights)) {
+    weights <- rep(1, nrow(mat))
+  }
+
+  nvars <- ncol(mat)
+  if(!is.null(modelprobs) & length(modelprobs) != (ncol(mat) + 1)) {
+    warning("modelprobs must be of length ncol(mat) + 1 !")
+  }
+  if(is.null(modelprobs)) {
+    modelprobs <- (1 + nvars)^-1 / choose(nvars, 0:nvars)
+  }
+  offsets <- diff(log(modelprobs))
+
+  if(gamma < 0) gamma <- 0
+
+  if(is.null(minprob)) {
+    minprob <- 1 / nrow(mat)
+  }
+
+  nSubsets <- ncol(mat) - 3
+  isingmat <- do.call("rbind", lapply(1:nSubsets, bigGetNeighborhood, mat, family, off,
+                                      gamma, cv, method, minprob, cpus))
+
+  nonzero <- which(isingmat != 0, arr.ind = TRUE)
+  nonzero <- nonzero[which(nonzero[, 1] != nonzero[, 2]), , drop = FALSE]
+  if(length(nonzero) != 0) {
+    nonzero <- t(apply(nonzero, 1, sort))
+    nonzero <- unique(nonzero)
+    for(i in 1:nrow(nonzero)) {
+      u <- nonzero[i, 1]
+      v <- nonzero[i, 2]
+      first <- isingmat[u, v]
+      second <- isingmat[v, u]
+      if(AND & (first == 0 | second == 0)) {
+        isingmat[u, v] <- 0
+        isingmat[v, u] <- 0
+        next
+      }
+
+      meanval <- (first + second) / 2
+      isingmat[u, v] <- meanval
+      isingmat[v, u] <- meanval
+    }
+  }
+
+  return(isingmat)
+}
+

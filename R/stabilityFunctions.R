@@ -95,12 +95,8 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     }
   }
 
-  if(!sampleNew) {
-    names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
-    samples <- lapply(unique(names(samples)), function(x) {
-      do.call("rbind", samples[names(samples) == x])
-    })
-  }
+  sampLegend <- obj$sampLegend
+  bigassign <- as.big.matrix(obj$assignmentList)
   subsets <- names(obj$coefficients)
   nsubsets <- ncol(samples[[1]])
 

@@ -1,3 +1,9 @@
+printmem <- function(objname, object) {
+  mem <- as.numeric(object.size(object)) / 10^6
+  message <- paste(objname, " ", round(mem, 3), "MB", sep = "")
+  print(message)
+}
+
 #' @useDynLib flowReMix
 #' @importFrom Rcpp sourceCpp
 #' @importFrom stats as.formula coef cov.wt dbinom glm model.offset model.response model.weights optim optimize p.adjust pbeta predict pwilcox rbinom rnorm runif t.test uniroot update.formula  var weighted.mean weights wilcox.test
@@ -315,6 +321,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #' @import doParallel
 #' @import foreach
 #' @import parallel
+#' @import bigmemory
 #' @md
 #' @export
 flowReMix <- function(formula,
@@ -625,7 +632,6 @@ flowReMix <- function(formula,
   databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
-  clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
   iterCoefMat <- matrix(ncol = length(glmFits), nrow = maxIter + 1)
   if(length(initMHcoef) == nSubsets) {
     MHcoef <- initMHcoef
@@ -656,6 +662,29 @@ flowReMix <- function(formula,
     rateWeights <- matrix(nrow = iterations - updateLag, ncol = iterations - updateLag)
   }
 
+  # Initializing big objects -----------------------
+  nsamp <- ceiling(nsamp / keepEach) * keepEach
+  if(markovChainEM & !keepSamples) {
+    nrows <- nsamp / keepEach * nSubjects
+  } else {
+    nrows <- (iterations - updateLag) * nsamp / keepEach * nSubjects
+  }
+  ncols <- nSubsets + 3
+  bignames <- c(levels(dat$sub.population), "idind", "iter", "weight")
+  bigassign <- big.matrix(nrow = nrows, ncol = ncols, dimnames = list(NULL, bignames))
+  bigrandom <- big.matrix(nrow = nrows, ncol = nSubsets, dimnames = list(NULL, bignames))
+  blockSize <- nrows / (iterations - updateLag)
+
+  currentRand <- estimatedRandomEffects
+  colnames(currentRand) <- bignames[1:nSubsets]
+  currentRand <- as.big.matrix(currentRand)
+
+  clusterAssignments <- matrix(0, ncol = nSubsets, nrow = nSubjects)
+  colnames(clusterAssignments) <- bignames[1:nSubsets]
+  clusterAssignments <- as.big.matrix(clusterAssignments)
+
+  bigadaptive <- big.matrix(nrow = nSubjects, ncol = nSubsets, dimnames = list(NULL, bignames))
+
   # Starting analysis -------------------------------
   if(verbose) print("Starting Stochastic EM")
   for(iter in 1:maxIter) {
@@ -681,9 +710,11 @@ flowReMix <- function(formula,
     }
 
     # Refitting Model with current random effects/assignments
+    printmem("databyid", databyid)
     dataByPopulation <- data.frame(rbindlist(databyid))
     dataByPopulation$iteration <- iter
     dataByPopulation$emWeights <- 1
+    rm(databyid)
     if(markovChainEM) {
       accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
@@ -872,6 +903,7 @@ flowReMix <- function(formula,
     databyid <- do.call("rbind", accumDat)
     databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
     databyid <- by(databyid, databyid$id, function(x) x)
+    rm(accumDat)
 
     # S-step ------------------------------
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
@@ -896,12 +928,19 @@ flowReMix <- function(formula,
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
 
+    if(markovChainEM & !keepSamples) {
+      iterInd <- 1
+    } else {
+      iterInd <- max(iter - updateLag, 1)
+    }
     listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                                 pre = preAssignment[[i]],
-                                                                rand = estimatedRandomEffects[i, ],
-                                                                assign = clusterAssignments[i, ],
-                                                                index = i), keepcols)
+                                                                index = c(ind = i, iter = iterInd, blockSize = blockSize)), keepcols)
+    if(iter == 1) {
+      idIndMap <- data.frame(ind = 1:nSubjects, id = sapply(listForMH, function(x) x$pre[1, 1]))
+    }
 
+    printmem("listForMH", listForMH)
     if(newSampler & iter == 1) {
       settingNsamp <- nsamp
       nsamp <- 2 * nsamp
@@ -912,8 +951,7 @@ flowReMix <- function(formula,
     inds <- splitIndices(length(listForMH), ncores)
     listForMH <- lapply(inds, function(x) listForMH[x])
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
-    # print(mem_used()) #### MEMORY CHECK
-    MHresult <- foreach(sublist = listForMH, .combine = c) %dorng% {
+    foreach(sublist = listForMH, .combine = c) %dorng% {
       lapply(sublist, function(subjectData) {
         if(!newSampler) {
           flowSstep(subjectData, nsamp, nSubsets, intSampSize,
@@ -921,7 +959,10 @@ flowReMix <- function(formula,
                     betaDispersion, randomAssignProb, modelprobs,
                     iterAssignCoef, prior, zeroPosteriorProbs,
                     M, invcov, mixed, sampleRandom = TRUE,
-                    doNotSample = doNotSampleSubset)
+                    doNotSample = doNotSampleSubset,
+                    bigassign, bigrandom,
+                    clusterAssignments, currentRand,
+                    bigadaptive)
         } else {
           newSstep(subjectData, nsamp, nSubsets, intSampSize,
                     isingCoefs, covariance, keepEach, MHcoef,
@@ -934,31 +975,29 @@ flowReMix <- function(formula,
     }
     # print(mem_used()) #### MEMORY CHECK
 
-    assignmentList <- lapply(MHresult, function(x) x$assign)
-    MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
-    randomList <- lapply(MHresult, function(x) x$rand)
-    rm(MHresult)
+    MHrates <- sapply(1:ncol(bigadaptive), function(x) mean(bigadaptive[, x]))
 
     for(i in 1:nSubjects) {
-      assignmentMat <- assignmentList[[i]]
+      subjrows <- mwhich(bigassign, cols = c("idind", "iter"), list(i, iterInd), comps = c("eq", "eq"), op = "AND")
+      # subjrows <- which(bigassign[, nSubsets + 1] == i & bigassign[, nSubsets + 2] == iterInd)
+      assignmentMat <- bigassign[subjrows, 1:nSubsets]
+      randomMat <- bigrandom[subjrows, 1:nSubsets]
       if(zeroPosteriorProbs){
-        assignmentMat[,which(preAssignment[[i]]$assign==0)]=0 #zero out pre-assigned z's
-        iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
-        assignmentMat <- assignmentList[[i]]  # restore the z's for cluster assignments.
+        tempassign <- assignmentMat
+        tempassign[, which(preAssignment[[i]]$assign == 0)] <- 0 #zero out pre-assigned z's
+        iterPosteriors <- colMeans(tempassign) # compute  posterior probabilities using zeroed z's
       }else{
         iterPosteriors <- colMeans(assignmentMat) # compute  posterior probabilities using zeroed z's
       }
       posteriors[i, ] <- (1 - iterweight) * posteriors[i, ] +  iterweight * iterPosteriors
-      clusterAssignments[i, ] <- assignmentMat[nrow(assignmentMat), ]
 
       subjectData <- databyid[[i]]
       popInd <- subjectData$subpopInd
-      randomMat <- randomList[[i]]
-      randomMat[is.na(randomMat)] <- 0
-      randomEst <- randomMat[nrow(randomMat), ]
+      randomEst <- currentRand[i, ]
       # Updating global estimates
       currentRandomEst <- estimatedRandomEffects[i, ]
-      estimatedRandomEffects[i, ] <- (1 - iterweight) * currentRandomEst + iterweight * (colMeans(randomMat) - currentRandomEst)
+      iterRandEst <- apply(randomMat, 2, mean)
+      estimatedRandomEffects[i, ] <- (1 - iterweight) * currentRandomEst + iterweight * (iterRandEst - currentRandomEst)
 
       # preparing data for glm
       subjectData$randomOffset[1:length(popInd)] <- as.numeric(randomEst[popInd])
@@ -985,55 +1024,27 @@ flowReMix <- function(formula,
     if(!mixed) {
       if(verbose) print("Updating Ising!")
 
-      # Saving posterior samples (or not)
-      if(iter == updateLag + 1) {
-        if(keepSamples) {
-          assignmentList <- lapply(assignmentList, function(x) {attr(x, "iter") <- iter ; return(x)})
-          exportAssignment <- assignmentList
-          names(exportAssignment) <- names(databyid)
-        }
-      } else if(iter > updateLag + 1) {
-        names(assignmentList) <- names(databyid)
-        assignmentList <- lapply(assignmentList, function(x) {attr(x, "iter") <- iter ; return(x)})
-        if(keepSamples) exportAssignment <- c(exportAssignment, assignmentList)
-      }
-
       # Calculating Ising Weights
       if(!markovChainEM & iter > updateLag + 1) {
-        assignFromIter <- sapply(exportAssignment, function(x) attr(x, "iter"))
-        exportAssignment <- exportAssignment[assignFromIter > iter - keepLastIterations]
-        isingWeights <- assignFromIter[assignFromIter > iter - keepLastIterations]
-        isingWeights <- unlist(as.vector(mapply(function(x, y) rep(x, nrow(y)), isingWeights, exportAssignment, SIMPLIFY = TRUE)))
-        isingWeights <- weightMap[isingWeights - updateLag]
-        # print(unique(isingWeights))
-        # print(sum(unique(isingWeights)))
+        bigassign[, nSubsets + 3] <- weightMap[bigassign[, nSubsets + 2]]
+      } else {
+        maxiter <- bigassign[, 2] == max(bigassign[, nSubsets + 2], na.rm = TRUE)
+        bigassign[maxiter, nSubsets + 3] <- 1
+        bigassign[!maxiter, nSubsets + 3] <- 0
       }
-
-      # If saEM then use all previous samples
-      if(!markovChainEM & iter > updateLag + 1) {
-        assignmentList <- exportAssignment
-      }
-
-      # If markov chain EM then start saving samples (or not)
-      if(markovChainEM & iter == iterations) {
-        exportAssignment <- assignmentList
-      }
-
-      assignmentList <- do.call("rbind",assignmentList)
-      assignmentList <- data.frame(assignmentList)
-      names(assignmentList) <- popnames
 
       # If markov chain EM or not aggregating then all weights are 1
       if(markovChainEM | iter <= updateLag + 1) {
-        isingWeights <- rep(1, nrow(assignmentList))
+        bigassign[, nSubsets + 3] <- 1
       }
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
         if(!isingWprior) {
-          isingfit <- raIsing(assignmentList, AND = TRUE,
-                              modelprobs = modelprobs,
-                              minprob = 1 / nSubjects, verbose=verbose,
-                              weights = isingWeights, parallel = parallel)
+          isingfit <- raIsing(bigassign, AND = FALSE, gamma = 0.25,
+                              modelprobs = NULL, minprob = 1 / nSubjects,
+                              method = "sparse", cv = FALSE,
+                              family = "binomial",verbose = FALSE,
+                              parallel = parallel)
         } else {
           isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,
@@ -1073,25 +1084,12 @@ flowReMix <- function(formula,
 
     # Updating Covariance -------------------------
     if(verbose) print("Estimating Covariance!")
+    maxrow <- max(which(!is.na(bigrandom[, 1])))
+    subRand <- sub.big.matrix(bigrandom, lastRow = maxrow)
+    subsamp <- sample.int(maxrow, nSubjects, prob = bigassign[1:maxrow, nSubsets + 3])
+    randomList <- bigrandom[subsamp, ]
+    printmem("randomList", randomList)
 
-    if(iter == updateLag + 1) {
-      names(randomList) <- names(databyid)
-      if(keepSamples) randomOutput <- randomList
-    } else if(iter > updateLag + 1){
-      names(randomList) <- names(databyid)
-      if(keepSamples) randomOutput <- c(randomOutput, randomList)
-    }
-
-    if(markovChainEM & iter == iterations) {
-      randomOutput <- randomList
-    }
-
-    if(!markovChainEM & iter > updateLag + 1) {
-      randomOutput <- randomOutput[assignFromIter > iter - keepLastIterations]
-      randomList <- randomOutput
-    }
-
-    randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
@@ -1121,7 +1119,7 @@ flowReMix <- function(formula,
     if(newSampler) {
       targetRate <- max(min(2 / keepEach, 0.4), 0.234)
     } else {
-      targetRate <- 0.234
+      targetRate <- 0.4
     }
 
     for(j in 1:nSubsets) {
@@ -1160,6 +1158,11 @@ flowReMix <- function(formula,
       names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)
+
+      idIndMap[, 2] <- gsub("\\%%%.*", "", idIndMap[, 2])
+      sampLegend <- data.frame(id = idIndMap[bigassign[, nSubsets + 1], 2],
+                               iter = bigassign[, nSubsets + 2],
+                               weight = bigassign[, nSubsets + 3])
     }
   }
 
@@ -1184,12 +1187,13 @@ flowReMix <- function(formula,
   result$subject_id <- match.call()$subject_id
   result$preAssignment <- preAssignmentMat
   result$MHcoef <- MHcoef
-  result$randomEffectSamp <- randomOutput
+  result$randomEffectSamp <- bigrandom[!is.na(bigrandom[, 1]), ]
 
   if(!mixed) {
     result$isingCov <- isingCoefs
     result$isingfit <- isingfit
-    result$assignmentList <- exportAssignment
+    result$assignmentList <- bigassign[, 1:nSubsets]
+    result$sampLegend <- sampLegend
     posteriors[, -1] <- 1 - posteriors[, -1]
     result$posteriors <- posteriors
     result$levelProbs <- levelProbs
@@ -1243,10 +1247,15 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                       betaDispersion, randomAssignProb, modelprobs,
                       iterAssignCoef, prior, zeroPosteriorProbs,
                       M, invcov, mixed, sampleRandom = TRUE,
-                      doNotSample = NULL) {
+                      doNotSample = NULL,
+                      bigassign, bigrandom,
+                      currentAssign, currentRand,
+                      bigadaptive) {
   if(is.null(doNotSample)) {
     doNotSample <- rep(FALSE, nSubsets)
   }
+  idInd <- subjectData$index[1]
+  iter <- subjectData$index[2]
   condvar <- 1 / diag(invcov)
   popInd <- subjectData$dat$subpopInd
   N <- subjectData$dat$N
@@ -1254,7 +1263,8 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   prop <- y/N
   unifVec <- runif(nsamp * nSubsets)
   normVec <- rnorm(intSampSize)
-  assignment <- subjectData$assign
+  assignment <- currentAssign[idInd, ]
+  randomEst <- currentRand[idInd, ]
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
@@ -1275,13 +1285,12 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   eta <- subjectData$dat$nullEta
   responderSubset <- popInd %in% which(assignment == 1)
   eta[responderSubset] <- subjectData$dat$altEta[responderSubset]
-  randomEst <- as.numeric(subjectData$rand)
 
   MHattempts <- rep(0, nSubsets)
   MHsuccess <- rep(0, nSubsets)
   if(sampleRandom) {
     randomMat <- simRandomEffectCoordinateMH(y, N,
-                                             subjectData$index,
+                                             subjectData$index[[1]],
                                              nsamp, nSubsets, MHcoef,
                                              as.vector(assignment),
                                              as.integer(popInd),
@@ -1295,8 +1304,22 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   } else {
     randomMat <- NULL
   }
-  return(list(assign = assignmentMat, rand = randomMat,
-              rate = MHsuccess / MHattempts))
+
+  currentRand[idInd, ] <- randomMat[nrow(randomMat), ]
+  currentAssign[idInd, ] <- assignmentMat[nrow(assignmentMat), ]
+
+  itershift <- (iter - 1)*subjectData$index[3]
+  fillstart <- ((idInd - 1) * nrow(assignmentMat)) + 1 + itershift
+  fillend <- (idInd * nrow(assignmentMat)) + itershift
+  fillrange <- fillstart:fillend
+  bigassign[fillrange, 1:nSubsets] <- assignmentMat
+  bigassign[fillrange, nSubsets + 1] <- idInd
+  bigassign[fillrange, nSubsets + 2] <- iter
+  bigrandom[fillrange, 1:nSubsets] <- randomMat
+
+  bigadaptive[idInd, ] <- MHsuccess / MHattempts
+
+  return(NULL)
 }
 
 newSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
