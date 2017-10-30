@@ -35,12 +35,16 @@ malaria <- malaria[order(malaria$ptid, malaria$stimgroup), ]
 
 # Analysis -----------------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = 7, keepEach = 5, nsamp = 50, initMHcoef = 2,
-                             nPosteriors = 10, centerCovariance = TRUE,
+control <- flowReMix_control(updateLag = 30, keepEach = 5, nsamp = 50, initMHcoef = 2,
+                             nPosteriors = 4, centerCovariance = TRUE,
                              maxDispersion = 500, minDispersion = 10^8,
                              randomAssignProb = 10^-8, intSampSize = 100,
                              lastSample = 10, isingInit = -log(95),
-                             initMethod = "robust")
+                             initMethod = "robust",
+                             ncores = 6,isingWprior=TRUE,
+                             markovChainEM = TRUE,
+                             prior = 0,
+                             zeroPosteriorProbs = FALSE)
 
 tempdat <- subset(malaria, TRUE)
 tempdat$time <- tempdat$visitno
@@ -59,17 +63,20 @@ tempdat$stimInd <- as.numeric(tempdat$stim == "stim")
 #              data = tempdat)
 # colnames(a)
 
-system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stimInd + stimInd:trtTime,
+keep_levels = unlist(lapply(strsplit(levels(tempdat$subset),"/"),function(x)x[3]))%in%c("154+","IL21+","IL2+","IFNg+","TNFa+","IL4+")
+temp = tempdat%>%filter(stimgroup=="RBC")%>%filter(subset %in% levels(subset)[keep_levels])%>%mutate(subset=factor(subset))
+
+system.time(fit_model4_50 <- flowReMix(cbind(count, parentcount - count) ~  visitno + stimInd + stimInd:trtTime,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = trtTime,
-                 data = tempdat,
+                 data = temp,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "robust",
-                 iterations = 11,
+                 regression_method = "robust",cluster_assignment = TRUE,
+                 iterations = 100,
                  parallel = TRUE,
-                 verbose = TRUE, control = control))
+                 verbose = FALSE, control = control))
 
 # load(file = "data analysis/results/malaria3_6_npost10niter40maxDisp1000.Robj")
 # load(file = "data analysis/results/malaria3_5_npost5niter40maxDisp1000.Robj")
