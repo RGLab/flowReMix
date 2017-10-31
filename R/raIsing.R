@@ -249,19 +249,19 @@ getNeighborhood <- function(j, mat, family, off = 0, gamma, cv, method, minprob,
 
   if(sum(y == 0) < 8 & family == "binomial") {
     p <- min(mean(y), 1 - minprob)
-    row <- rep(0, ncol(mat))
+    row <- rep(0, nSubsets)
     coef <- log(p / (1 - p))
     row[j] <- coef
     return(row)
   } else if(sum(y == 1) < 8 & family == "binomial") {
     p <- max(mean(y), minprob)
-    row <- rep(0, ncol(mat))
+    row <- rep(0, nSubsets)
     coef <- log(p / (1 - p))
     row[j] <- coef
     return(row)
   } else if(ncol(X) < 2) {
     p <- mean(y)
-    row <- rep(0, ncol(mat))
+    row <- rep(0, nSubsets)
     log(p / (1 - p))
     row[j] <- coef
     return(row)
@@ -272,7 +272,7 @@ getNeighborhood <- function(j, mat, family, off = 0, gamma, cv, method, minprob,
                              intercept = TRUE)
     logliks <- 2 * (netfit$dev.ratio - 1) * netfit$nulldev
     dfs <- netfit$df
-    ebic <- -logliks + dfs * log(nrow(mat) * (ncol(mat) - 1)^gamma)
+    ebic <- -logliks + dfs * log(nrow(mat) * (nSubsets - 1)^gamma)
     lambda <- netfit$lambda[which.min(ebic)]
   } else {
     netfit <- glmnet::cv.glmnet(regX, y, family = family, offset = off,

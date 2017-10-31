@@ -108,7 +108,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE, keepSamples = TRUE,
                              verbose = TRUE, control = control,
-                             newSampler = TRUE))
+                             newSampler = FALSE))
 # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")
 
