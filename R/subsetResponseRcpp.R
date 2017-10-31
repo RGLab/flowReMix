@@ -1086,9 +1086,13 @@ flowReMix <- function(formula,
     # Updating Covariance -------------------------
     if(verbose) print("Estimating Covariance!")
     maxrow <- max(which(!is.na(bigrandom[, 1])))
-    subRand <- sub.big.matrix(bigrandom, lastRow = maxrow)
     subsamp <- sample.int(maxrow, nSubjects, prob = bigassign[1:maxrow, nSubsets + 3])
-    randomList <- bigrandom[subsamp, ]
+    rm(randomList)
+    randomList <- NULL
+    try(randomList <- bigrandom[subsamp, ])
+    if(is.null(randomList)) {
+      print("wtf")
+    }
     printmem("randomList", randomList)
 
     oldCovariance <- covariance
@@ -1159,12 +1163,11 @@ flowReMix <- function(formula,
       names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)
-
-      idIndMap[, 2] <- gsub("\\%%%.*", "", idIndMap[, 2])
-      sampLegend <- data.frame(id = idIndMap[bigassign[, nSubsets + 1], 2],
-                               iter = bigassign[, nSubsets + 2],
-                               weight = bigassign[, nSubsets + 3])
     }
+    idIndMap[, 2] <- gsub("\\%%%.*", "", idIndMap[, 2])
+    sampLegend <- data.frame(id = idIndMap[bigassign[, nSubsets + 1], 2],
+                             iter = bigassign[, nSubsets + 2],
+                             weight = bigassign[, nSubsets + 3])
   }
 
   # Processing random effects -----------
@@ -1303,7 +1306,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                              M, betaDispersion,
                                              keepEach)
   } else {
-    randomMat <- NULL
+    randomMat <- matrix(0, nrow = nrow(assignmentMat), ncol = ncol(assignmentMat))
   }
 
   currentRand[idInd, ] <- randomMat[nrow(randomMat), ]
