@@ -157,11 +157,7 @@ fdrTable <- function(obj, target) {
 
 #' @export
 #' @import ggplot2
-plot.flowReMix_fdrTable <- function(x, ...) {
-  mc = match.call()
-  target = mc$target
-  subsets = mc$subsets
-  varname = mc$varname
+plot.flowReMix_fdrTable <- function(x, target, subsets = NULL, varname = NULL, ...) {
   plotList <- x$empiricalFDR
   if(!is.null(subsets)) {
     plotList <- subset(plotList, subset %in% subsets)
@@ -241,8 +237,6 @@ plotScatter <- function(obj, subsets = NULL,
                            trtprop = mean(prop))
   forplot <- merge(ctrl, treat)
   forplot$shape <- factor(forplot$shape)
-  if(!is.null(subsets))
-    forplot=forplot%>%filter(sub.population%in%subsets)
   figure <- ggplot(forplot)
   if(is.null(target)) {
     figure <- figure + geom_point(aes(x = log(ctrlprop), y = log(trtprop),
