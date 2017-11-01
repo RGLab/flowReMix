@@ -170,7 +170,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
                          fill = NULL, fillName = NULL,
                          fillRange = NULL, fillPalette = NULL,
                          title = TRUE, normalize = FALSE,
-                         count = TRUE, label_size = 1.8,seed=100) {
+                         count = TRUE, label_size = 1.8,seed=100, ...) {
   if(graph == "ising") {
     ising <- obj$isingAvg
     if(count) {

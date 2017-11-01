@@ -83,6 +83,10 @@ plot(fit, type = "scatter", target = vaccine, ncol = 2,
      paletteRange = c(0.5, 1))
 plot(fit, type = "scatter", target = vaccine, ncol = 2,
      paletteRange = c(0.5, 1), varname = "flalop")
+plot(fit, type = "boxplot", target = vaccine, ncol = 3,
+     test = "wilcoxon")
+plot(fit, type = "graph", target = vaccine, ncol = 3,
+     test = "wilcoxon", fill = roctab$auc)
 
 
 

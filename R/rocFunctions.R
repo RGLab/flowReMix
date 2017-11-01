@@ -267,7 +267,7 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
                         test = c("none", "logistic", "t-test", "wilcoxon"),
                         one_sided = FALSE, jitter = FALSE,
-                        ncol = 5, adjust = "BH",sigdigits=5) {
+                        ncol = 5, adjust = "BH",sigdigits=5, ...) {
   if(is.null(varname) & !is.null(target)) {
     varname <- as.character(match.call()$target)
     varname <- varname[length(varname)]
