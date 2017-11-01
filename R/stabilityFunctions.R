@@ -41,14 +41,13 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
       if(is.null(obj$assignmentList)) {
         stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
       }
-      samples <- obj$assignmentList
-      names(samples) <- names(obj$randomEffectSamp)
+      bigmat <- as.big.matrix(obj$assignmentList)
       family <- "binomial"
     } else if(type == "randomEffects") {
       if(is.null(obj$randomEffectSamp)) {
         stop("Posterior samples were not kept, please re-run with `sampleNew = TRUE'.")
       }
-      samples <- obj$randomEffectSamp
+      bigmat <- as.big.matrix(obj$randomEffectSamp)
       family <- "gaussian"
     } else {
       stop("Method not supported!")
@@ -74,55 +73,64 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     mixed <- is.null(obj$isingAvg)
     inds <- splitIndices(length(mhList), cpus)
     mhList <- lapply(inds, function(x) mhList[x])
-    MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
+
+    nSubjects <- nrow(obj$posteriors)
+    bigassign <- big.matrix(nrow = reps * nSubjects, ncol = nSubsets + 3)
+    bigrandom <- big.matrix(nrow = reps * nSubjects, ncol = nSubsets)
+    post <- as.matrix(fit$posteriors[, -1])
+    clusterAssignments <- apply(post, 2, function(p) as.numeric(rbinom(length(p), 1, p)))
+    clusterAssignments <- as.big.matrix(clusterAssignments)
+    currentRand <- as.big.matrix(as.matrix(obj$randomEffects[, -1]))
+    doNotSampleSubset <- rep(FALSE, nSubsets)
+    modelprobs <- rep(1, nSubsets + 1)
+    bigadaptive <- big.matrix(nrow = nrow(fit$posteriors), ncol = nSubsets)
+    covariance <- obj$covariance
+    M <- obj$dispersion
+    betaDispersion <- TRUE
+    randomAssignProb <- obj$control$randomAssignProb
+    iterAssignCoef <- obj$control$preAssignCoefs[length(obj$control$preAssignCoefs)]
+    sampleRandom <- (type == 'randomEffects')
+
+    foreach(sublist = mhList, .combine = c) %dorng% {
       lapply(sublist, function(subjectData) {
-        flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
-                intSampSize = intSampSize, isingCoefs = isingCoefs,
-                covariance = cov, keepEach = keepEach,
-                MHcoef = MHcoef, betaDispersion = TRUE,
-                randomAssignProb = 0, modelprobs = 0,
-                iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
-                M = dispersion, invcov = invcov, mixed = mixed,
-                sampleRandom = (type != "ising"))
+        flowSstep(subjectData, nsamp, nSubsets, intSampSize,
+                  isingCoefs, covariance, keepEach, MHcoef,
+                  betaDispersion, randomAssignProb, modelprobs,
+                  iterAssignCoef, prior, zeroPosteriorProbs,
+                  M, invcov, mixed, sampleRandom,
+                  doNotSample = doNotSampleSubset,
+                  bigassign, bigrandom,
+                  clusterAssignments, currentRand,
+                  bigadaptive)
       })
-    }
-    if(type == "ising") {
-      samples <- lapply(MHresult, function(x) x$assign)
-      family = "binomial"
-    } else if(type == "randomEffects") {
-      samples <- lapply(MHresult, function(x) x$rand)
-      family <- "gaussian"
+      if(type == "ising") {
+        bigmat <- sub.big.matrix(bigassign, lastCol = nSubsets)
+        family <- "binomial"
+      } else {
+        bigmat <- bigrandom
+        family <- "gaussian"
+      }
     }
   }
 
   if(!sampleNew) {
-    names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
-    samples <- lapply(unique(names(samples)), function(x) {
-      do.call("rbind", samples[names(samples) == x])
-    })
-  }
-  subsets <- names(obj$coefficients)
-  nsubsets <- ncol(samples[[1]])
-
-  if(sampleNew) {
-    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[i, , drop = FALSE])))
+    sampLegend <- obj$sampLegend
   } else {
-    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[sample.int(nrow(samp), 1), , drop = FALSE])))
+    sampLegend <- data.frame(id = bigassign[, nSubsets + 1])
   }
 
-  inds = splitIndices(reps, cpus)
-  samples <- lapply(inds, function(x) samples[x])
-  set.seed(seed)
+  samples <- sapply(unique(sampLegend$id), function(x) {
+    sample(which(sampLegend$id == x), reps, replace = TRUE)
+  })
 
-  cluster_res <- foreach(matrices = samples, .combine = c) %dorng% {
-    countCovar <- lapply(matrices, function(mat)
-      raIsing(mat, AND = AND, gamma = gamma, family = family,
-              method = "sparse", cv = cv, parallel = FALSE) != 0)
-    return(countCovar)
+  cluster_res <- foreach(i = 1:nrow(samples), .combine = "+") %dorng% {
+    samp <- samples[i, ]
+    raIsing(bigmat, AND = AND, gamma = gamma, family = family,
+            method = "sparse", cv = cv, parallel = FALSE,
+            subsamp = samp, nSubsets = ncol(bigmat), nSubjects = length(samp)) != 0
   }
 
-  countCovar <- Reduce(cluster_res, f = "+")
-  props <- countCovar / reps
+  props <- cluster_res / reps
   colnames(props) <- names(obj$coefficients)
   rownames(props) <- colnames(props)
   diag(props) <- 0
@@ -158,10 +166,10 @@ reConstructMHlist <- function(obj) {
 
   estimatedRandomEffects <- obj$randomEffects
   nSubjects <- nrow(obj$posteriors)
+
   listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                               pre = preAssignment[[i]],
-                                                              rand = estimatedRandomEffects[i, ],
-                                                              index = i), keepcols)
+                                                              index = c(ind = i, iter = 1, blockSize = 0)), keepcols)
   names(listForMH) <- names(databyid)
   return(listForMH)
 }
@@ -221,30 +229,20 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
                                      title = title, label_size = label_size, seed=seed)
   return(figure)
 }
-
+#' @import ggplot2
 #' @export
-plot.flowReMix_stability <- function(x, ...){
-  mc = match.call();
-  threshold = ifelse(is.null(eval(mc$threshold, envir=parent.frame())), 0.5, eval(mc$threshold,envir=parent.frame()))
-  plotAll = ifelse(is.null(eval(mc$plotAll,envir=parent.frame())),FALSE,eval(mc$plotAll,envir=parent.frame()))
-  fill = eval(mc$fill,envir=parent.frame())
-  fillName = eval(mc$fillName, envir=parent.frame())
-  fillRange = eval(mc$fillRange, envir=parent.frame())
-  fillPalette = eval(mc$fillPalette, envir=parent.frame())
-  title = ifelse(is.null(eval(mc$title,envir=parent.frame())),TRUE,eval(mc$title,envir=parent.frame()))
-  layout <- ifelse(is.null(eval(mc$layout,envir=parent.frame())), "fruchtermanreingold", eval(mc$layout, envir=parent.frame()))
-  layout.par <- mc$layout.par
-  label_size = ifelse(is.null(eval(mc$label_size,envir=parent.frame())),1.8,eval(mc$label_size,envir=parent.frame()))
-  seed = ifelse(is.null(eval(mc$seed,envir=parent.frame())),100,eval(mc$seed,parent.frame()))
-
+plot.flowReMix_stability <- function(x, threshold = 0.5, nEdges = NULL, plotAll = FALSE,
+                                     fill = NULL, fillName = NULL, fillRange = NULL,
+                                     fillPalette = NULL, title = TRUE,
+                                     layout = "fruchtermanreingold",
+                                     layout.par = NULL, label_size = 1.8, seed = 100,
+                                     ...){
   set.seed(seed)
-  requireNamespace("ggplot2")
   measure <- fill
   props <- x$network
-  if(is.null(mc$nEdges)) {
+  if(is.null(nEdges)) {
     props[abs(props) < threshold] <- 0
   } else {
-    nEdges <- mc$nEdges
     propVals <- sort(unique(as.vector(abs(props))), decreasing = TRUE)
     propCounts <- sapply(propVals, function(x) sum(props == x) / 2)
     threshold <- propVals[min(which(cumsum(propCounts) >= nEdges))]
