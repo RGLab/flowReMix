@@ -87,7 +87,7 @@ plot(fit, type = "boxplot", target = vaccine, ncol = 3,
      test = "wilcoxon")
 plot(fit, type = "graph", target = vaccine, ncol = 3,
      test = "wilcoxon", fill = roctab$auc)
-
+summary(fit, type = "ROC", target = vaccine)
 
 
 # Scatter plots -----------------

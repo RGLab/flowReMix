@@ -86,7 +86,9 @@ plot.flowReMix <- function(x, target = NULL, varname = NULL,
 #' @param ... additional arguments. See description
 #' @importFrom rlang enquo
 #' @export
-summary.flowReMix <- function(object, ...) {
+summary.flowReMix <- function(object, target, type = c("ROC", "FDR"), direction = "auto", adjust = "BH",
+                              test = c("wilcoxon", "logistic", "ttest"),
+                              sortAUC = FALSE, ...) {
   mc = match.call();
   if(is.null(mc$subject_id)){
     subject_id = object$subject_id
@@ -95,24 +97,19 @@ summary.flowReMix <- function(object, ...) {
     subject_id = mc$subject_id
     subject_id = enquo(subject_id)
   }
-  if(is.null(mc$target)){
+  if(is.null(target)){
     stop("Please specify an argument for `target`. \n This should be the unquoted
          name of an outcome variable in the data. \n
          e.g.: summary(fit, target = outcome)")
-  }else{
-    target = mc$target
-    target = enquo(target)
   }
-  if(is.null(mc$type)){
-    type = "ROC"
-  }else{
-    type = eval(mc$type,envir=parent.frame())
-  }
-  type = match.arg(type, c("FDR","ROC"))
+
+  type <- match.arg(type, c("FDR","ROC"))
   if(!exists("data",object)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }
+
   #Check of the target variable is valid
+  target <- match.call()$target
   isvalid = object$data %>%
     group_by(!!subject_id) %>% mutate(nlevels = length(unique(!!target)))
   if(!all(isvalid$nlevels %in% 1)){
@@ -128,6 +125,8 @@ summary.flowReMix <- function(object, ...) {
       )
     )
   }
+
+  target <- match.call()$target
   outcome = object$data %>%
     group_by(!!subject_id) %>%
     summarize(outcome=unique(!!target))
@@ -137,12 +136,9 @@ summary.flowReMix <- function(object, ...) {
   outcome[, 1] <- as.character(outcome[, 1])
   outcome = suppressWarnings(left_join(object$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
-    mc$type = NULL
-    mc[[1]]=  getFromNamespace("rocTable",ns = "flowReMix")
-    mc$target = outcome
-    mc$obj=mc$object
-    mc$object=NULL
-    eval(mc, envir=parent.frame())
+    table <- rocTable(object, outcome, direction = direction, adjust = adjust,
+                         pvalue = test, sortAUC = sortAUC)
+    return(table)
   } else if(type == "FDR") {
     return(fdrTable(object, ifelse(is.factor(outcome),outcome,factor(outcome))))
   } else {
