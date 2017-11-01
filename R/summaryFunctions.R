@@ -12,11 +12,16 @@
 #' @usage
 #'   \method{plot}{flowReMix}(x,...)
 #' @export
-plot.flowReMix <- function(x, target = NULL,
+plot.flowReMix <- function(x, target = NULL, varname = NULL,
+                           subsets = NULL, ncol = 5,
+                           palette = NULL, paletteRange = NULL,
                            type = c("ROC","scatter","boxplot","FDR","graph"), ...){
-  if(is.null(target)){
-    subject_id <- x$subject_id
-    target = x$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup
+  mc = match.call()
+  if(!is.null(mc$target)){
+    target = mc$target
+    target = enquo(target)
+    subject_id = x$subject_id
+    target = x$data %>% group_by(!!subject_id) %>% summarize(outcome=unique(!!target))%>%ungroup#%>%select(outcome)%>%unlist%>%factor
     target <- as.data.frame(target)
     post <- x$posteriors[, 1:2]
     if(is.factor(x$posteriors[, 1])) {
@@ -28,7 +33,7 @@ plot.flowReMix <- function(x, target = NULL,
   }
 
   if(type == "FDR") {
-    table <- fdrTable(obj=x, target = target)
+    table <- fdrTable(obj = x, target = target)
     mc[[1]] = as.name("plot")
     mc$obj = table
     mc$target = NULL
@@ -40,10 +45,14 @@ plot.flowReMix <- function(x, target = NULL,
     mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "scatter") {
+    figure <- plotScatter(x, subsets = subsets, target = target,
+                          varname = varname, ncol = ncol,
+                          colPalette = palette, paletteRange = paletteRange)
+    return(figure)
     # mc[[1]] = as.name("flowReMix:::plotScatter")
-    mc[[1]] = getFromNamespace("plotScatter",ns = "flowReMix")
-    mc$obj = mc$x
-    mc$x =NULL
+    # mc[[1]] = getFromNamespace("plotScatter",ns = "flowReMix")
+    # mc$obj = mc$x
+    # mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "boxplot") {
     # mc[[1]] = as.name("flowReMix:::plotBoxplot")
@@ -70,7 +79,6 @@ plot.flowReMix <- function(x, target = NULL,
 #' @description summarize the output of a flowReMix object into a rocTable
 #' Uses non-standard evaluation
 #' \itemize{
-#' \item{subject}{The name of the subject variable, as an unquoted variable.}
 #' \item{target}{The name of the outcome variable as an unquoted variable.}
 #' \item{type}{either "ROC" or "FDR".}
 #' }

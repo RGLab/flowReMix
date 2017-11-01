@@ -16,7 +16,6 @@
 summarize the output of a flowReMix object into a rocTable
 Uses non-standard evaluation
 \itemize{
-\item{subject}{The name of the subject variable, as an unquoted variable.}
 \item{target}{The name of the outcome variable as an unquoted variable.}
 \item{type}{either "ROC" or "FDR".}
 }

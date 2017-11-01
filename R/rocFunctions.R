@@ -3,6 +3,7 @@
 plotROC <- function(obj, target, direction = "auto",
                     ncols = 5,
                     thresholdPalette = NULL,
+                    paletteRange = NULL,
                     subsets = NULL, varname = NULL) {
   notNA <- !is.na(target)
   post <- obj$posteriors[notNA, -1]
@@ -157,7 +158,7 @@ fdrTable <- function(obj, target) {
 
 #' @export
 #' @import ggplot2
-plot.flowReMix_fdrTable <- function(x, target, subsets = NULL, varname = NULL, ...) {
+plot.flowReMix_fdrTable <- function(x, target, subsets = NULL, varname = NULL, ncol = 5, ...) {
   plotList <- x$empiricalFDR
   if(!is.null(subsets)) {
     plotList <- subset(plotList, subset %in% subsets)
@@ -173,7 +174,7 @@ plot.flowReMix_fdrTable <- function(x, target, subsets = NULL, varname = NULL, .
   ggplot(plotList) +
     geom_line(aes(x = nominal, y = value, col = Measure, linetype = Measure)) +
     geom_abline(intercept = 0, slope = 1, col = "grey") +
-    facet_wrap(~ subset) + theme_bw() +
+    facet_wrap(~ subset, ncol = ncol) + theme_bw() +
     xlab("Nominal FDR") + ylab("Empirical") +
     ggtitle(paste("FDR and Power Curves for", varname))
 }
@@ -181,7 +182,8 @@ plot.flowReMix_fdrTable <- function(x, target, subsets = NULL, varname = NULL, .
 #' @import  ggplot2
 plotScatter <- function(obj, subsets = NULL,
                         target = NULL, varname = NULL,
-                        ncol = 5, colPalette = NULL) {
+                        ncol = 5, colPalette = NULL,
+                        paletteRange = NULL) {
   if(is.null(obj$modelFrame)) {
     dat <- buildFlowFrame(obj$call, obj$data)$frame
   } else {
@@ -199,6 +201,10 @@ plotScatter <- function(obj, subsets = NULL,
     if(length(target) != nrow(obj$posteriors)) {
       stop("Length of target must be identical to the number of subjects in the dataset!")
     }
+  }
+
+  if(is.null(paletteRange)) {
+    paletteRange <- c(0, 1)
   }
 
   if(is.null(colPalette)) {
@@ -247,7 +253,7 @@ plotScatter <- function(obj, subsets = NULL,
       scale_shape_discrete(name = varname)
   }
 
-  figure <- figure + scale_color_gradientn(name = "Posterior", colors = colPalette) +
+  figure <- figure + scale_color_gradientn(limits = paletteRange, name = "Posterior", colors = colPalette) +
     facet_wrap(~ sub.population, scales = "free", ncol = ncol) +
     xlab("Log Control Proportion") +
     ylab("Log Treatment Proportion") +
