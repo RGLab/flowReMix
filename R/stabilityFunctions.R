@@ -243,6 +243,8 @@ plot.flowReMix_stability <- function(x, threshold = 0.5, nEdges = NULL, plotAll 
   network <- props
   if(!plotAll) {
     keep <- apply(network, 1, function(x) any(abs(x) >= threshold))
+  } else {
+    keep <- rep(TRUE, ncol(network))
   }
   network <- network[keep, keep]
   net <- network::network(props)

@@ -71,6 +71,10 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 system.time(stab <- stabilityGraph(fit, sampleNew = FALSE, reps = 100, cpus = 2))
 system.time(stab <- stabilityGraph(fit, sampleNew = TRUE, reps = 10))
 
+# S3 methods ----------
+plot(stab, fill = roctab$auc, fillRange = c(0.4, 1), plotAll = TRUE,
+     label_size = 5, fillPalette = 2, threshold = 1)
+
 # Scatter plots -----------------
 vaccine <- as.vector(by(data, INDICES = data$ptid, FUN = function(x) x$vaccine[1] == "VACCINE"))
 plot(fit, type = "scatter", target = vaccine, ncol = 3)
