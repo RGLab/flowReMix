@@ -5,7 +5,7 @@
 \title{degreeFromStringFun
 A function to parse the degree of a subset from its name.}
 \usage{
-degreeFromStringFun(x)
+degreeFromStringFun(x, split = "\\\\+")
 }
 \arguments{
 \item{x}{\code{character} cell subset name from \code{getSubsets}}

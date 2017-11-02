@@ -5,14 +5,16 @@
 \title{weightForPFS
 Compute the weighting for the polyfunctionality score for each type of subset.}
 \usage{
-weightForPFS(x, M = NULL, parser = degreeFromStringFun)
+weightForPFS(x, M = NULL, parsefun = degreeFromStringFun, split = "\\\\+")
 }
 \arguments{
 \item{x}{\code{flowReMix} fit object}
 
 \item{M}{\code{numeric} the max possible functionality. Uses \code{max(degree)} if not provided.}
 
-\item{parser}{\code{function} to parse the degree from a cell subset name. Defaults to \code{\link{degreeFromStringFun}} in the package.}
+\item{parsefun}{\code{function} to parse the degree from a cell subset name. Defaults to \code{\link{degreeFromStringFun}} in the package.}
+
+\item{split}{\code{character} used to split the functionality and extract the degree.}
 }
 \value{
 \code{numeric} vector of weights.

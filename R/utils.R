@@ -70,10 +70,10 @@ getIsing = function(x){
 #' data(fit505)
 #' degreeFromStringFun(getSubsets(fit505))
 #'
-degreeFromStringFun = function(x){
+degreeFromStringFun = function(x,split="\\+"){
   degree = unlist(
     Map(
-      strsplit(x = gsub(".*?/", "", x), split = "\\+"),
+      strsplit(x = gsub(".*?/", "", x), split = split),
       f=length),
     use.names = FALSE)
   names(degree) = x
@@ -86,7 +86,8 @@ degreeFromStringFun = function(x){
 #' k is the degree of a subset and M is the \code{max(degree)} or the number of markers.
 #' @param x \code{flowReMix} fit object
 #' @param M \code{numeric} the max possible functionality. Uses \code{max(degree)} if not provided.
-#' @param parser \code{function} to parse the degree from a cell subset name. Defaults to \code{\link{degreeFromStringFun}} in the package.
+#' @param parsefun \code{function} to parse the degree from a cell subset name. Defaults to \code{\link{degreeFromStringFun}} in the package.
+#' @param split \code{character} used to split the functionality and extract the degree.
 #'
 #' @return \code{numeric} vector of weights.
 #' @seealso \code{\link{flowReMixPFS}} \code{\link{degreeFromStringFun}}
@@ -95,12 +96,12 @@ degreeFromStringFun = function(x){
 #' @examples
 #' data(fit505)
 #' weightForPFS(fit505)
-weightForPFS = function(x, M = NULL, parser = degreeFromStringFun){
+weightForPFS = function(x, M = NULL, parsefun = degreeFromStringFun, split = "\\+"){
   if("character"%in%class(x)){
-    degree =  parser(x)
+    degree =  parsefun(x, split = split)
   }else{
     .isFlowRemix(x)
-    degree = parser(getSubsets(x))
+    degree = parsefun(getSubsets(x),split = split)
   }
   if(is.null(match.call()$M))
      M = max(degree)
@@ -157,3 +158,284 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
 }
 
 
+#' plotIsingGraph
+#'
+#' Plot an ising graph.
+#' @param x \code{flowReMix} object.
+#'
+#' @return \code{ggplot} ggraph object
+#' @export
+#' @importFrom igraph graph_from_adjacency_matrix
+#' @importFrom tidygraph as_tbl_graph
+#' @importFrom tidygraph group_components
+#' @importFrom rlang enquo
+#' @examples
+#' data(fit505)
+#' plotIsingGraph(fit505,weight=0.9) +
+#' guides(shape=guide_legend(nrow=1),
+#'   size=guide_legend(nrow=1),
+#'   color=guide_legend(nrow=4))
+plotIsingGraph = function(x, weight=0.6,layout="kk"){
+  weight = enquo(weight)
+  .isFlowRemix(x)
+  ising = getIsing(x)
+  ising_graph = graph_from_adjacency_matrix(getIsing(x)$network, weighted = TRUE,mode = "undirected",diag = FALSE)
+  ising_tidy = as_tbl_graph(ising_graph)
+  ising_tidy %>% activate(edges) %>% filter(weight > !!weight) %>% activate(nodes) %>%
+    filter(name %in% name[.E()$from] |
+             name %in% name[.E()$to]) %>%
+    mutate(community = as.factor(group_components())) %>%
+    mutate(
+      degree = (degreeFromStringFun(name)),
+      stim = do.call(rbind, strsplit(name, "/"))[, 1],
+      parent = do.call(rbind, strsplit(name, "/"))[, 2]
+    ) %>%
+    ggraph(layout = layout) +
+    geom_edge_link() +
+    geom_node_point(aes(
+      color = community,
+      size = degree,
+      shape = stim
+    )) + theme_graph() + geom_node_text(aes(label=parent),repel=TRUE)
+}
+
+#' plotChordDiagram
+#' Generate a chord diagram from a flowReMix fit.
+#' @details Parses the \code{subsets} labels into factors that can be used to annotate tracks on a chord diagram.
+#' Connections correspond to edges in the ising stability graph with a minumum \code{threshold} propensity.
+#' A label such as "env/8+/IL2+" with an argument of \code{separator="/"} and \code{varnames=c("stim","parent","functions")} would
+#' cause the cell subset label to be parsed into three variables corresponding to the stimulation, the
+#' parent cell population, and the cytokine function.
+#' @param x \code{flowReMix} fit
+#' @param threshold \code{numeric} threshold for the minimum edge weight in the graph (exclusive).
+#' @param varnames \code{character} variable names to define by splitting subsets. e.g. \code{c("parent","stim","function")}
+#' @param separator \code{character} separator to split subset string into variables.
+#' @param function.separator \code{character} separator to split multifunction string  into individual functions.
+#' @param track.order \code{character} vector of the same length as \code{varnames} specifying the order of the variables in the tracks.
+#' @param sort.order \code{character} vector of the same length as \code{varnames} specifying the order of the variables in the tracks.
+#' @param inner.track \code{character} specifying which variable in \code{varnames} is on the inner track.
+#' @param track.height \code{numeric} vector of track heights, length 1 or \code{length(varnames)}
+#' @param track.margin \code{numeric} vector of length 2 specifying the track margin.
+#' @param functions.name \code{character} length 1, name of the column holding the functions.
+#' @param wrap.width \code{numeric} string width to wrap annotation labels for all tracks.
+#' @param label.cex \code{numeric} scaling factors for the labels in each track.Should be same length as \code{varnames}.
+#' @param facing \code{character} passed to circos.text. \code{facing=c("inside", "outside", "reverse.clockwise", "clockwise",
+#' "downward", "bending", "bending.inside", "bending.outside")}
+#' @param parsefun \code{function} that parses multiple function labels to single function matrix.
+#' @return NULL
+#' @importFrom igraph graph_from_adjacency_matrix
+#' @importFrom tidygraph as_tbl_graph
+#' @importFrom tidygraph group_components
+#' @importFrom tidyr separate
+#' @importFrom tidyr unnest
+#' @importFrom tidyr spread
+#' @export
+#'
+#' @examples
+#' data(fit505)
+#' #also defined in the package namespace
+#' parser = function(x,separator,functions){
+#'   functions=enquo(functions)
+#'    dat = x%>% mutate(func = strsplit(!!functions, split = separator)) %>%
+#'  tidyr::unnest()%>%tidyr::spread(func,func)
+#'  dat[is.na(dat)]=""
+#'  dat
+#' }
+#' plotChordDiagram(fit505,
+#'    threshold = 0.6,
+#'    varnames=c("stim","parent","functions"),
+#'    track.order = c("functions","stim","parent"),
+#'    sort.order=c("stim","parent","degree"),
+#'    functions.name="functions",
+#'    track.height = 2.5,
+#'    track.margin = c(0,0),
+#'    label.cex=0.6,
+#'    wrap.at = " ",
+#'    facing=c("inside","inside","inside"),parsefun=parser)
+#'    \dontrun{
+#'    plotChordDiagram(
+#'      rv144_aggregate,
+#'      threshold = 0.85,
+#'      varnames = c("functions"),
+#'      separator = " ",
+#'      function.separator = ",",
+#'      track.order = "functions",
+#'      sort.order = c("degree", "functions"),
+#'      inner.track = "functions",
+#'      parsefun = parser,
+#'      track.height = 2,
+#'      track.margin = c(0, 0),
+#'      functions.name = c("functions"),
+#'      facing = "inside",
+#'      wrap.at = " ",
+#'      label.cex = 0.6
+#' )
+#'    }
+plotChordDiagram  = function(x,threshold = 0.6,
+                             varnames = c("stim","parent","functions"),
+                             separator = "/",
+                             function.separator = "\\+",
+                             track.order = c("functions","parent","stim"),
+                             sort.order = c("functions","parent","stim"),
+                             inner.track = "parent",
+                             track.height = 2,
+                             track.margin = c(0,0),
+                             functions.name="functions",
+                             wrap.at = c("\\+","",""),
+                             label.cex = c(0.5,0.5,0.5),
+                             facing = "clockwise",
+                             parsefun=NULL){
+
+  if(!functions.name%in%varnames){
+    stop("functions.name not in varnames",call. = FALSE)
+  }
+    gr = igraph::graph_from_adjacency_matrix(getIsing(x)$network,weighted = TRUE,mode = "undirected",diag = FALSE)
+  gr = tidygraph::as_tbl_graph(gr)
+  nodes = gr %>% activate(nodes) %>% as.data.frame()
+  edges = gr %>% activate(edges) %>% as.data.frame()
+  edgelist = inner_join(nodes %>%
+                          mutate(from = as.integer(rownames(.))), edges) %>%
+    mutate(from = NULL) %>% rename(from = name) %>%
+    inner_join(nodes %>% mutate(from = as.integer(rownames(.))) %>%
+                 rename(to = from)) %>%
+    mutate(to = NULL) %>% rename(to = name) %>%
+    select(from,to,weight)
+
+      edgelist = edgelist %>% tidyr::separate(from,
+                                   paste0(varnames, "_from"),
+                                   sep = separator, remove = FALSE) %>%
+        tidyr::separate(to,
+                        paste0(varnames, "_to"), sep = separator, remove = FALSE)
+  fromvars = paste0(varnames,"_from")
+  tovars = paste0(varnames,"_to")
+  edgelist[is.na(edgelist)]=""
+    #Map to interaction variables
+    edgelist = edgelist %>% mutate(sg_from = interaction(sep = "\n", lapply(fromvars, function(x)
+      eval(as.name(
+        x
+      )))),
+      sg_to = interaction(sep = "\n", lapply(tovars, function(x)
+        eval(as.name(
+          x
+        ))))) %>%
+      filter(weight > threshold)
+
+  node_clusters = gr %>%
+    activate(edges) %>%
+    filter(.E()$weight > threshold) %>%
+    activate(nodes) %>%
+    filter(name %in% name[.E()$from] |name %in% name[.E()$to]) %>%
+    mutate(cluster = group_components()) %>% activate(nodes) %>% as.data.frame()
+
+
+  circos.clear()
+  indices = gsub(separator, "\n", node_clusters$name)
+  nclust = length(unique(node_clusters$cluster))
+  #this needs to be defined in the input
+  attribs = do.call(rbind, strsplit(indices, "\n"))
+  colnames(attribs) = varnames
+  attribs = cbind(name=indices,attribs)
+  qfunctions.name=quo(eval(as.name(functions.name)))
+  attribs = as.data.frame(attribs,stringsAsFactors = FALSE)%>%parsefun(functions=!!qfunctions.name,separator=function.separator)
+  rest = attribs[,setdiff(colnames(attribs),c("name",functions.name))]
+
+  dat = (edgelist)[, c("sg_from", "sg_to", "weight")]%>%mutate(sg_from=as.character(sg_from),sg_to=as.character(sg_to))
+  dat = node_clusters %>% mutate(name = gsub(separator, "\n", name)) %>% rename(sg_from = name) %>% inner_join(dat)
+  clust = dat$cluster
+
+
+  tosortby = cbind(attribs,degree=degreeFromStringFun(attribs$name,split=function.separator))[,c(sort.order)]
+  o = order(tosortby)
+  .pad = function(x,l){
+    if(length(x)==1){
+      x = rep(x,l)
+    }else if(length(x)!=l){
+      x = rep(x,length.out=l)
+    }
+    x
+  }
+  #Make a list of tracks
+  .makeTracks = function(ntracks = NULL, track.height = NULL,track.margin = NULL){
+    if(ntracks != length(track.height)){
+      stop("track.height must be the same length as the varnames: ",ntracks,"\n",call. = FALSE)
+    }
+    if(length(track.margin)!=2){
+      stop("track.margin must be the length 2: ",ntracks,"\n",call. = FALSE)
+    }
+
+    tracks=list()
+    for(i in seq.int(ntracks)){
+      tracks[[i]] = list(track.height = uh(track.height[i], "mm"),track.margin = uh(track.margin, "mm"))
+    }
+    tracks
+  }
+  mytracks = .makeTracks(ntracks=ncol(rest),track.height = .pad(track.height,ncol(rest)),track.margin = track.margin)
+
+
+  #colors for the inner grid and connections.
+  inner.grid.colors = colorRampPalette(brewer_pal(type = "qual", palette = 3)(12))(nlevels(factor(attribs[,inner.track])))[factor(attribs[,inner.track])]
+  connection_colors = colorRampPalette(brewer_pal(type = "div", palette =
+                                6)(8))(nclust)[factor(clust)]
+  names(inner.grid.colors) = names(indices)
+  facing = .pad(facing,(ncol(attribs)))
+  track.height = .pad(track.height,(ncol(attribs)))
+  wrap.at = .pad(wrap.at,(ncol(attribs)))
+  label.cex = .pad(label.cex, ncol(attribs))
+  chordDiagram(dat %>% select(sg_from, sg_to, weight),
+               directional = 0,
+               order = indices[o],
+               direction.type = c("diffHeight"),
+               symmetric = TRUE, self.link = 0, annotationTrack = NULL,
+               preAllocateTracks = mytracks,
+               grid.col = inner.grid.colors[o],
+               col = connection_colors,
+               link.sort = TRUE)
+
+  #colors for the remianing variables
+  track.order = setdiff(track.order,functions.name)
+  rest = rest[,c(track.order,setdiff(colnames(rest),track.order))]
+  sapply(1:ncol(rest),function(columnidx){
+    # browser()
+    this.track = (split(get.all.sector.index(), rest[o,columnidx]))
+    this.tracklength = length(this.track)
+    #decide if we interpolate the color palette
+    mxc = (subset(RColorBrewer::brewer.pal.info,category=="qual")[columnidx,,drop=FALSE]$maxcolors)[[1]]
+    track.colors = colorRampPalette(brewer_pal(type = "qual", palette = columnidx)(mxc-1))(this.tracklength)
+    names(track.colors)=names(this.track)
+    track.colors[names(track.colors)%in%""]="#FFFFFF"
+    mapply(
+      this.track,
+      FUN = highlight.sector,
+      track.index = columnidx,
+      col = track.colors,
+      text = gsub(paste0("(",wrap.at[columnidx],")"),"\\1\n",names(this.track)),
+      cex = label.cex[columnidx],
+      text.col = "black",
+      niceFacing = TRUE,
+      facing = facing[columnidx]
+    )
+  })
+  invisible(NULL)
+}
+
+
+#' Cell subset label parser
+#' Parses cell subset labels into matrix of functions.
+#' @param x \code{data.frame0} input with a column corresponding to the cell subset function labels
+#' @param separator \code{string} to split the label on
+#' @param functions \code{name} bare, unquoted name of the column holding the function label
+#' @description Best explained via the example.
+#' @seealso \code{\link{plotChordDiagram}}
+#' @return matrix of individual functions.
+#' @export
+#'
+#' @examples
+#' dat = data.frame(name=c("IFNg+TNFa+IL2+","IFNg+","IL2+","CD154+TNF+"),stringsAsFactors=FALSE)
+#' parser(dat,separator = "\\+",functions=name)
+parser = function(x,separator,functions){
+    functions=enquo(functions)
+     dat = x%>% mutate(func = strsplit(!!functions, split = separator)) %>%
+   tidyr::unnest()%>%tidyr::spread(func,func)
+   dat[is.na(dat)]=""
+   dat
+  }
