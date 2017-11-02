@@ -131,7 +131,8 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 double randomAssignProb,
                                 NumericVector mprobs, double preAssignCoef,
                                 double prior, bool zeroPosteriorProbs,
-                                LogicalVector doNotSample, NumericVector init) {
+                                LogicalVector doNotSample,
+                                NumericVector init) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -147,7 +148,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericVector iterPosteriors(nSubsets) ;
   nsamp = floor(nsamp / keepEach) * keepEach ;
   NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
-  NumericVector assignment = clone(init) ;
+  NumericVector assignment(nSubsets) ;
 
   int unifPosition = 0 ;
   double isingOffset = 0 ;
@@ -300,19 +301,19 @@ double binomDensityForMH(NumericVector count, NumericVector N,
 
 // [[Rcpp::export]]
 NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
-                              int i, int nsamp, int nSubsets,
-                              NumericVector MHcoef,
-                              IntegerVector assignment,
-                              IntegerVector popInd,
-                              NumericVector eta,
-                              NumericVector randomEstt,
-                              NumericVector condvar,
-                              NumericMatrix covariance,
-                              NumericMatrix invcov,
-                              NumericVector MHattempts, NumericVector MHsuccess,
-                              NumericVector unifVec,
-                              NumericVector dispersion, bool betaDispersion,
-                              int keepEach) {
+                                          int i, int nsamp, int nSubsets,
+                                          NumericVector MHcoef,
+                                          IntegerVector assignment,
+                                          IntegerVector popInd,
+                                          NumericVector eta,
+                                          NumericVector randomEstt,
+                                          NumericVector condvar,
+                                          NumericMatrix covariance,
+                                          NumericMatrix invcov,
+                                          NumericVector MHattempts, NumericVector MHsuccess,
+                                          NumericVector unifVec,
+                                          NumericVector dispersion, bool betaDispersion,
+                                          int keepEach) {
   int m, j ;
   NumericVector subsetEta ;
   NumericVector subsetCount, subsetN ;
@@ -613,6 +614,8 @@ void newMHsampler(NumericMatrix assign, NumericMatrix random,
 //     }
 //   }
 // }
+
+
 
 
 

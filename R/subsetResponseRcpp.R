@@ -1268,7 +1268,6 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   unifVec <- runif(nsamp * nSubsets)
   normVec <- rnorm(intSampSize)
   assignment <- rep(0, nSubsets) #currentAssign[idInd, ]
-  randomEst <- currentRand[idInd, ]
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
@@ -1287,8 +1286,10 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
 
   unifVec <- runif(nsamp * nSubsets)
   eta <- subjectData$dat$nullEta
+  assignment <- assignmentMat[nrow(assignmentMat), ]
   responderSubset <- popInd %in% which(assignment == 1)
   eta[responderSubset] <- subjectData$dat$altEta[responderSubset]
+  randomEst <- currentRand[idInd, ]
 
   MHattempts <- rep(0, nSubsets)
   MHsuccess <- rep(0, nSubsets)
