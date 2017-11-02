@@ -5,7 +5,9 @@
 \alias{summary.flowReMix}
 \title{summary of a flowReMix fit}
 \usage{
-\method{summary}{flowReMix}(object, ...)
+\method{summary}{flowReMix}(object, target, type = c("ROC", "FDR"),
+  direction = "auto", adjust = "BH", test = c("wilcoxon", "logistic",
+  "ttest"), sortAUC = FALSE, ...)
 }
 \arguments{
 \item{object}{a flowReMix model fit.}
@@ -16,7 +18,6 @@
 summarize the output of a flowReMix object into a rocTable
 Uses non-standard evaluation
 \itemize{
-\item{subject}{The name of the subject variable, as an unquoted variable.}
 \item{target}{The name of the outcome variable as an unquoted variable.}
 \item{type}{either "ROC" or "FDR".}
 }
