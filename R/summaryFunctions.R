@@ -97,13 +97,13 @@ summary.flowReMix <- function(object, target, type = c("ROC", "FDR"), direction 
     subject_id = mc$subject_id
     subject_id = enquo(subject_id)
   }
-  if(is.null(target)){
+  if(is.null(mc$target)){
     stop("Please specify an argument for `target`. \n This should be the unquoted
          name of an outcome variable in the data. \n
          e.g.: summary(fit, target = outcome)")
   }
 
-  type <- match.arg(type, c("FDR","ROC"))
+  type <- match.arg(type[1], c("FDR","ROC"))
   if(!exists("data",object)){
     stop("modify the fit object to contain the input data as element `fit$data`")
   }

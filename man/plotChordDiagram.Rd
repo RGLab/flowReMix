@@ -71,7 +71,7 @@ data(fit505)
 parser = function(x,separator,functions){
   functions=enquo(functions)
    dat = x\%>\% mutate(func = strsplit(!!functions, split = separator)) \%>\%
- tidyr::unnest()\%>\%tidyr::spread(func,func)
+  unnest()\%>\%tidyr::spread(func,func)
  dat[is.na(dat)]=""
  dat
 }

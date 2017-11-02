@@ -233,6 +233,10 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #' @importFrom tidyr separate
 #' @importFrom tidyr unnest
 #' @importFrom tidyr spread
+#' @importFrom rlang sym
+#' @importFrom RColorBrewer brewer.pal.info
+#' @importFrom scales brewer_pal
+#' @import circlize
 #' @export
 #'
 #' @examples
@@ -241,7 +245,7 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #' parser = function(x,separator,functions){
 #'   functions=enquo(functions)
 #'    dat = x%>% mutate(func = strsplit(!!functions, split = separator)) %>%
-#'  tidyr::unnest()%>%tidyr::spread(func,func)
+#'   unnest()%>%tidyr::spread(func,func)
 #'  dat[is.na(dat)]=""
 #'  dat
 #' }
@@ -303,7 +307,8 @@ plotChordDiagram  = function(x,threshold = 0.6,
   aucfilt = rep(TRUE,ncol(nw))
   if(!is.null(match.call()$auc.filter)){
     auc.outcome = enquo(auc.outcome)
-    auctable = eval(as.call(list(getFromNamespace("summary.flowReMix",ns = "flowReMix"),object=x,target=sym(quo_name(auc.outcome)))))%>%
+    auc.outcome = sym(quo_name(auc.outcome))
+    auctable = eval(as.call(list(getFromNamespace("summary.flowReMix",ns = "flowReMix"),object=x,target=auc.outcome)))%>%
       arrange(-auc)%>%filter(auc > auc.filter)
     aucfilt = colnames(nw)%in%auctable$subset
   }
@@ -326,8 +331,8 @@ plotChordDiagram  = function(x,threshold = 0.6,
   if(!functions.name%in%varnames){
     stop("functions.name not in varnames",call. = FALSE)
   }
-    gr = igraph::graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
-  gr = tidygraph::as_tbl_graph(gr)
+    gr = graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
+  gr = as_tbl_graph(gr)
   nodes = gr %>% activate(nodes) %>% as.data.frame()
   edges = gr %>% activate(edges) %>% as.data.frame()
   edgelist = inner_join(nodes %>%
@@ -338,10 +343,10 @@ plotChordDiagram  = function(x,threshold = 0.6,
     mutate(to = NULL) %>% rename(to = name) %>%
     select(from,to,weight)
 
-      edgelist = edgelist %>% tidyr::separate(from,
+      edgelist = edgelist %>% separate(from,
                                    paste0(varnames, "_from"),
                                    sep = separator, remove = FALSE) %>%
-        tidyr::separate(to,
+        separate(to,
                         paste0(varnames, "_to"), sep = separator, remove = FALSE)
   fromvars = paste0(varnames,"_from")
   tovars = paste0(varnames,"_to")
@@ -382,7 +387,7 @@ plotChordDiagram  = function(x,threshold = 0.6,
 
 
   tosortby = cbind(attribs,degree=degreeFromStringFun(attribs$name,split=function.separator))[,c(sort.order)]
-  o = order(tosortby)
+  o = eval(as.call(c(order,as.list(tosortby))))
   .pad = function(x,l){
     if(length(x)==1){
       x = rep(x,l)
@@ -436,7 +441,7 @@ plotChordDiagram  = function(x,threshold = 0.6,
     this.track = (split(get.all.sector.index(), rest[o,columnidx]))
     this.tracklength = length(this.track)
     #decide if we interpolate the color palette
-    mxc = (subset(RColorBrewer::brewer.pal.info,category=="qual")[columnidx,,drop=FALSE]$maxcolors)[[1]]
+    mxc = (subset(brewer.pal.info,category=="qual")[columnidx,,drop=FALSE]$maxcolors)[[1]]
     track.colors = colorRampPalette(brewer_pal(type = "qual", palette = columnidx)(mxc-1))(this.tracklength)
     names(track.colors)=names(this.track)
     track.colors[names(track.colors)%in%""]="#FFFFFF"
@@ -463,6 +468,8 @@ plotChordDiagram  = function(x,threshold = 0.6,
 #' @param functions \code{name} bare, unquoted name of the column holding the function label
 #' @description Best explained via the example.
 #' @seealso \code{\link{plotChordDiagram}}
+#' @importFrom tidyr unnest
+#' @importFrom tidyr spread
 #' @return matrix of individual functions.
 #' @export
 #'
@@ -472,7 +479,7 @@ plotChordDiagram  = function(x,threshold = 0.6,
 parser = function(x,separator,functions){
     functions=enquo(functions)
      dat = x%>% mutate(func = strsplit(!!functions, split = separator)) %>%
-   tidyr::unnest()%>%tidyr::spread(func,func)
+   unnest()%>%spread(func,func)
    dat[is.na(dat)]=""
    dat
   }
