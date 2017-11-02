@@ -149,6 +149,10 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   nsamp = floor(nsamp / keepEach) * keepEach ;
   NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
   NumericVector assignment(nSubsets) ;
+  for(int i = 0; i < nSubsets ; i ++) {
+    assignment[i] = init[i] ;
+  }
+
 
   int unifPosition = 0 ;
   double isingOffset = 0 ;

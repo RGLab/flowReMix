@@ -1124,7 +1124,7 @@ flowReMix <- function(formula,
     if(newSampler) {
       targetRate <- max(min(2 / keepEach, 0.4), 0.234)
     } else {
-      targetRate <- 0.234
+      targetRate <- 0.4
     }
 
     for(j in 1:nSubsets) {
@@ -1267,7 +1267,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   prop <- y/N
   unifVec <- runif(nsamp * nSubsets)
   normVec <- rnorm(intSampSize)
-  assignment <- rep(0, nSubsets) #currentAssign[idInd, ]
+  assignment <- currentAssign[idInd, ]
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
