@@ -11,7 +11,8 @@ plotChordDiagram(x, threshold = 0.6, varnames = c("stim", "parent",
   sort.order = c("functions", "parent", "stim"), inner.track = "parent",
   track.height = 2, track.margin = c(0, 0), functions.name = "functions",
   wrap.at = c("\\\\+", "", ""), label.cex = c(0.5, 0.5, 0.5),
-  facing = "clockwise", parsefun = NULL)
+  facing = "clockwise", parsefun = NULL, functionality.filter = NULL,
+  auc.filter = NULL, auc.outcome = NULL, response.filter = NULL)
 }
 \arguments{
 \item{x}{\code{flowReMix} fit}
@@ -43,6 +44,14 @@ plotChordDiagram(x, threshold = 0.6, varnames = c("stim", "parent",
 
 \item{parsefun}{\code{function} that parses multiple function labels to single function matrix.}
 
+\item{functionality.filter}{\code{numeric} lower threshold for functionality degree. Exclusive.}
+
+\item{auc.filter}{\code{numeric} lower threshold for AUC prediction. Exclusive.}
+
+\item{auc.outcome}{\code{name} unquoted variable name used for prediction to calculate the AUC.}
+
+\item{response.filter}{\code{numeric} minimum cell subset response probability to include.}
+
 \item{wrap.width}{\code{numeric} string width to wrap annotation labels for all tracks.}
 }
 \description{
@@ -67,20 +76,24 @@ parser = function(x,separator,functions){
  dat
 }
 plotChordDiagram(fit505,
-   threshold = 0.6,
+   threshold = 0.8,
    varnames=c("stim","parent","functions"),
-   track.order = c("functions","stim","parent"),
-   sort.order=c("stim","parent","degree"),
+   track.order = c("stim","parent","functions"),
+   sort.order=c("parent","stim","degree"),
    functions.name="functions",
    track.height = 2.5,
    track.margin = c(0,0),
    label.cex=0.6,
    wrap.at = " ",
+   functionality.filter=1,
+   auc.filter = 0,
+   auc.outcome = hiv,
+   response.filter = 0.05,
    facing=c("inside","inside","inside"),parsefun=parser)
    \dontrun{
    plotChordDiagram(
      rv144_aggregate,
-     threshold = 0.85,
+     threshold = 0.8,
      varnames = c("functions"),
      separator = " ",
      function.separator = ",",
@@ -93,7 +106,8 @@ plotChordDiagram(fit505,
      functions.name = c("functions"),
      facing = "inside",
      wrap.at = " ",
-     label.cex = 0.6
+     label.cex = 0.6,
+     functionality.filter=1
 )
    }
 }

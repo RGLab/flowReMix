@@ -222,6 +222,10 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #' @param facing \code{character} passed to circos.text. \code{facing=c("inside", "outside", "reverse.clockwise", "clockwise",
 #' "downward", "bending", "bending.inside", "bending.outside")}
 #' @param parsefun \code{function} that parses multiple function labels to single function matrix.
+#' @param functionality.filter \code{numeric} lower threshold for functionality degree. Exclusive.
+#' @param auc.filter \code{numeric} lower threshold for AUC prediction. Exclusive.
+#' @param auc.outcome \code{name} unquoted variable name used for prediction to calculate the AUC.
+#' @param response.filter \code{numeric} minimum cell subset response probability to include.
 #' @return NULL
 #' @importFrom igraph graph_from_adjacency_matrix
 #' @importFrom tidygraph as_tbl_graph
@@ -242,20 +246,24 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #'  dat
 #' }
 #' plotChordDiagram(fit505,
-#'    threshold = 0.6,
+#'    threshold = 0.8,
 #'    varnames=c("stim","parent","functions"),
-#'    track.order = c("functions","stim","parent"),
-#'    sort.order=c("stim","parent","degree"),
+#'    track.order = c("stim","parent","functions"),
+#'    sort.order=c("parent","stim","degree"),
 #'    functions.name="functions",
 #'    track.height = 2.5,
 #'    track.margin = c(0,0),
 #'    label.cex=0.6,
 #'    wrap.at = " ",
+#'    functionality.filter=1,
+#'    auc.filter = 0,
+#'    auc.outcome = hiv,
+#'    response.filter = 0.05,
 #'    facing=c("inside","inside","inside"),parsefun=parser)
 #'    \dontrun{
 #'    plotChordDiagram(
 #'      rv144_aggregate,
-#'      threshold = 0.85,
+#'      threshold = 0.8,
 #'      varnames = c("functions"),
 #'      separator = " ",
 #'      function.separator = ",",
@@ -268,7 +276,8 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #'      functions.name = c("functions"),
 #'      facing = "inside",
 #'      wrap.at = " ",
-#'      label.cex = 0.6
+#'      label.cex = 0.6,
+#'      functionality.filter=1
 #' )
 #'    }
 plotChordDiagram  = function(x,threshold = 0.6,
@@ -284,12 +293,40 @@ plotChordDiagram  = function(x,threshold = 0.6,
                              wrap.at = c("\\+","",""),
                              label.cex = c(0.5,0.5,0.5),
                              facing = "clockwise",
-                             parsefun=NULL){
+                             parsefun=NULL,
+                             functionality.filter=NULL,
+                             auc.filter = NULL,
+                             auc.outcome=NULL,
+                             response.filter=NULL){
+
+  nw = getIsing(x)$network
+  aucfilt = rep(TRUE,ncol(nw))
+  if(!is.null(match.call()$auc.filter)){
+    auc.outcome = enquo(auc.outcome)
+    auctable = eval(as.call(list(getFromNamespace("summary.flowReMix",ns = "flowReMix"),object=x,target=sym(quo_name(auc.outcome)))))%>%
+      arrange(-auc)%>%filter(auc > auc.filter)
+    aucfilt = colnames(nw)%in%auctable$subset
+  }
+
+  degfilt = rep(TRUE,ncol(nw))
+  if(!is.null(match.call()$functionality.filter)){
+    deg = degreeFromStringFun(x = colnames(nw),split = function.separator)
+    degfilt = deg>functionality.filter
+  }
+
+  respfilt = rep(TRUE,ncol(nw))
+  if(!is.null(match.call()$response.filter)){
+    lp = x$levelProbs
+    names(lp) = colnames(nw)
+    respfilt = lp>response.filter
+  }
+  nw = nw[respfilt&aucfilt&degfilt,respfilt&aucfilt&degfilt]
+
 
   if(!functions.name%in%varnames){
     stop("functions.name not in varnames",call. = FALSE)
   }
-    gr = igraph::graph_from_adjacency_matrix(getIsing(x)$network,weighted = TRUE,mode = "undirected",diag = FALSE)
+    gr = igraph::graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
   gr = tidygraph::as_tbl_graph(gr)
   nodes = gr %>% activate(nodes) %>% as.data.frame()
   edges = gr %>% activate(edges) %>% as.data.frame()
