@@ -20,9 +20,9 @@ test_that("flowReMix object has required fields",{
 test_that("Polyfunctionality Score Functions work correctly", {
   expect_is(flowReMixPFS(x = fit505, M = 5, stimVar = stimGroup, parentVar = parent),c("data.frame","tibble","data.table"))
   expect_true(all(c("parent","stimGroup","ptid","PFS")%in%colnames(flowReMixPFS(x = fit505, M = 5, stimVar = stimGroup, parentVar = parent))))
-  expect_is(flowReMixPFS(x=fit505, M = 5, stimVar = stimGroup, parentVar = parent, parser = function(x)1),c("data.frame","tibble","data.table"))
+  expect_is(flowReMixPFS(x=fit505, M = 5, stimVar = stimGroup, parentVar = parent, parsefun = function(x,...)1),c("data.frame","tibble","data.table"))
   d1 = flowReMixPFS(x=fit505, M = 5, stimVar = stimGroup, parentVar = parent)
-  d2 = flowReMixPFS(x=fit505, M = 5, stimVar = stimGroup, parentVar = parent, parser = function(x)5)
+  d2 = flowReMixPFS(x=fit505, M = 5, stimVar = stimGroup, parentVar = parent, parsefun = function(x,...)5)
   expect_true(all(d1$PFS  <= d2$PFS))
   expect_true(all(table(weightForPFS(x=fit505,M = 5)) == c(85,27,8))) #distribution of weights
   expect_equal(degreeFromStringFun(c("env/23+/A+B+","env/A+B+","A+B+","A+","")),c("env/23+/A+B+"=2,"env/A+B+"=2,"A+B+"=2,"A+"=1,0))

@@ -32,7 +32,11 @@ Imports: Rcpp,
     plyr,
     purrr,
     reshape2,
-    tidyr 
+    tidyr,
+    circlize, 
+    scales,
+    tidygraph,
+    RColorBrewer 
 Suggests: pROC,
     reshape2,
     testthat

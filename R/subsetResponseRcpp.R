@@ -332,6 +332,9 @@ flowReMix <- function(formula,
                       iterations = 80, parallel = TRUE, verbose = FALSE,
                       control = NULL, keepSamples = FALSE,
                       newSampler = FALSE) {
+  if(class(data)!="data.frame"){
+    stop("data must be a data.frame",call. = FALSE)
+  }
   # Getting control variables -------------------
   if(is.null(control)) {
     control <- flowReMix_control()

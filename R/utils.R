@@ -168,6 +168,7 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
 #' @importFrom igraph graph_from_adjacency_matrix
 #' @importFrom tidygraph as_tbl_graph
 #' @importFrom tidygraph group_components
+#' @importFrom tidygraph activate
 #' @importFrom rlang enquo
 #' @examples
 #' data(fit505)
