@@ -1,15 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name saaRV144 # Set a name for your job. This is useful if you have multiple jobs queued.
 #SBATCH --partition short    # Slurm partition to use
-#SBATCH --ntasks 4       # Number of tasks to run. By default, one CPU core will be allocated per task
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --tasks-per-node=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=4000    # Memory limit for each tasks (in MB)
 #SBATCH --time 0-12:00        # Wall time limit in D-HH:MM
 #SBATCH --mem-per-cpu=4000    # Memory limit for each tasks (in MB)
 #SBATCH -o flowout.out     # File to which STDOUT will be written
 #SBATCH -e flowout.out
 #SBATCH --mail-type=ALL       # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=amitmeir@uw.edu # Email to which notifications will be sent
-#SBATCH --array=1-400
+#SBATCH --array=1-80
 
 module load R
 
-R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" RV144clusterNewer.R
+R CMD BATCH --no-save --no-restore "--args setting='${SLURM_ARRAY_TASK_ID}'" RV144clusterBig.R

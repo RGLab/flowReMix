@@ -39,7 +39,7 @@ data$treatment2 <- data$treatment
 
 control <- flowReMix_control(updateLag = 5, nsamp = 20, initMHcoef = 1,
                              keepEach = 5, isingWprior = FALSE,
-                             nPosteriors = 1, centerCovariance = FALSE,
+                             nPosteriors = 2, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = 2,
@@ -60,7 +60,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 10, parallel = TRUE,
+                 iterations = 10, parallel = FALSE,
                  cluster_assignment = TRUE, keepSamples = TRUE,
                  verbose = TRUE, control = control, newSampler = FALSE))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")

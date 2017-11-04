@@ -621,7 +621,10 @@ flowReMix <- function(formula,
   }
 
   preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
-  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) x)
+  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
+    x$id <- as.character(x$id)
+    return(x)
+    })
 
   if(any(preAssignCoefs > 1) | any(preAssignCoefs < 0)) {
     warning("preAssignCoefs must be a numeric vector the coordinates of which must be between 0 and 1!")
@@ -1027,15 +1030,12 @@ flowReMix <- function(formula,
       # Calculating Ising Weights
       if(!markovChainEM & iter > updateLag + 1) {
         bigassign[, nSubsets + 3] <- weightMap[bigassign[, nSubsets + 2]]
+        bigassign[is.na(bigassign[, 1]), nSubsets + 3] <- 0
       } else {
-        maxiter <- bigassign[, 2] == max(bigassign[, nSubsets + 2], na.rm = TRUE)
+        maxiter <- bigassign[, nSubsets + 2] == max(bigassign[, nSubsets + 2], na.rm = TRUE)
+        maxiter[is.na(maxiter)] <- FALSE
         bigassign[maxiter, nSubsets + 3] <- 1
         bigassign[!maxiter, nSubsets + 3] <- 0
-      }
-
-      # If markov chain EM or not aggregating then all weights are 1
-      if(markovChainEM | iter <= updateLag + 1) {
-        bigassign[, nSubsets + 3] <- 1
       }
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
@@ -1047,10 +1047,16 @@ flowReMix <- function(formula,
                               parallel = parallel, subsamp = NULL,
                               nSubsets = nSubsets, nSubjects = nSubjects)
         } else {
-          isingfit <- pIsing(assignmentList, AND = TRUE,
+          sampforp <- sum(bigassign[, nSubsets + 2] == max(bigassign[, nSubsets + 2], na.rm = TRUE), na.rm = TRUE)
+          sampforpweights <- bigassign[, nSubsets + 3]
+          isingrowsamp <- sample.int(nrow(bigassign), sampforp, replace = FALSE, prob = sampforpweights)
+          isingfit <- pIsing(bigassign, AND = TRUE,
                              preAssignment = preAssignmentMat,
                              prevfit = isingCoefs, verbose=verbose,
-                             weights = isingWeights)
+                             nSubjects = nSubjects, nSubsets = nSubsets,
+                             subsamp = isingrowsamp)
+          rm(sampforpweights)
+          rm(isingrowsamp)
         }
 
         isingAvg <- isingAvg * (1 - iterweight) + isingfit * iterweight
@@ -1220,20 +1226,20 @@ flowReMix <- function(formula,
 
   if(control$isingStabilityReps > 0) {
     if(verbose) print("Performing stability selection for ising model!")
-    result$isingStability <- stabilityGraph(result, type = "ising",
+    try(result$isingStability <- stabilityGraph(result, type = "ising",
                                             reps = control$isingStabilityReps,
                                             seed = control$seed,
                                             cpus = cpus,
-                                            sampleNew = sampleNew)
+                                            sampleNew = sampleNew))
   }
 
   if(control$randStabilityReps > 0) {
     if(verbose) print("Performing stability selection for random effects!")
-    result$randomStability <- stabilityGraph(result, type = "randomEffects",
+    try(result$randomStability <- stabilityGraph(result, type = "randomEffects",
                                             reps = control$randStabilityReps,
                                             seed = control$seed,
                                             cpus = cpus,
-                                            sampleNew = sampleNew)
+                                            sampleNew = sampleNew))
   }
 
   if(!saveSamples) {
@@ -1267,6 +1273,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   prop <- y/N
   unifVec <- runif(nsamp * nSubsets)
   normVec <- rnorm(intSampSize)
+  # assignment <- rep(0, nSubsets)
   assignment <- currentAssign[idInd, ]
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)

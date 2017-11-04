@@ -68,17 +68,16 @@ booldata$subset <- factor(booldata$subset)
 booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
 
 # Getting result files --------------------------
-filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_27__*")),
-               as.list(dir(path = 'data analysis/results', pattern="rv144_28__*")))[141:189]
+filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_32__*")))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
 for(i in 1:length(filenames)) {
+  fit <- readRDS(file = filenames[[i]])
   if(i == 1) {
     idLevels <- levels(fit$posteriors$ptid)
   }
   # readRDS(file = filenames[[i]])
-  fit <- readRDS(file = filenames[[i]])
   fit$posteriors$ptid <- factor(fit$posteriors$ptid, levels = idLevels)
   fit$posteriors <- fit$posteriors[order(fit$posteriors[, 1]), ]
   post[[i]] <- fit$posteriors[, -1]
@@ -110,9 +109,10 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 
 # Bootstrapping -------------------------
-# groups <- list(c(1:38), c(1:20), c(21:38))
-groups <- list(c(1:46), c(47:94), c(95:140), c(141:189))
-# groups <- list(c(1:98))
+pising <- sapply(filenames, function(x) grepl("pising1", x))
+iter40 <- sapply(filenames, function(x) grepl("niter40", x))
+groups <- list(which(pising & iter40), which(!pising & iter40),
+               which(pising & !iter40), which(!pising & !iter40))
 resList <- list()
 rpList <- list()
 auclist <- list()
@@ -146,27 +146,28 @@ for(i in 1:length(groups)) {
 }
 
 aucplot <- auclist
-aucplot[[1]]$iterations <- "mc40"
-aucplot[[2]]$iterations <- "mc80"
-aucplot[[3]]$iterations <- "sa40"
-aucplot[[4]]$iterations <- "sa80"
+aucplot[[1]]$setting <- "p40"
+aucplot[[2]]$setting <- "ra40"
+aucplot[[3]]$setting <- "p80"
+aucplot[[4]]$setting <- "ra80"
 aucplot <- do.call("rbind", aucplot)
-aucplot <- melt(aucplot, id = "iterations")
+aucplot <- melt(aucplot, id = "setting")
 names(aucplot)[2:3] <- c("subset", "auc")
-ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(iterations))) +
+ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(setting))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 probplot <- problist
-probplot[[1]]$iterations <- "mc40"
-probplot[[2]]$iterations <- "mc80"
-probplot[[3]]$iterations <- "sa40"
-probplot[[4]]$iterations <- "sa80"
+probplot[[1]]$setting <- "p40"
+probplot[[2]]$setting <- "ra40"
+probplot[[3]]$setting <- "p80"
+probplot[[4]]$setting <- "ra80"
 probplot <- do.call("rbind", probplot)
-probplot <- melt(probplot, id = "iterations")
+probplot <- melt(probplot, id = "setting")
 names(probplot)[2:3] <- c("subset", "responseProb")
 ggplot(probplot) +
-  geom_boxplot(aes(x = subset, y = responseProb, col = factor(iterations), outlier.size = 0.01)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  geom_boxplot(aes(x = subset, y = responseProb, col = factor(setting), outlier.size = 0.01)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  geom_hline(yintercept = mean(booldata$vaccine == "VACCINE"), linetype = 2)
 
 # Bootstrapping the variabilty of an aggregate fit --------------
 reps <- 100
