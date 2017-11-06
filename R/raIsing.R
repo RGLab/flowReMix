@@ -185,7 +185,7 @@ getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, min
     regX <- X
   }
 
-  if(sum(y == 0) < 8 & family == "binomial") {
+  if(sum(y == 0) < 8 & family == "binomial"| ncol(regX) < 2) {
     p <- min(mean(y), 1 - minprob)
     row <- rep(0, ncol(mat))
     coef <- log(p / (1 - p))
