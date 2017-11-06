@@ -17,6 +17,7 @@ plot.flowReMix <- function(x, target = NULL, varname = NULL,
                            palette = NULL, paletteRange = NULL,
                            type = c("ROC","scatter","boxplot","FDR","graph"), ...){
   mc = match.call()
+  type=type[1] #need to do this otherwise you get warnings due to different lengths in an equality comparison when using the default passed vector.
   if(!is.null(mc$target)){
     target = mc$target
     target = enquo(target)

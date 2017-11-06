@@ -29,3 +29,10 @@ test_that("Polyfunctionality Score Functions work correctly", {
   expect_error(flowReMixPFS(x=fit505, M = 5, stimVar = stimGroup, parentVar = par))
   expect_error(flowReMixPFS(x=fit505, M = 5, stimVar = stimG, parentVar = parent))
 })
+
+test_that("scatterplots work and accept subset argument"){
+  data(fit505)
+  subs = getSubsets(fit505)[1:3]
+  expect_is({testplot = plot(fit505,subsets=subs,target=vaccine,type="scatter")},"ggplot")
+  expect_equal(nlevels(factor(testplot$data$sub.population)),3)
+}
