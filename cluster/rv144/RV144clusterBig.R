@@ -1,4 +1,4 @@
-cpus <- 4
+cpus <- 1
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -53,7 +53,7 @@ names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
 configurations <- expand.grid(niters = c(40, 80),
-                              seed = c(1:10),
+                              seed = c(11:40),
                               prior = c(0),
                               wprior = c(FALSE, TRUE),
                               method = c("SA", "MC"))

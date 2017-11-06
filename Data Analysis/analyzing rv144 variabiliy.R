@@ -111,8 +111,13 @@ infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 # Bootstrapping -------------------------
 pising <- sapply(filenames, function(x) grepl("pising1", x))
 iter40 <- sapply(filenames, function(x) grepl("niter40", x))
-groups <- list(which(pising & iter40), which(!pising & iter40),
-               which(pising & !iter40), which(!pising & !iter40))
+mcem <- sapply(filenames, function(x) grepl("MC", x))
+groups <- list(which(pising & iter40 & mcem), which(!pising & iter40 & mcem),
+               which(pising & !iter40 & mcem), which(!pising & !iter40 & mcem),
+               which(pising & !iter40 & !mcem), which(!pising & !iter40 & !mcem),
+               which(pising & iter40 & !mcem), which(!pising & iter40 & !mcem))
+keepgroups <- sapply(groups, function(x) length(x) > 0)
+groups <- groups[keepgroups]
 resList <- list()
 rpList <- list()
 auclist <- list()
@@ -145,22 +150,24 @@ for(i in 1:length(groups)) {
   print(cbind(resList[[i]], rpList[[i]]))
 }
 
-aucplot <- auclist
-aucplot[[1]]$setting <- "p40"
-aucplot[[2]]$setting <- "ra40"
-aucplot[[3]]$setting <- "p80"
-aucplot[[4]]$setting <- "ra80"
+groupnames <- c("p40mc", "ra40mc", "p80mc", "ra80mc",
+                "p40sa", "ra40sa", "p80sa", "ra80msa")
+aucplot <- lapply(1:length(auclist), function(i) {
+  res <- auclist[[i]]
+  res$setting <- groupnames[i]
+  return(res)
+})
 aucplot <- do.call("rbind", aucplot)
 aucplot <- melt(aucplot, id = "setting")
 names(aucplot)[2:3] <- c("subset", "auc")
 ggplot(aucplot) + geom_boxplot(aes(x = subset, y = auc, col = factor(setting))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-probplot <- problist
-probplot[[1]]$setting <- "p40"
-probplot[[2]]$setting <- "ra40"
-probplot[[3]]$setting <- "p80"
-probplot[[4]]$setting <- "ra80"
+probplot <- lapply(1:length(auclist), function(i) {
+  res <- problist[[i]]
+  res$setting <- groupnames[i]
+  return(res)
+})
 probplot <- do.call("rbind", probplot)
 probplot <- melt(probplot, id = "setting")
 names(probplot)[2:3] <- c("subset", "responseProb")
@@ -208,8 +215,7 @@ names(report) <- c("lci50", "median50", "uci50", "lci100", "median100", "uci100"
 # Concensus graph -----------------------
 rocResults <- summary(fit, rocResults, target = vaccine)
 infectResults <- summary(fit, rocResults, target = hiv)
-filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_27__*")),
-               as.list(dir(path = 'data analysis/results', pattern="rv144_28__*")))
+filenames <- c(as.list(dir(path = 'data analysis/results', pattern="rv144_32__*")))[groups[[8]]]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 net <- list()
 for(i in 1:length(filenames)) {

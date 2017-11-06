@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4000    # Memory limit for each tasks (in MB)
 #SBATCH --time 0-12:00        # Wall time limit in D-HH:MM
 #SBATCH --mem-per-cpu=4000    # Memory limit for each tasks (in MB)
@@ -12,7 +12,7 @@
 #SBATCH -e flowout.out
 #SBATCH --mail-type=ALL       # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=amitmeir@uw.edu # Email to which notifications will be sent
-#SBATCH --array=1-80
+#SBATCH --array=1-240
 
 module load R
 

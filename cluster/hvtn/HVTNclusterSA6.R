@@ -117,7 +117,7 @@ subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
 configurations <- expand.grid(method = c("SA", "MC"),
-                              seed = 1:50,
+                              seed = 1:10,
                               prior = c(0, 2),
                               niter = c(40, 80))
 config <- configurations[setting, ]
