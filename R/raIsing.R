@@ -180,7 +180,7 @@ getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, min
   X <- as.matrix(mat[, -j])
   xcols <- colSums(X)
   if(family == "binomial") {
-    regX <- X[, xcols >= 4]
+    regX <- X[, xcols >= 4,drop=FALSE]
   } else {
     regX <- X
   }
