@@ -453,6 +453,11 @@ flowReMix <- function(formula,
   maxIter <- as.integer(iterations)
   rate <- 1
   updateLag <- max(ceiling(updateLag), 1)
+
+  if(maxIter <= updateLag){
+    stop("iter should be > updateLag")
+  }
+
   if(updateLag < 2) {
     warning("We recommend using an updateLag of at least 3 to let the algorithm warm up.")
   }
@@ -1089,6 +1094,7 @@ flowReMix <- function(formula,
     # Updating Covariance -------------------------
     if(verbose) print("Estimating Covariance!")
 
+    #Note there is a bug here where if iter is < updateLag, the names never get assigned and we have an error downstream in stabilityGraph
     if(iter == updateLag + 1) {
       names(randomList) <- names(databyid)
       if(keepSamples) randomOutput <- randomList
@@ -1227,11 +1233,12 @@ flowReMix <- function(formula,
 
   if(control$isingStabilityReps > 0) {
     if(verbose) print("Performing stability selection for ising model!")
-    result$isingStability <- stabilityGraph(result, type = "ising",
+    # browser()
+    result$isingStability <- try(stabilityGraph(result, type = "ising",
                                             reps = control$isingStabilityReps,
                                             seed = control$seed,
                                             cpus = cpus,
-                                            sampleNew = sampleNew)
+                                            sampleNew = sampleNew))
   }
 
   if(control$randStabilityReps > 0) {
@@ -1243,7 +1250,8 @@ flowReMix <- function(formula,
                                             sampleNew = sampleNew)
   }
 
-  if(!saveSamples) {
+  #If ising stability did not error out, then toss out samples
+  if(!saveSamples & !inherits(result$isingStability,"try-error")) {
     result$randomEffectSamp <- NULL
     result$assignmentList <- NULL
   }
