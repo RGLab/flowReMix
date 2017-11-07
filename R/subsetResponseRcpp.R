@@ -626,7 +626,10 @@ flowReMix <- function(formula,
   }
 
   preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
-  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) x)
+  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
+    x$id <- as.character(x$id)
+    return(x)
+  })
 
   if(any(preAssignCoefs > 1) | any(preAssignCoefs < 0)) {
     warning("preAssignCoefs must be a numeric vector the coordinates of which must be between 0 and 1!")

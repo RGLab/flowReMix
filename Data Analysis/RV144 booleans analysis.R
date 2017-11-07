@@ -78,11 +78,11 @@ library(flowReMix)
 prior <- 0
 npost <- 1
 niter <- 100
-seed <- 2
+seed <- 1
 lastSample <- NULL
 cpus <- 2
-control <- flowReMix_control(updateLag = 10, nsamp = 40, initMHcoef = 1,
-                             keepEach = 40, isingWprior = FALSE,
+control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
+                             keepEach = 5, isingWprior = TRUE,
                              zeroPosteriorProbs = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3, minDispersion = 10^7,
@@ -96,7 +96,6 @@ control <- flowReMix_control(updateLag = 10, nsamp = 40, initMHcoef = 1,
                              isingInit = -7)
 
 booldata$subset <- factor(booldata$subset)
-preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              subject_id = ptid,
                              cell_type = subset,
@@ -105,11 +104,11 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              covariance = "sparse",
                              ising_model = "sparse",
                              regression_method = "robust",
-                             iterations =  niter,
-                             cluster_assignment = preAssignment,
-                             parallel = TRUE, keepSamples = TRUE,
+                             iterations =  20,
+                             cluster_assignment = TRUE,
+                             parallel = FALSE, keepSamples = TRUE,
                              verbose = TRUE, control = control,
-                             newSampler = TRUE))
+                             newSampler = FALSE))
 # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")
 
