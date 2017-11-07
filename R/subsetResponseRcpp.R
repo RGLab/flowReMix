@@ -911,19 +911,11 @@ flowReMix <- function(formula,
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
 
-    if(!newSampler) {
-      listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
-                                                                  pre = preAssignment[[i]],
-                                                                  rand = estimatedRandomEffects[i, ],
-                                                                  index = i), keepcols)
-    } else {
-      listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
-                                                                  pre = preAssignment[[i]],
-                                                                  rand = estimatedRandomEffects[i, ],
-                                                                  assign = clusterAssignments[i, ],
-                                                                  index = i), keepcols)
-
-    }
+    listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
+                                                                pre = preAssignment[[i]],
+                                                                rand = estimatedRandomEffects[i, ],
+                                                                assign = clusterAssignments[i, ],
+                                                                index = i), keepcols)
 
     if(newSampler & iter == 1) {
       settingNsamp <- nsamp
@@ -1293,7 +1285,8 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                        as.integer(subjectData$pre$assign),
                                        randomAssignProb, modelprobs, iterAssignCoef,
                                        prior, zeroPosteriorProbs,
-                                       doNotSample)
+                                       doNotSample,
+                                       as.numeric(subjectData$assign))
   }
 
   unifVec <- runif(nsamp * nSubsets)
