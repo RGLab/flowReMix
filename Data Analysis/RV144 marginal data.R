@@ -45,9 +45,9 @@ control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
                              initMethod = "robust", ncores = 2,
                              markovChainEM = TRUE,
                              seed = 10,
-                             preAssignCoefs = 1, sampleNew = TRUE,
+                             preAssignCoefs = 1, sampleNew = FALSE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
-                             isingStabilityReps = 10, randStabilityReps = 10,
+                             isingStabilityReps = 0, randStabilityReps = 0,
                              isingInit = -2)
 
 data$stim <- factor(data$stim, levels = c("negctrl", "env"))

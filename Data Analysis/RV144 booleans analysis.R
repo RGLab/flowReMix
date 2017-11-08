@@ -106,7 +106,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              regression_method = "robust",
                              iterations =  20,
                              cluster_assignment = TRUE,
-                             parallel = FALSE, keepSamples = TRUE,
+                             parallel = TRUE, keepSamples = TRUE,
                              verbose = TRUE, control = control,
                              newSampler = FALSE))
 # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
