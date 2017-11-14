@@ -37,6 +37,8 @@ plotChordDiagram(x, threshold = 0.6, varnames = c("stim", "parent",
 
 \item{functions.name}{\code{character} length 1, name of the column holding the functions.}
 
+\item{wrap.at}{\code{character} regex, string position to wrap labels for all tracks.}
+
 \item{label.cex}{\code{numeric} scaling factors for the labels in each track.Should be same length as \code{varnames}.}
 
 \item{facing}{\code{character} passed to circos.text. \code{facing=c("inside", "outside", "reverse.clockwise", "clockwise",
@@ -51,8 +53,6 @@ plotChordDiagram(x, threshold = 0.6, varnames = c("stim", "parent",
 \item{auc.outcome}{\code{name} unquoted variable name used for prediction to calculate the AUC.}
 
 \item{response.filter}{\code{numeric} minimum cell subset response probability to include.}
-
-\item{wrap.width}{\code{numeric} string width to wrap annotation labels for all tracks.}
 }
 \description{
 plotChordDiagram
