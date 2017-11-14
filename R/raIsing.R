@@ -98,7 +98,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)
     if(family == "binomial") {
-      regX <- X[, xcols >= 4]
+      regX <- X[, xcols >= 4,drop=FALSE]
     } else {
       regX <- X
     }
@@ -177,10 +177,10 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
 getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, minprob) {
   y <- as.vector(mat[, j])
-  X <- as.matrix(mat[, -j])
+  X <- as.matrix(mat[, -j,drop=FALSE])
   xcols <- colSums(X)
   if(family == "binomial") {
-    regX <- X[, xcols >= 4,drop=FALSE]
+    regX <- as.matrix(X[, xcols >= 4,drop=FALSE])
   } else {
     regX <- X
   }

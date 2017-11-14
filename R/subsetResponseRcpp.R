@@ -936,7 +936,7 @@ flowReMix <- function(formula,
                     betaDispersion, randomAssignProb, modelprobs,
                     iterAssignCoef, prior, zeroPosteriorProbs,
                     M, invcov, mixed, sampleRandom = TRUE,
-                    doNotSample = doNotSampleSubset)
+                    doNotSample = doNotSampleSubset, markovChainEM = markovChainEM)
         } else {
           newSstep(subjectData, nsamp, nSubsets, intSampSize,
                     isingCoefs, covariance, keepEach, MHcoef,
@@ -1045,6 +1045,7 @@ flowReMix <- function(formula,
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
         if(!isingWprior) {
+          #note broken for tb data
           isingfit <- raIsing(assignmentList, AND = TRUE,
                               modelprobs = modelprobs,
                               minprob = 1 / nSubjects, verbose=verbose,
@@ -1261,7 +1262,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                       betaDispersion, randomAssignProb, modelprobs,
                       iterAssignCoef, prior, zeroPosteriorProbs,
                       M, invcov, mixed, sampleRandom = TRUE,
-                      doNotSample = NULL) {
+                      doNotSample = NULL, markovChainEM = TRUE) {
   if(is.null(doNotSample)) {
     doNotSample <- rep(FALSE, nSubsets)
   }
@@ -1275,6 +1276,13 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
+    if(markovChainEM){
+      # subjassign = rep(0,length(subjectData$assign))
+      subjassign = subjectData$assign
+    }else{
+      #only initialize to previous iteration when we use the saEM, not the mcEM.
+      subjassign = subjectData$assign
+    }
     assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
                                        subjectData$dat$nullEta, subjectData$dat$altEta,
                                        covariance, nsamp, nSubsets, keepEach, intSampSize,
@@ -1286,7 +1294,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                        randomAssignProb, modelprobs, iterAssignCoef,
                                        prior, zeroPosteriorProbs,
                                        doNotSample,
-                                       as.numeric(subjectData$assign))
+                                       as.numeric(subjassign))
   }
 
   unifVec <- runif(nsamp * nSubsets)

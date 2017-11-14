@@ -132,7 +132,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector mprobs, double preAssignCoef,
                                 double prior, bool zeroPosteriorProbs,
                                 LogicalVector doNotSample,
-                                NumericVector init) {
+                                NumericVector assignment) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -148,10 +148,11 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
   NumericVector iterPosteriors(nSubsets) ;
   nsamp = floor(nsamp / keepEach) * keepEach ;
   NumericMatrix assignmentMatrix(int(nsamp / keepEach), nSubsets) ;
-  NumericVector assignment(nSubsets) ;
-  for(int i = 0; i < nSubsets ; i ++) {
-    assignment[i] = init[i] ;
-  }
+  //no need for this, just call the passed in init as assignment and reuse it.
+  // NumericVector assignment(nSubsets) ;
+  // for(int i = 0; i < nSubsets ; i ++) {
+  //   assignment[i] = init[i] ;
+  // }
 
   int unifPosition = 0 ;
   double isingOffset = 0 ;

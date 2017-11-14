@@ -74,6 +74,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     mixed <- is.null(obj$isingAvg)
     inds <- splitIndices(length(mhList), cpus)
     mhList <- lapply(inds, function(x) mhList[x])
+    mcEM = obj$call$markovChainEM
     MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
       lapply(sublist, function(subjectData) {
         flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
@@ -83,7 +84,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                 randomAssignProb = 0, modelprobs = 0,
                 iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
                 M = dispersion, invcov = invcov, mixed = mixed,
-                sampleRandom = (type != "ising"))
+                sampleRandom = (type != "ising"),mcEM)
       })
     }
     if(type == "ising") {
