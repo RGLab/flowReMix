@@ -16,7 +16,6 @@ List CppFlowSstep(const List& subjectData, const int nsamp, const int nSubsets, 
     if(doNotSample.length() != nSubsets){
       throw std::domain_error("doNotSample argument has invalid length!");
     }
-
     NumericVector condvar(invcov.nrow());
 
     auto invdiag = [](const NumericMatrix &m, NumericVector &v){
