@@ -74,18 +74,39 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     mixed <- is.null(obj$isingAvg)
     inds <- splitIndices(length(mhList), cpus)
     mhList <- lapply(inds, function(x) mhList[x])
-    mcEM = obj$call$markovChainEM
+    mcEM = obj$control$markovChainEM
+    if(!exists("doNotSample")){
+      doNotSample = rep(FALSE,nSubsets)
+    }
+    if(length(mhList)==1){
+      MHresult = CppFlowSstepList(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
+                       intSampSize = intSampSize, isingCoefs = isingCoefs,
+                       covariance = cov, keepEach = keepEach,
+                       MHcoef = MHcoef, betaDispersion = TRUE,
+                       randomAssignProb = 0, modelprobs = 0,
+                       iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+                       M = dispersion, invcov = invcov, mixed = mixed,
+                       sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+    }else{
     MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
-      lapply(sublist, function(subjectData) {
-        flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
+      # lapply(sublist, function(subjectData) {
+        CppFlowSstepList(sublist, nsamp = nsamp, nSubsets = nSubsets,
                 intSampSize = intSampSize, isingCoefs = isingCoefs,
                 covariance = cov, keepEach = keepEach,
                 MHcoef = MHcoef, betaDispersion = TRUE,
                 randomAssignProb = 0, modelprobs = 0,
                 iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
                 M = dispersion, invcov = invcov, mixed = mixed,
-                sampleRandom = (type != "ising"),mcEM)
-      })
+                sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+        # flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
+        #              intSampSize = intSampSize, isingCoefs = isingCoefs,
+        #              covariance = cov, keepEach = keepEach,
+        #              MHcoef = MHcoef, betaDispersion = TRUE,
+        #              randomAssignProb = 0, modelprobs = 0,
+        #              iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+        #              M = dispersion, invcov = invcov, mixed = mixed,
+        #              sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+    }
     }
     if(type == "ising") {
       samples <- lapply(MHresult, function(x) x$assign)
@@ -158,6 +179,9 @@ reConstructMHlist <- function(obj) {
   rm(forcols)
 
   estimatedRandomEffects <- obj$randomEffects
+  if(class(estimatedRandomEffects)=="data.frame"|ncol(estimatedRandomEffects)>length(nlevels(factor(dat$sub.population)))){
+    estimatedRandomEffects = as.matrix(estimatedRandomEffects[,-1L])
+  }
   nSubjects <- nrow(obj$posteriors)
   listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                               pre = preAssignment[[i]],
