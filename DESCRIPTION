@@ -8,7 +8,7 @@ Maintainer: Amit Meir <ammeir@fhcrc.org>
 Description: Fitting mixtures of generalized linear models with random effects and subject-level treatment effects.
 License: MIT + file LICENSE
 LazyData: FALSE
-LinkingTo: Rcpp, RcppArmadillo
+LinkingTo: Rcpp, RcppArmadillo, RcppProgress
 Imports: Rcpp,
     glmnet,
     data.table,

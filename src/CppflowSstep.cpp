@@ -1,6 +1,10 @@
 #include  <RcppArmadillo.h>
 #include <algorithm>
 using namespace Rcpp;
+// [[Rcpp::plugins(cpp17)]]
+// [[Rcpp::depends(RcppProgress)]]
+// [[Rcpp::plugins(openmp)]]
+#include <progress.hpp>
 
 extern NumericMatrix subsetAssignGibbs(const NumericVector& y, const NumericVector& prop, const NumericVector& N, const NumericMatrix& isingCoefs, const NumericVector& nullEta, const NumericVector& altEta, const NumericMatrix& covariance, int nsamp, const int nSubsets, const int keepEach, const int intSampSize, const NumericVector& MHcoef, const IntegerVector& popInd, const NumericVector& unifVec, const NumericVector& normVec, const NumericVector& dispersion, const bool betaDispersion, const IntegerVector& preAssignment, const double randomAssignProb, const NumericVector& mprobs, const double preAssignCoef, const double prior, const bool zeroPosteriorProbs, const LogicalVector& doNotSample, NumericVector assignment,const int msize);
 extern NumericMatrix simRandomEffectCoordinateMH(const NumericVector& y, const NumericVector& N, const int i, int nsamp, const int nSubsets, const NumericVector& MHcoef, const IntegerVector& assignment, const IntegerVector& popInd, const NumericVector& eta, const NumericVector& randomEstt, const NumericVector& condvar, const NumericMatrix& covariance, const NumericMatrix& invcov, NumericVector MHattempts, NumericVector MHsuccess, const NumericVector& unifVec, const NumericVector& dispersion, const bool betaDispersion, const int keepEach, const int msize);
@@ -135,6 +139,7 @@ List CppFlowSstep(const List& subjectData, const int nsamp, const int nSubsets, 
 }
 
 
+
 //[[Rcpp::export]]
 List CppFlowSstepList(const List& subjectDataList, int nsamp, const int nSubsets,const int intSampSize,
                       const NumericMatrix& isingCoefs, const NumericMatrix& covariance, const int keepEach, const NumericVector& MHcoef,
@@ -142,11 +147,15 @@ List CppFlowSstepList(const List& subjectDataList, int nsamp, const int nSubsets
                       const double iterAssignCoef,  const double prior, const bool zeroPosteriorProbs,
                       const NumericVector& M, const NumericMatrix& invcov, const bool mixed, const bool sampleRandom,
                       const LogicalVector& doNotSample, const bool markovChainEM) {
+
+  Progress prog(subjectDataList.length(), true);
+
   nsamp = floor(nsamp / keepEach) * keepEach ;
   int msize = int(nsamp/keepEach);
 
   List results(subjectDataList.length());
   for(int i=0;i<subjectDataList.length();++i){
+
     SEXP le = subjectDataList[i];
     List subjectData = le;
     List currentResult = CppFlowSstep(subjectData, nsamp, nSubsets,intSampSize,isingCoefs,covariance,
@@ -155,6 +164,8 @@ List CppFlowSstepList(const List& subjectDataList, int nsamp, const int nSubsets
                                       M,  invcov,  mixed,  sampleRandom,
                                       doNotSample,  markovChainEM, msize);
     results[i] = currentResult;
+    prog.increment();
+    if (Progress::check_abort()) { return(results);}// returns partial results
   }
   return(results);
 }

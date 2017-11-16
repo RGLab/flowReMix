@@ -1,7 +1,7 @@
 #include <Rcpp.h>
 #include <algorithm>
 using namespace Rcpp;
-
+// [[Rcpp::plugins(cpp17)]]
 //[[Rcpp::export]]
 NumericVector weightedMean(NumericVector x, NumericVector weights, bool na_rm)
 {

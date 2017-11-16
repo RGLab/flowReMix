@@ -941,15 +941,7 @@ flowReMix <- function(formula,
                          M, invcov, mixed, sampleRandom = TRUE,
                          doNotSample = doNotSampleSubset,
                          markovChainEM = markovChainEM)
-        # lapply(sublist, function(subjectData) {
-        #   flowSstep(subjectData, nsamp, nSubsets, intSampSize,
-        #             isingCoefs, covariance, keepEach, MHcoef,
-        #             betaDispersion, randomAssignProb, modelprobs,
-        #             iterAssignCoef, prior, zeroPosteriorProbs,
-        #             M, invcov, mixed, sampleRandom = TRUE,
-        #             doNotSample = doNotSampleSubset,
-        #             markovChainEM = markovChainEM)
-        # })
+
       }
     }else{
       MHresult = foreach(sublist = listForMH, .combine = c) %dorng% {
@@ -1034,7 +1026,7 @@ flowReMix <- function(formula,
         assignFromIter <- sapply(exportAssignment, function(x) attr(x, "iter"))
         exportAssignment <- exportAssignment[assignFromIter > iter - keepLastIterations]
         isingWeights <- assignFromIter[assignFromIter > iter - keepLastIterations]
-        isingWeights <- unlist(as.vector(mapply(function(x, y) rep(x, nrow(y)), isingWeights, exportAssignment, SIMPLIFY = TRUE)))
+        isingWeights <- unlist(as.vector(mapply(function(x, y) rep(x, nrow(y)), isingWeights, exportAssignment, SIMPLIFY = TRUE)),use.names = FALSE)
         isingWeights <- weightMap[isingWeights - updateLag]
         # print(unique(isingWeights))
         # print(sum(unique(isingWeights)))
@@ -1051,8 +1043,8 @@ flowReMix <- function(formula,
       }
 
       assignmentList <- do.call("rbind",assignmentList)
-      assignmentList <- as.data.frame(assignmentList)
-      names(assignmentList) <- popnames
+      # assignmentList <- as.data.frame(assignmentList) #why?
+      colnames(assignmentList) <- popnames
 
       # If markov chain EM or not aggregating then all weights are 1
       if(markovChainEM | iter <= updateLag + 1) {
@@ -1061,7 +1053,6 @@ flowReMix <- function(formula,
 
       if(isingMethod %in% c("sparse", "raIsing") & nSubsets > 2) {
         if(!isingWprior) {
-          #note broken for tb data
           isingfit <- raIsing(assignmentList, AND = TRUE,
                               modelprobs = modelprobs,
                               minprob = 1 / nSubjects, verbose=verbose,

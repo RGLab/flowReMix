@@ -1,7 +1,8 @@
 #include  <RcppArmadillo.h>
 using namespace Rcpp;
-
+// [[Rcpp::plugins(cpp17)]]
 // headers
+
 
 NumericVector expit(NumericVector x) ;
 
@@ -148,7 +149,7 @@ NumericMatrix subsetAssignGibbs(const NumericVector& y, const NumericVector& pro
   NumericVector iterPosteriors(nSubsets) ;
   // nsamp = floor(nsamp / keepEach) * keepEach ;
   NumericMatrix assignmentMatrix(msize, nSubsets) ;
-  //no need for this, just call the passed in init as assignment and reuse it.
+  //no need for this, just call the passed in init variable as assignment and reuse it.
   // NumericVector assignment(nSubsets) ;
   // for(int i = 0; i < nSubsets ; i ++) {
   //   assignment[i] = init[i] ;
