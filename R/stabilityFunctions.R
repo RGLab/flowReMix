@@ -72,32 +72,35 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     dispersion <- obj$dispersion
     invcov <- obj$invCovAvg
     mixed <- is.null(obj$isingAvg)
-    inds <- splitIndices(length(mhList), cpus)
+    # inds <- splitIndices(length(mhList), pmin(length(mhList),cpus))
+    inds <- splitIndices(length(mhList), pmin(length(mhList),1))
     mhList <- lapply(inds, function(x) mhList[x])
+    # mhList = extractFromList(mhList)
+
     mcEM = obj$control$markovChainEM
     if(!exists("doNotSample")){
       doNotSample = rep(FALSE,nSubsets)
     }
     if(length(mhList)==1){
-      MHresult = CppFlowSstepList(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
+      MHresult = CppFlowSstepList_mc(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
                        intSampSize = intSampSize, isingCoefs = isingCoefs,
                        covariance = cov, keepEach = keepEach,
                        MHcoef = MHcoef, betaDispersion = TRUE,
                        randomAssignProb = 0, modelprobs = 0,
                        iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
                        M = dispersion, invcov = invcov, mixed = mixed,
-                       sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+                       sampleRandom = (type != "ising"), doNotSample = doNotSample, markovChainEM = mcEM)
     }else{
     MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
       # lapply(sublist, function(subjectData) {
-        CppFlowSstepList(sublist, nsamp = nsamp, nSubsets = nSubsets,
-                intSampSize = intSampSize, isingCoefs = isingCoefs,
-                covariance = cov, keepEach = keepEach,
-                MHcoef = MHcoef, betaDispersion = TRUE,
-                randomAssignProb = 0, modelprobs = 0,
-                iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
-                M = dispersion, invcov = invcov, mixed = mixed,
-                sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+      CppFlowSstepList_mc(sublist, nsamp = nsamp, nSubsets = nSubsets,
+                          intSampSize = intSampSize, isingCoefs = isingCoefs,
+                          covariance = cov, keepEach = keepEach,
+                          MHcoef = MHcoef, betaDispersion = TRUE,
+                          randomAssignProb = 0, modelprobs = 0,
+                          iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+                          M = dispersion, invcov = invcov, mixed = mixed,
+                          sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
          }
     }
     if(type == "ising") {
@@ -132,8 +135,9 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     samples = aperm(samples,c(3,2,1))
   }
 
-  inds = splitIndices(reps, cpus)
-  samples <- lapply(inds, function(x) samples[,,x])
+
+  inds = splitIndices(reps, pmin(reps,cpus))
+  samples <- lapply(inds, function(x) samples[,,x,drop=FALSE])
   set.seed(seed)
   countCovar <- foreach(matrices = samples , .combine = "+") %dorng% {
     countCovar <- apply(matrices,3, function(mat)

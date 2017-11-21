@@ -305,7 +305,7 @@ plotChordDiagram  = function(x,threshold = 0.6,
                              auc.outcome=NULL,
                              response.filter=NULL){
 
-  nw = getIsing(x)$network
+  nw = flowReMix::getIsing(x)$network
   aucfilt = rep(TRUE,ncol(nw))
   if(!is.null(match.call()$auc.filter)){
     auc.outcome = enquo(auc.outcome)
@@ -317,7 +317,7 @@ plotChordDiagram  = function(x,threshold = 0.6,
 
   degfilt = rep(TRUE,ncol(nw))
   if(!is.null(match.call()$functionality.filter)){
-    deg = degreeFromStringFun(x = colnames(nw),split = function.separator)
+    deg = flowReMix::degreeFromStringFun(x = colnames(nw),split = function.separator)
     degfilt = deg>functionality.filter
   }
 
@@ -333,7 +333,7 @@ plotChordDiagram  = function(x,threshold = 0.6,
   if(!functions.name%in%varnames){
     stop("functions.name not in varnames",call. = FALSE)
   }
-    gr = graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
+    gr = igraph::graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
   gr = as_tbl_graph(gr)
   nodes = gr %>% activate(nodes) %>% as.data.frame()
   edges = gr %>% activate(edges) %>% as.data.frame()
@@ -443,8 +443,8 @@ plotChordDiagram  = function(x,threshold = 0.6,
     this.track = (split(get.all.sector.index(), rest[o,columnidx]))
     this.tracklength = length(this.track)
     #decide if we interpolate the color palette
-    mxc = (subset(brewer.pal.info,category=="qual")[columnidx,,drop=FALSE]$maxcolors)[[1]]
-    track.colors = colorRampPalette(brewer_pal(type = "qual", palette = columnidx)(mxc-1))(this.tracklength)
+    mxc = (subset(brewer.pal.info,category=="qual")[(columnidx%%8+1),,drop=FALSE]$maxcolors)[[1]]
+    track.colors = colorRampPalette(brewer_pal(type = "qual", palette = (columnidx%%8+1))(max(1,mxc-1)))(this.tracklength)
     names(track.colors)=names(this.track)
     track.colors[names(track.colors)%in%""]="#FFFFFF"
     mapply(
@@ -484,4 +484,18 @@ parser = function(x,separator,functions){
    unnest()%>%spread(func,func)
    dat[is.na(dat)]=""
    dat
-  }
+}
+
+extractFromList = function(mhlist){
+  N = length(mhlist[[1]])
+  J = nrow(mhlist[[1]][[1]]$pre)
+  Y = matrix(unlist(map(map(mhlist[[1]],"dat"),"y")),ncol=N)
+  TOT = matrix(unlist(map(map(mhlist[[1]],"dat"),"N")),ncol=N)
+  subpopInd = matrix(unlist(map(map(mhlist[[1]],"dat"),"subpopInd")),ncol=N)
+  nullEta = matrix(unlist(map(map(mhlist[[1]],"dat"),"nullEta")),ncol=N)
+  altEta = matrix(unlist(map(map(mhlist[[1]],"dat"),"altEta")),ncol=N)
+  rand = matrix(unlist(map(mhlist[[1]],"rand")),ncol=N)
+  index = unlist(map(mhlist[[1]],"index"))
+  preassign = matrix(unlist(map(map(mhlist[[1]],"pre"),"assign")),ncol=N)
+  return(list(N=N,J=J,Y=Y,TOT=TOT,subpopInd = subpopInd,nullEta=nullEta,altEta=altEta,rand=rand,index=index,preassign=preassign))
+}

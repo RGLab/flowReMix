@@ -934,7 +934,7 @@ flowReMix <- function(formula,
     # print(mem_used()) #### MEMORY CHECK
     if(!newSampler){
       MHresult <- foreach(sublist = listForMH, .combine = c,.noexport="listForMH") %dorng% {
-        CppFlowSstepList(sublist, nsamp, nSubsets, intSampSize,
+        CppFlowSstepList_mc(sublist, nsamp, nSubsets, intSampSize,
                          isingCoefs, covariance, keepEach, MHcoef,
                          betaDispersion, randomAssignProb, modelprobs,
                          iterAssignCoef, prior, zeroPosteriorProbs,
