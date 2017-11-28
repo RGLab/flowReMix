@@ -75,7 +75,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
         clusterassignments(assigninds) = preassign(assigninds);
       }
 
-#pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, betaDispersion, preassign, clusterDensities, intSampSize, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) default(none) num_threads(cpus)
+#pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, betaDispersion, preassign, clusterDensities, intSampSize, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {
   int abort = 0;
 #pragma omp for
@@ -298,7 +298,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
         Named("rand") = wrap(randomeffectMats),
         Named("rate") = wrap(MHsuccessrates)
       );
-      std::cout<<"Done.\n";
+      std::cout<<"\n";
       return retval;
   }
   catch (std::exception &ex){

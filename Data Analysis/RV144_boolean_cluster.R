@@ -1,3 +1,8 @@
+library(flowReMix)
+library(foreach)
+library(doParallel)
+library(doRNG)
+
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
   assign <- as.numeric(by(x, x$subset, function(y) y$prop[1] > y$prop[2]))
@@ -8,7 +13,7 @@ assign <- function(x) {
 
 require(pROC)
 require(reshape2)
-load("data/rv144_booleans.rda")
+load("../data/rv144_booleans.rda")
 bySubset <- by(data.frame(booleans$stim, booleans$nonstim), booleans$Subset, function(x) x)
 largerThanThershold <- sapply(bySubset, function(x) colSums(x >5))
 
@@ -44,9 +49,6 @@ for(i in 1:length(subsets)) {
 }
 subsets <- unique(booldata$Subset)
 booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE), ])
-# booldata <- merge(booldata, data.frame(ptid = correlates$ptid,
-#                                        IgAprim = correlates$IgAprim,
-#                                        V2prim = correlates$V2prim))
 names(booldata) <- tolower(names(booldata))
 
 
@@ -75,44 +77,43 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 # Analysis -------------
 library(flowReMix)
 
-pargrid = expand.grid(niter=c(10,20,50,100,500),nsamp = c(20,50,100),prior=c(0,1,2,4))
-setting = Sys.getenv('SLURM_ARRAYID')
+pargrid = expand.grid(niter=c(20,50,100,500,1000),nsamp = c(20,50,100),prior=c(0,1,2,4))
+setting = Sys.getenv('SLURM_ARRAY_TASK_ID')
 cores = Sys.getenv('SLURM_CPUS_PER_TASK')
 config = pargrid[setting,]
 npost <- 1
-niter  = config[1]
-prior = config[3]
-nsamp = config[2]
-print(c(cores, config,npost,niter,prior,nsamp))
-# control <- flowReMix_control(updateLag = 10, nsamp = nsamp, initMHcoef = 2.5,
-#                              keepEach = 1,
-#                              nPosteriors = npost, centerCovariance = TRUE,
-#                              maxDispersion = 1000, minDispersion = 10^7,
-#                              randomAssignProb = 10^-8, intSampSize = 50,
-#                              lastSample = 4, isingInit = -log(99),
-#                              ncores = cores,
-#                              preAssignCoefs = 0,
-#                              prior = prior, isingWprior = TRUE,
-#                              markovChainEM = TRUE,
-#                              initMethod = "robust",
-#                              zeroPosteriorProbs = TRUE)
-#
-# booldata$subset <- factor(booldata$subset)
-# preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
-# booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
-# system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
-#                              subject_id = ptid,
-#                              cell_type = subset,
-#                              cluster_variable = stim,
-#                              data = booldata,
-#                              covariance = "sparse",
-#                              ising_model = "sparse",
-#                              regression_method = "robust",
-#                              iterations =  niter,
-#                              cluster_assignment = TRUE,
-#                              parallel = TRUE,
-#                              verbose = FALSE, control = control))
-# saveRDS(fit,paste0("rv144_cluster_niter_",niter,"_nsamp_",nsamp,"_prior_",prior,".rds"))
+niter  = as.integer(config[1])
+prior = as.numeric(config[3])
+nsamp = as.integer(config[2])
+ control <- flowReMix_control(updateLag = 10, nsamp = nsamp, initMHcoef = 2.5,
+                              keepEach = 1,
+                              nPosteriors = npost, centerCovariance = TRUE,
+                              maxDispersion = 1000, minDispersion = 10^7,
+                              randomAssignProb = 10^-8, intSampSize = 50,
+                              lastSample = 4, isingInit = -log(99),
+                              ncores = cores,
+                              preAssignCoefs = 0,
+                              prior = prior, isingWprior = TRUE,
+                              markovChainEM = TRUE,
+                              initMethod = "robust",
+                              zeroPosteriorProbs = TRUE)
+
+ booldata$subset <- factor(booldata$subset)
+ preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
+ booldata$stim <- factor(booldata$stim, levels = c("nonstim", "stim"))
+ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+                              subject_id = ptid,
+                              cell_type = subset,
+                              cluster_variable = stim,
+                              data = booldata,
+                              covariance = "sparse",
+                              ising_model = "sparse",
+                              regression_method = "robust",
+                              iterations =  niter,
+                              cluster_assignment = TRUE,
+                              parallel = TRUE,
+                              verbose = FALSE, control = control))
+ saveRDS(fit,paste0("output/rv144_cluster_niter_",niter,"_nsamp_",nsamp,"_prior_",prior,".rds"))
 # plot(fit, type = "scatter", target = vaccine)
 # plot(fit, type = "ROC", target = vaccine, direction = "<",varname="vaccine")
 # plot(fit, type = "ROC", target = hiv, direction = ">",varname="hiv")

@@ -726,10 +726,11 @@ flowReMix <- function(formula,
 
     oldM <- M
     # create progress bar
-    if(!verbose) pb <- txtProgressBar(min = 1, max = iterations, style = 3)
+#    if(!verbose) pb <- txtProgressBar(min = 1, max = iterations, style = 3)
     # Updating Regression Equation -------------------
     if(iter > 1) {
-      if(!verbose) setTxtProgressBar(pb, iter)
+#      if(!verbose) setTxtProgressBar(pb, iter)
+	if(!verbost)message("iteration ",i);
       if(verbose) print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
