@@ -218,7 +218,7 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #' @param track.height \code{numeric} vector of track heights, length 1 or \code{length(varnames)}
 #' @param track.margin \code{numeric} vector of length 2 specifying the track margin.
 #' @param functions.name \code{character} length 1, name of the column holding the functions.
-#' @param wrap.at \code{character} regex, string position to wrap labels for all tracks.
+#' @param wrap.width \code{numeric} string width to wrap annotation labels for all tracks.
 #' @param label.cex \code{numeric} scaling factors for the labels in each track.Should be same length as \code{varnames}.
 #' @param facing \code{character} passed to circos.text. \code{facing=c("inside", "outside", "reverse.clockwise", "clockwise",
 #' "downward", "bending", "bending.inside", "bending.outside")}
@@ -231,7 +231,6 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #' @importFrom igraph graph_from_adjacency_matrix
 #' @importFrom tidygraph as_tbl_graph
 #' @importFrom tidygraph group_components
-#' @importFrom tidygraph .E
 #' @importFrom tidyr separate
 #' @importFrom tidyr unnest
 #' @importFrom tidyr spread

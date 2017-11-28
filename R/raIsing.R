@@ -88,17 +88,17 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
     covs <- as.matrix(mat[, -i])
     eta <- as.numeric(covs %*% coefs)
     # if(verbose) cat(pResp, " ")
-    isingOffset[i] <- uniroot(f = function(off) weightedMean(expit(eta + off), w = weights,na_rm=FALSE) - pResp,
+    isingOffset[i] <- uniroot(f = function(off) weighted.mean(expit(eta + off), w = weights) - pResp,
                               interval = c(-50, 50))$root
   }
   # if(verbose) cat("\n")
 
-  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
+  isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dopar% {
     y <- as.vector(mat[, j])
     X <- as.matrix(mat[, -j])
     xcols <- colSums(X)
     if(family == "binomial") {
-      regX <- X[, xcols >= 4,drop=FALSE]
+      regX <- X[, xcols >= 4]
     } else {
       regX <- X
     }
@@ -166,7 +166,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
       coefs <- as.numeric(isingmat[i, -i])
       covs <- as.matrix(mat[, -i])
       eta <- as.numeric(covs %*% coefs)
-      isingOffset[i] <- uniroot(f = function(off) weightedMean(expit(eta + off), w = weights,na_rm=FALSE) - targetResp[i],
+      isingOffset[i] <- uniroot(f = function(off) weighted.mean(expit(eta + off), w = weights) - targetResp[i],
                                 interval = c(-50, 50))$root
     }
     diag(isingmat) <- isingOffset
@@ -177,10 +177,10 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
 
 getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, minprob) {
   y <- as.vector(mat[, j])
-  X <- as.matrix(mat[, -j,drop=FALSE])
+  X <- as.matrix(mat[, -j])
   xcols <- colSums(X)
   if(family == "binomial") {
-    regX <- as.matrix(X[, xcols >= 4,drop=FALSE])
+    regX <- X[, xcols >= 4,drop=FALSE]
   } else {
     regX <- X
   }

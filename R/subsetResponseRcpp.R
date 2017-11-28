@@ -69,7 +69,7 @@ estimateIntercept <- function(propMat) {
 initializeModel <- function(dat, formula, method, mixed) {
   if(is.null(dat)) {
     warning("Some cell-subsets are empty!")
-    return(list(empty=FALSE))
+    return("empty!")
   }
   if(!mixed) {
     if(all(dat$treatmentvar == 1)) {
@@ -143,7 +143,7 @@ initializeModel <- function(dat, formula, method, mixed) {
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
   randomEffects <- randomEffects[order(unique(dat$id))]
   return(list(fit = fit, coef = coef, randomEffects = randomEffects,
-              separation = outputsep,empty=FALSE))
+              separation = outputsep))
 }
 
 #' Fitting a Mixture of Mixed Effect Models for Binomial Data
@@ -481,11 +481,13 @@ flowReMix <- function(formula,
     treatmentvar <- 1
   }
 
-  isingMethod<- isingMethod[1]
-  isingMethod = match.arg(isingMethod,  c("raIsing", "sparse", "dense", "none"))
+  if(length(isingMethod) > 1) isingModel<- isingModel[1]
+  if(!(isingMethod %in% c("raIsing", "sparse", "dense", "none"))) {
+    stop("ising_model must be one of raIsing, sparse, dense or none")
+  }
 
-  regressionMethod <- regressionMethod[1]
-  regressionMethod = match.arg(regressionMethod,c("firth", "binom", "betabinom", "sparse", "robust"))
+  if(length(regressionMethod) > 1) regressionMethod <- regressionMethod[1]
+  if(!(regressionMethod %in% c(c("firth", "binom", "betabinom", "sparse", "robust")))) stop("regression_method must be one of binom, betabinom, sparse, robust or firth!")
   if(regressionMethod == "binom") {
     smallCounts <- FALSE
     betaDispersion <- FALSE
@@ -498,14 +500,19 @@ flowReMix <- function(formula,
     smallCounts <- TRUE
     betaDispersion <- TRUE
     robustreg <- FALSE
-  } else { #fallback firth or robust
+  } else if(regressionMethod == "robust" | regressionMethod == "firth") {
     smallCounts <- FALSE
     robustreg <- TRUE
     betaDispersion <- TRUE
+  } else {
+    stop("Regression method not supported!")
   }
 
-  covarianceMethod <- covarianceMethod[1]
-  covarianceMethod = match.arg(covarianceMethod, c("sparse", "dense", "diagonal"))
+  if(length(covarianceMethod) > 1) covarianceMethod <- covarianceMethod[1]
+  if(!(covarianceMethod %in% c("sparse", "dense", "diagonal"))) {
+    stop("`covariance' must be one of sparse, dense or diagonal!")
+  }
+
   if(!markovChainEM & learningRate > 1) {
     warning("`learningRate' must be between between less or equal to 1 and larger than 0.5! Using learningRate = 1")
     learningRate <- 1
@@ -539,7 +546,7 @@ flowReMix <- function(formula,
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
-    dat <- do.call("rbind", c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)),make.row.names=FALSE))
+    dat <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(dat, x)))
   } else {
     dataReplicates <- 1
   }
@@ -557,10 +564,8 @@ flowReMix <- function(formula,
     #print(unique(as.character(dataByPopulation[[j]]$sub.population)))
     initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
   }
-  names(initialization) = names(dataByPopulation)
 
-  isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
-
+  isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
     newlevels <- levels(sub.population)[!(levels(sub.population) %in% empty)]
@@ -597,15 +602,9 @@ flowReMix <- function(formula,
   # Setting up preAssignment ----------------------
   if(length(cluster_assignment) == 1) {
     if(cluster_assignment & !mixed) {
-      # preAssignment <- by(dat, dat$id, autoPreAssign) #slow
-      preAssignment = dat %>% dplyr::group_by(id, subset = sub.population) %>% dplyr::summarize(assign = {
-        prop = y / N
-        baseline = ifelse(is.factor(treatmentvar), levels(treatmentvar)[1], 0)
-        -as.numeric(min(prop[treatmentvar == baseline]) < max(prop[treatmentvar !=
-                                                                     baseline]))
-      }) %>% arrange(id, as.character(subset))%>%as.data.frame
-      # preAssignment <- do.call("rbind", c(preAssignment,make.row.names=FALSE))
-      # names(preAssignment) <- c("id", "subset", "assign")
+      preAssignment <- by(dat, dat$id, autoPreAssign)
+      preAssignment <- do.call("rbind", preAssignment)
+      names(preAssignment) <- c("id", "subset", "assign")
     } else {
       preAssignment <- expand.grid(id = unique(dat$id), subset = unique(dat$sub.population))
       preAssignment$assign <- rep(-1, nrow(preAssignment))
@@ -626,8 +625,7 @@ flowReMix <- function(formula,
     if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
   }
 
-  # preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
-  preAssignmentMat = preAssignment%>%arrange(id,subset)
+  preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
   preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
     x$id <- as.character(x$id)
     return(x)
@@ -912,14 +910,12 @@ flowReMix <- function(formula,
     } else {
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
-    listForMH = vector('list',nSubjects)
-    for(i in 1:length(listForMH)){
-      listForMH[[i]] = list(dat = databyid[[i]][, keepcols],
-           pre = preAssignment[[i]],
-           rand = estimatedRandomEffects[i, ],
-           assign = clusterAssignments[i, ],
-           index = i)
-    }
+
+    listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
+                                                                pre = preAssignment[[i]],
+                                                                rand = estimatedRandomEffects[i, ],
+                                                                assign = clusterAssignments[i, ],
+                                                                index = i), keepcols)
 
     if(newSampler & iter == 1) {
       settingNsamp <- nsamp
@@ -932,28 +928,24 @@ flowReMix <- function(formula,
     listForMH <- lapply(inds, function(x) listForMH[x])
     iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
-    if(!newSampler){
-      MHresult <- foreach(sublist = listForMH, .combine = c,.noexport="listForMH") %dorng% {
-        CppFlowSstepList(sublist, nsamp, nSubsets, intSampSize,
-                         isingCoefs, covariance, keepEach, MHcoef,
-                         betaDispersion, randomAssignProb, modelprobs,
-                         iterAssignCoef, prior, zeroPosteriorProbs,
-                         M, invcov, mixed, sampleRandom = TRUE,
-                         doNotSample = doNotSampleSubset,
-                         markovChainEM = markovChainEM)
-
-      }
-    }else{
-      MHresult = foreach(sublist = listForMH, .combine = c) %dorng% {
-        lapply(sublist, function(subjectData) {
+    MHresult <- foreach(sublist = listForMH, .combine = c) %dorng% {
+      lapply(sublist, function(subjectData) {
+        if(!newSampler) {
+          flowSstep(subjectData, nsamp, nSubsets, intSampSize,
+                    isingCoefs, covariance, keepEach, MHcoef,
+                    betaDispersion, randomAssignProb, modelprobs,
+                    iterAssignCoef, prior, zeroPosteriorProbs,
+                    M, invcov, mixed, sampleRandom = TRUE,
+                    doNotSample = doNotSampleSubset)
+        } else {
           newSstep(subjectData, nsamp, nSubsets, intSampSize,
-               isingCoefs, covariance, keepEach, MHcoef,
-               betaDispersion, randomAssignProb, modelprobs,
-               iterAssignCoef, prior, zeroPosteriorProbs,
-               M, invcov, mixed, sampleRandom = TRUE,
-               doNotSample = doNotSampleSubset)
-        })
-      }
+                    isingCoefs, covariance, keepEach, MHcoef,
+                    betaDispersion, randomAssignProb, modelprobs,
+                    iterAssignCoef, prior, zeroPosteriorProbs,
+                    M, invcov, mixed, sampleRandom = TRUE,
+                    doNotSample = doNotSampleSubset)
+        }
+      })
     }
     # print(mem_used()) #### MEMORY CHECK
 
@@ -1026,7 +1018,7 @@ flowReMix <- function(formula,
         assignFromIter <- sapply(exportAssignment, function(x) attr(x, "iter"))
         exportAssignment <- exportAssignment[assignFromIter > iter - keepLastIterations]
         isingWeights <- assignFromIter[assignFromIter > iter - keepLastIterations]
-        isingWeights <- unlist(as.vector(mapply(function(x, y) rep(x, nrow(y)), isingWeights, exportAssignment, SIMPLIFY = TRUE)),use.names = FALSE)
+        isingWeights <- unlist(as.vector(mapply(function(x, y) rep(x, nrow(y)), isingWeights, exportAssignment, SIMPLIFY = TRUE)))
         isingWeights <- weightMap[isingWeights - updateLag]
         # print(unique(isingWeights))
         # print(sum(unique(isingWeights)))
@@ -1043,8 +1035,8 @@ flowReMix <- function(formula,
       }
 
       assignmentList <- do.call("rbind",assignmentList)
-      # assignmentList <- as.data.frame(assignmentList) #why?
-      colnames(assignmentList) <- popnames
+      assignmentList <- data.frame(assignmentList)
+      names(assignmentList) <- popnames
 
       # If markov chain EM or not aggregating then all weights are 1
       if(markovChainEM | iter <= updateLag + 1) {
@@ -1269,7 +1261,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                       betaDispersion, randomAssignProb, modelprobs,
                       iterAssignCoef, prior, zeroPosteriorProbs,
                       M, invcov, mixed, sampleRandom = TRUE,
-                      doNotSample = NULL, markovChainEM = TRUE) {
+                      doNotSample = NULL) {
   if(is.null(doNotSample)) {
     doNotSample <- rep(FALSE, nSubsets)
   }
@@ -1283,13 +1275,6 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
-    if(markovChainEM){
-      subjassign = rep(0,length(subjectData$pre$assign))
-      # subjassign = subjectData$assign
-    }else{
-      #only initialize to previous iteration when we use the saEM, not the mcEM.
-      subjassign = subjectData$assign
-    }
     assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
                                        subjectData$dat$nullEta, subjectData$dat$altEta,
                                        covariance, nsamp, nSubsets, keepEach, intSampSize,
@@ -1301,7 +1286,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                        randomAssignProb, modelprobs, iterAssignCoef,
                                        prior, zeroPosteriorProbs,
                                        doNotSample,
-                                       as.numeric(subjassign))
+                                       as.numeric(subjectData$assign))
   }
 
   unifVec <- runif(nsamp * nSubsets)
@@ -1387,7 +1372,7 @@ buildFlowFrame <- function(call, data) {
         id <- eval(call$subject_id, envir = parent.frame())
       }
     }else if(is.null(call$subject_id)){
-      id <- as.character(1:n)
+      id <- 1:n
     }
 
     if(length(call$weights) == 1){

@@ -74,31 +74,17 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     mixed <- is.null(obj$isingAvg)
     inds <- splitIndices(length(mhList), cpus)
     mhList <- lapply(inds, function(x) mhList[x])
-    mcEM = obj$control$markovChainEM
-    if(!exists("doNotSample")){
-      doNotSample = rep(FALSE,nSubsets)
-    }
-    if(length(mhList)==1){
-      MHresult = CppFlowSstepList(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
-                       intSampSize = intSampSize, isingCoefs = isingCoefs,
-                       covariance = cov, keepEach = keepEach,
-                       MHcoef = MHcoef, betaDispersion = TRUE,
-                       randomAssignProb = 0, modelprobs = 0,
-                       iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
-                       M = dispersion, invcov = invcov, mixed = mixed,
-                       sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
-    }else{
     MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
-      # lapply(sublist, function(subjectData) {
-        CppFlowSstepList(sublist, nsamp = nsamp, nSubsets = nSubsets,
+      lapply(sublist, function(subjectData) {
+        flowSstep(subjectData, nsamp = nsamp, nSubsets = nSubsets,
                 intSampSize = intSampSize, isingCoefs = isingCoefs,
                 covariance = cov, keepEach = keepEach,
                 MHcoef = MHcoef, betaDispersion = TRUE,
                 randomAssignProb = 0, modelprobs = 0,
                 iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
                 M = dispersion, invcov = invcov, mixed = mixed,
-                sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
-         }
+                sampleRandom = (type != "ising"))
+      })
     }
     if(type == "ising") {
       samples <- lapply(MHresult, function(x) x$assign)
@@ -110,7 +96,6 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   }
 
   if(!sampleNew) {
-    #what if the samples don't have names?
     names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
     samples <- lapply(unique(names(samples)), function(x) {
       do.call("rbind", samples[names(samples) == x])
@@ -120,29 +105,23 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   nsubsets <- ncol(samples[[1]])
 
   if(sampleNew) {
-    # samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[i, , drop = FALSE])))
-    #below is 20 times faster.
-    #taking slices along the third dimension gives contiguous memory chunks..should do an aperm so that reps is the third dim.
-    samples = array(unlist(samples,use.names=FALSE),dim = c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples)))
-    samples = aperm(samples,c(3,2,1))
+    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[i, , drop = FALSE])))
   } else {
-    # samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[sample.int(nrow(samp), 1), , drop = FALSE])))
-    samples2 = array(unlist(samples,use.names=FALSE),c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples))) #make it a multidimensional array
-    samples = array(apply(samples2,3,function(x)x[sample.int(nrow(x)),]),dim=c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples))) #and permute the replicates per subject
-    samples = aperm(samples,c(3,2,1))
+    samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[sample.int(nrow(samp), 1), , drop = FALSE])))
   }
 
   inds = splitIndices(reps, cpus)
-  samples <- lapply(inds, function(x) samples[,,x])
+  samples <- lapply(inds, function(x) samples[x])
   set.seed(seed)
-  countCovar <- foreach(matrices = samples , .combine = "+") %dorng% {
-    countCovar <- apply(matrices,3, function(mat)
-      raIsing((mat), AND = AND, gamma = gamma, family = family,
+
+  cluster_res <- foreach(matrices = samples, .combine = c) %dorng% {
+    countCovar <- lapply(matrices, function(mat)
+      raIsing(mat, AND = AND, gamma = gamma, family = family,
               method = "sparse", cv = cv, parallel = FALSE) != 0)
-    countCovar = matrix(rowSums(countCovar),ncol=dim(matrices)[2])
     return(countCovar)
   }
-  # countCovar <- Reduce(cluster_res, f = "+")
+
+  countCovar <- Reduce(cluster_res, f = "+")
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
   rownames(props) <- colnames(props)
@@ -178,9 +157,6 @@ reConstructMHlist <- function(obj) {
   rm(forcols)
 
   estimatedRandomEffects <- obj$randomEffects
-  if(class(estimatedRandomEffects)=="data.frame"|ncol(estimatedRandomEffects)>length(nlevels(factor(dat$sub.population)))){
-    estimatedRandomEffects = as.matrix(estimatedRandomEffects[,-1L])
-  }
   nSubjects <- nrow(obj$posteriors)
   listForMH <- lapply(1:nSubjects, function(i, keepcols) list(dat = databyid[[i]][, keepcols],
                                                               pre = preAssignment[[i]],
