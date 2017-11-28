@@ -1,10 +1,16 @@
 #include  <RcppArmadillo.h>
+#include <omp.h>
+#include <exception>
+#include <boost/exception/all.hpp>
+#include <boost/math/special_functions/beta.hpp>
+#include "flowReMix.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp17)]]
 // headers
 
 
-NumericVector expit(NumericVector x) ;
+
+// NumericVector expit(NumericVector x) ;
 
 void print(NumericVector x);
 
@@ -30,6 +36,10 @@ void copyVec(IntegerVector from, IntegerVector to) {
   }
 }
 
+arma::vec logit_arma(arma::vec p) {
+  arma::vec result = log(p / (1.0 - p)) ;
+  return result ;
+}
 
 NumericVector logit(NumericVector p) {
   NumericVector result = log(p / (1.0 - p)) ;
@@ -50,10 +60,22 @@ NumericMatrix computeRandomEta(NumericVector eta, NumericVector vsample) {
 double betaBinomDens(int count, int N, double prob, double M) {
   double a = M * prob ;
   double b = M * (1 - prob) ;
+  if(b==0){
+    b = 0.5;
+  }
+  if(a==0){
+    a = 0.5;
+  }
+  double logdens;
 
-  double logdens = R::lchoose(N, count) ;
-  logdens += R::lbeta(count + a, N - count + b) ;
-  logdens -= R::lbeta(a, b) ;
+  try{
+  logdens = flowReMix::lchoose(N, count) ;
+  logdens += log(boost::math::beta(count + a, N - count + b)) ;
+  logdens -= log(boost::math::beta(a, b)) ;
+  }catch(const boost::exception &e){
+    std::cout<<boost::diagnostic_information(e);
+    std::cout<<"a "<<a<<" N "<<N<<" count "<<count<<" b "<<b<< " prob "<<prob<<" M "<<M<<"\n";
+  }
   return logdens ;
 }
 

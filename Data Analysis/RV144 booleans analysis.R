@@ -77,10 +77,10 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 prior <- 0
 npost <- 1
-niter <- 100
+niter <- 30 
 seed <- 1
 lastSample <- NULL
-cpus <- 2
+cpus <- 6
 control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
                              keepEach = 5, isingWprior = TRUE,
                              zeroPosteriorProbs = FALSE,
@@ -104,10 +104,10 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              covariance = "sparse",
                              ising_model = "sparse",
                              regression_method = "robust",
-                             iterations =  20,
+                             iterations =  niter,
                              cluster_assignment = TRUE,
                              parallel = TRUE, keepSamples = TRUE,
-                             verbose = TRUE, control = control,
+                             verbose = FALSE, control = control,
                              newSampler = FALSE))
 # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")

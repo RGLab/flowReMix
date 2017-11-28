@@ -1,2 +1,2 @@
 CXX_STD=-std=c++1z
-PKG_CXXFLAGS=${CXX_STD} -fopenmp
+PKG_CXXFLAGS=${CXX_STD} -fopenmp -DDEBUG

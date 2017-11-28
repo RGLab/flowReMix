@@ -6,36 +6,6 @@
 
 using namespace Rcpp;
 
-// CppFlowSstepList_mc
-List CppFlowSstepList_mc(const List subjectDataList, int nsamp, const int nSubsets, const int intSampSize, const arma::mat isingCoefs, const arma::mat covariance, const int keepEach, const arma::vec MHcoef, const bool betaDispersion, const double randomAssignProb, const arma::vec modelprobs, const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs, const arma::vec M, const arma::mat invcov, const bool mixed, const bool sampleRandom, const arma::vec doNotSample, const bool markovChainEM);
-RcppExport SEXP _flowReMix_CppFlowSstepList_mc(SEXP subjectDataListSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP intSampSizeSEXP, SEXP isingCoefsSEXP, SEXP covarianceSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP betaDispersionSEXP, SEXP randomAssignProbSEXP, SEXP modelprobsSEXP, SEXP iterAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP MSEXP, SEXP invcovSEXP, SEXP mixedSEXP, SEXP sampleRandomSEXP, SEXP doNotSampleSEXP, SEXP markovChainEMSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List >::type subjectDataList(subjectDataListSEXP);
-    Rcpp::traits::input_parameter< int >::type nsamp(nsampSEXP);
-    Rcpp::traits::input_parameter< const int >::type nSubsets(nSubsetsSEXP);
-    Rcpp::traits::input_parameter< const int >::type intSampSize(intSampSizeSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type isingCoefs(isingCoefsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type covariance(covarianceSEXP);
-    Rcpp::traits::input_parameter< const int >::type keepEach(keepEachSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type MHcoef(MHcoefSEXP);
-    Rcpp::traits::input_parameter< const bool >::type betaDispersion(betaDispersionSEXP);
-    Rcpp::traits::input_parameter< const double >::type randomAssignProb(randomAssignProbSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type modelprobs(modelprobsSEXP);
-    Rcpp::traits::input_parameter< const double >::type iterAssignCoef(iterAssignCoefSEXP);
-    Rcpp::traits::input_parameter< const double >::type prior(priorSEXP);
-    Rcpp::traits::input_parameter< const bool >::type zeroPosteriorProbs(zeroPosteriorProbsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type M(MSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type invcov(invcovSEXP);
-    Rcpp::traits::input_parameter< const bool >::type mixed(mixedSEXP);
-    Rcpp::traits::input_parameter< const bool >::type sampleRandom(sampleRandomSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type doNotSample(doNotSampleSEXP);
-    Rcpp::traits::input_parameter< const bool >::type markovChainEM(markovChainEMSEXP);
-    rcpp_result_gen = Rcpp::wrap(CppFlowSstepList_mc(subjectDataList, nsamp, nSubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, modelprobs, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM));
-    return rcpp_result_gen;
-END_RCPP
-}
 // CppFlowSstepList
 List CppFlowSstepList(const List& subjectDataList, int nsamp, const int nSubsets, const int intSampSize, const NumericMatrix& isingCoefs, const NumericMatrix& covariance, const int keepEach, const NumericVector& MHcoef, const bool betaDispersion, const double randomAssignProb, const NumericVector& modelprobs, const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs, const NumericVector& M, const NumericMatrix& invcov, const bool mixed, const bool sampleRandom, const LogicalVector& doNotSample, const bool markovChainEM);
 RcppExport SEXP _flowReMix_CppFlowSstepList(SEXP subjectDataListSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP intSampSizeSEXP, SEXP isingCoefsSEXP, SEXP covarianceSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP betaDispersionSEXP, SEXP randomAssignProbSEXP, SEXP modelprobsSEXP, SEXP iterAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP MSEXP, SEXP invcovSEXP, SEXP mixedSEXP, SEXP sampleRandomSEXP, SEXP doNotSampleSEXP, SEXP markovChainEMSEXP) {
@@ -63,6 +33,75 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const LogicalVector& >::type doNotSample(doNotSampleSEXP);
     Rcpp::traits::input_parameter< const bool >::type markovChainEM(markovChainEMSEXP);
     rcpp_result_gen = Rcpp::wrap(CppFlowSstepList(subjectDataList, nsamp, nSubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, modelprobs, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM));
+    return rcpp_result_gen;
+END_RCPP
+}
+// CppFlowSstepList_mc_vec
+List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y, const arma::mat& N, const arma::mat& subpopInd, arma::mat& clusterassignments, const arma::mat& nullEta, const arma::mat altEta, const arma::mat& rand, arma::vec& index, const arma::mat& preassign, const int nsamp, const int nsubsets, const int intSampSize, const arma::mat& isingCoefs, const arma::mat& covariance, const int keepEach, const arma::vec& MHcoef, const bool betaDispersion, const double randomAssignProb, const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs, const arma::vec& M, const arma::mat& invcov, const bool mixed, const bool sampleRandom, const arma::vec& doNotSample, const bool markovChainEM, int cpus);
+RcppExport SEXP _flowReMix_CppFlowSstepList_mc_vec(SEXP nsubjectsSEXP, SEXP YSEXP, SEXP NSEXP, SEXP subpopIndSEXP, SEXP clusterassignmentsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP randSEXP, SEXP indexSEXP, SEXP preassignSEXP, SEXP nsampSEXP, SEXP nsubsetsSEXP, SEXP intSampSizeSEXP, SEXP isingCoefsSEXP, SEXP covarianceSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP betaDispersionSEXP, SEXP randomAssignProbSEXP, SEXP iterAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP MSEXP, SEXP invcovSEXP, SEXP mixedSEXP, SEXP sampleRandomSEXP, SEXP doNotSampleSEXP, SEXP markovChainEMSEXP, SEXP cpusSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int >::type nsubjects(nsubjectsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type subpopInd(subpopIndSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type clusterassignments(clusterassignmentsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type nullEta(nullEtaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type altEta(altEtaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type rand(randSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type index(indexSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type preassign(preassignSEXP);
+    Rcpp::traits::input_parameter< const int >::type nsamp(nsampSEXP);
+    Rcpp::traits::input_parameter< const int >::type nsubsets(nsubsetsSEXP);
+    Rcpp::traits::input_parameter< const int >::type intSampSize(intSampSizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type isingCoefs(isingCoefsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< const int >::type keepEach(keepEachSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type MHcoef(MHcoefSEXP);
+    Rcpp::traits::input_parameter< const bool >::type betaDispersion(betaDispersionSEXP);
+    Rcpp::traits::input_parameter< const double >::type randomAssignProb(randomAssignProbSEXP);
+    Rcpp::traits::input_parameter< const double >::type iterAssignCoef(iterAssignCoefSEXP);
+    Rcpp::traits::input_parameter< const double >::type prior(priorSEXP);
+    Rcpp::traits::input_parameter< const bool >::type zeroPosteriorProbs(zeroPosteriorProbsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type M(MSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type invcov(invcovSEXP);
+    Rcpp::traits::input_parameter< const bool >::type mixed(mixedSEXP);
+    Rcpp::traits::input_parameter< const bool >::type sampleRandom(sampleRandomSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type doNotSample(doNotSampleSEXP);
+    Rcpp::traits::input_parameter< const bool >::type markovChainEM(markovChainEMSEXP);
+    Rcpp::traits::input_parameter< int >::type cpus(cpusSEXP);
+    rcpp_result_gen = Rcpp::wrap(CppFlowSstepList_mc_vec(nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus));
+    return rcpp_result_gen;
+END_RCPP
+}
+// CppFlowSstepList_mc
+List CppFlowSstepList_mc(const List subjectDataList, int nsamp, const int nSubsets, const int intSampSize, const arma::mat isingCoefs, const arma::mat covariance, const int keepEach, const arma::vec MHcoef, const bool betaDispersion, const double randomAssignProb, const arma::vec modelprobs, const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs, const arma::vec M, const arma::mat invcov, const bool mixed, const bool sampleRandom, const arma::vec doNotSample, const bool markovChainEM);
+RcppExport SEXP _flowReMix_CppFlowSstepList_mc(SEXP subjectDataListSEXP, SEXP nsampSEXP, SEXP nSubsetsSEXP, SEXP intSampSizeSEXP, SEXP isingCoefsSEXP, SEXP covarianceSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP betaDispersionSEXP, SEXP randomAssignProbSEXP, SEXP modelprobsSEXP, SEXP iterAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP MSEXP, SEXP invcovSEXP, SEXP mixedSEXP, SEXP sampleRandomSEXP, SEXP doNotSampleSEXP, SEXP markovChainEMSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List >::type subjectDataList(subjectDataListSEXP);
+    Rcpp::traits::input_parameter< int >::type nsamp(nsampSEXP);
+    Rcpp::traits::input_parameter< const int >::type nSubsets(nSubsetsSEXP);
+    Rcpp::traits::input_parameter< const int >::type intSampSize(intSampSizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type isingCoefs(isingCoefsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< const int >::type keepEach(keepEachSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type MHcoef(MHcoefSEXP);
+    Rcpp::traits::input_parameter< const bool >::type betaDispersion(betaDispersionSEXP);
+    Rcpp::traits::input_parameter< const double >::type randomAssignProb(randomAssignProbSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type modelprobs(modelprobsSEXP);
+    Rcpp::traits::input_parameter< const double >::type iterAssignCoef(iterAssignCoefSEXP);
+    Rcpp::traits::input_parameter< const double >::type prior(priorSEXP);
+    Rcpp::traits::input_parameter< const bool >::type zeroPosteriorProbs(zeroPosteriorProbsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type M(MSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type invcov(invcovSEXP);
+    Rcpp::traits::input_parameter< const bool >::type mixed(mixedSEXP);
+    Rcpp::traits::input_parameter< const bool >::type sampleRandom(sampleRandomSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type doNotSample(doNotSampleSEXP);
+    Rcpp::traits::input_parameter< const bool >::type markovChainEM(markovChainEMSEXP);
+    rcpp_result_gen = Rcpp::wrap(CppFlowSstepList_mc(subjectDataList, nsamp, nSubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, modelprobs, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -200,8 +239,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_flowReMix_CppFlowSstepList_mc", (DL_FUNC) &_flowReMix_CppFlowSstepList_mc, 20},
     {"_flowReMix_CppFlowSstepList", (DL_FUNC) &_flowReMix_CppFlowSstepList, 20},
+    {"_flowReMix_CppFlowSstepList_mc_vec", (DL_FUNC) &_flowReMix_CppFlowSstepList_mc_vec, 29},
+    {"_flowReMix_CppFlowSstepList_mc", (DL_FUNC) &_flowReMix_CppFlowSstepList_mc, 20},
     {"_flowReMix_vecBetaBinomDens", (DL_FUNC) &_flowReMix_vecBetaBinomDens, 4},
     {"_flowReMix_setNumericVectorToZero", (DL_FUNC) &_flowReMix_setNumericVectorToZero, 1},
     {"_flowReMix_subsetAssignGibbs", (DL_FUNC) &_flowReMix_subsetAssignGibbs, 26},

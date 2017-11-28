@@ -21,7 +21,7 @@
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
                            gamma = 0.9, AND = TRUE, seed = NULL,
-                           sampleNew = FALSE) {
+                           sampleNew = FALSE,keepEach=10) {
   if(cpus == 1) {
     foreach::registerDoSEQ()
   } else {
@@ -55,7 +55,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     }
   } else {
     mhList <- reConstructMHlist(obj)
-    keepEach <- max(obj$control$keepEach, 10)
+    keepEach <- min(obj$control$keepEach, keepEach)
     nsamp <- ceiling(reps * keepEach)
     isingCoefs <- obj$isingAvg
     nSubsets <- length(obj$coefficients)
@@ -75,45 +75,64 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     # inds <- splitIndices(length(mhList), pmin(length(mhList),cpus))
     inds <- splitIndices(length(mhList), pmin(length(mhList),1))
     mhList <- lapply(inds, function(x) mhList[x])
-    # mhList = extractFromList(mhList)
+    mhList = extractFromList(mhList)
 
     mcEM = obj$control$markovChainEM
     if(!exists("doNotSample")){
       doNotSample = rep(FALSE,nSubsets)
     }
-    if(length(mhList)==1){
-      MHresult = CppFlowSstepList_mc(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
-                       intSampSize = intSampSize, isingCoefs = isingCoefs,
-                       covariance = cov, keepEach = keepEach,
-                       MHcoef = MHcoef, betaDispersion = TRUE,
-                       randomAssignProb = 0, modelprobs = 0,
-                       iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
-                       M = dispersion, invcov = invcov, mixed = mixed,
-                       sampleRandom = (type != "ising"), doNotSample = doNotSample, markovChainEM = mcEM)
-    }else{
-    MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
-      # lapply(sublist, function(subjectData) {
-      CppFlowSstepList_mc(sublist, nsamp = nsamp, nSubsets = nSubsets,
-                          intSampSize = intSampSize, isingCoefs = isingCoefs,
-                          covariance = cov, keepEach = keepEach,
-                          MHcoef = MHcoef, betaDispersion = TRUE,
-                          randomAssignProb = 0, modelprobs = 0,
-                          iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
-                          M = dispersion, invcov = invcov, mixed = mixed,
-                          sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
-         }
-    }
+    # if(length(mhList)==1){
+      MHresult = CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
+                                         N = mhList$TOT, subpopInd = mhList$subpopInd,
+                                         clusterassignments = mhList$clusterassignments,
+                                         nullEta = mhList$nullEta, altEta = mhList$altEta,
+                                         rand = mhList$rand, index = mhList$index, preassign = mhList$preassign,
+                                         nsamp = nsamp, nsubsets = nSubsets,
+                                         intSampSize = intSampSize, isingCoefs = isingCoefs,
+                                         covariance = cov, keepEach = keepEach,
+                                         MHcoef = MHcoef, betaDispersion = TRUE,
+                                         randomAssignProb = 0,
+                                         iterAssignCoef = preCoef, prior = prior,
+                                         zeroPosteriorProbs = FALSE,
+                                         M = dispersion, invcov = invcov, mixed = mixed,
+                                         sampleRandom = (type != "ising"),
+                                         doNotSample = doNotSample, markovChainEM = mcEM, cpus=cpus)
+
+    # MHresult =   CppFlowSstepList_mc(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
+    #                         intSampSize = intSampSize, isingCoefs = isingCoefs,
+    #                         covariance = cov, keepEach = keepEach,
+    #                         MHcoef = MHcoef, betaDispersion = TRUE,
+    #                         randomAssignProb = 0, modelprobs = 0,
+    #                         iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+    #                         M = dispersion, invcov = invcov, mixed = mixed,
+    #                         sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+    # # }else{
+    # MHresult <- foreach(sublist = mhList, .combine = c) %dorng% {
+    #   # lapply(sublist, function(subjectData) {
+    #   CppFlowSstepList_mc(sublist, nsamp = nsamp, nSubsets = nSubsets,
+    #                       intSampSize = intSampSize, isingCoefs = isingCoefs,
+    #                       covariance = cov, keepEach = keepEach,
+    #                       MHcoef = MHcoef, betaDispersion = TRUE,
+    #                       randomAssignProb = 0, modelprobs = 0,
+    #                       iterAssignCoef = preCoef, prior = prior, zeroPosteriorProbs = FALSE,
+    #                       M = dispersion, invcov = invcov, mixed = mixed,
+    #                       sampleRandom = (type != "ising"),doNotSample = doNotSample, markovChainEM = mcEM)
+    #      }
+    # }
     if(type == "ising") {
-      samples <- lapply(MHresult, function(x) x$assign)
+      # samples <- lapply(MHresult, function(x) x$assign)
+      samples = MHresult$assign
       family = "binomial"
     } else if(type == "randomEffects") {
-      samples <- lapply(MHresult, function(x) x$rand)
+      # samples <- lapply(MHresult, function(x) x$rand)
+      samples = MHresult$rand
       family <- "gaussian"
     }
   }
 
   if(!sampleNew) {
     #what if the samples don't have names?
+    #TODO fix
     names(samples) <- sapply(names(samples), function(x) strsplit(x, "%%%")[[1]][[1]])
     samples <- lapply(unique(names(samples)), function(x) {
       do.call("rbind", samples[names(samples) == x])
@@ -123,25 +142,35 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   nsubsets <- ncol(samples[[1]])
 
   if(sampleNew) {
+    #no need for this since we are already in the right format using mc_vec function
     # samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[i, , drop = FALSE])))
     #below is 20 times faster.
     #taking slices along the third dimension gives contiguous memory chunks..should do an aperm so that reps is the third dim.
-    samples = array(unlist(samples,use.names=FALSE),dim = c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples)))
-    samples = aperm(samples,c(3,2,1))
+    # samples = array(unlist(samples,use.names=FALSE),dim = c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples)))
+    # samples = aperm(samples,c(3,2,1))
   } else {
+    #TODO fix
     # samples <- lapply(1:reps, function(i) t(sapply(samples, function(samp) samp[sample.int(nrow(samp), 1), , drop = FALSE])))
     samples2 = array(unlist(samples,use.names=FALSE),c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples))) #make it a multidimensional array
     samples = array(apply(samples2,3,function(x)x[sample.int(nrow(x)),]),dim=c(nrow(samples[[1]]),ncol(samples[[1]]),length(samples))) #and permute the replicates per subject
-    samples = aperm(samples,c(3,2,1))
+    # samples = aperm(samples,c(3,2,1)) #TODO check that it should be correct so we to t(mat) below..
   }
 
-
-  inds = splitIndices(reps, pmin(reps,cpus))
-  samples <- lapply(inds, function(x) samples[,,x,drop=FALSE])
+  if(!sampleNew){
+    inds = splitIndices(reps,pmin(reps,cpus))
+    for(i in 1:length(inds)){
+      inds[[i]]=rep(i,length(inds[[i]]))
+    }
+    inds = split(sample(dim(samples)[1],reps,replace=TRUE),inds)
+  }else{
+    inds = splitIndices(reps, pmin(reps,cpus))
+  }
+  #splitting third dimension below.. is along replicates.. so we change that to split by the first now that we've permuted
+  samples <- lapply(inds, function(x) samples[x,,,drop=FALSE])
   set.seed(seed)
   countCovar <- foreach(matrices = samples , .combine = "+") %dorng% {
-    countCovar <- apply(matrices,3, function(mat)
-      raIsing((mat), AND = AND, gamma = gamma, family = family,
+    countCovar <- apply(matrices,1, function(mat) #by first dim - replicates
+      raIsing(t(mat), AND = AND, gamma = gamma, family = family,
               method = "sparse", cv = cv, parallel = FALSE) != 0)
     countCovar = matrix(rowSums(countCovar),ncol=dim(matrices)[2])
     return(countCovar)

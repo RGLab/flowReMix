@@ -299,6 +299,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
+#' @import foreach
 #' @importFrom R.utils withTimeout
 #' @importFrom grDevices rainbow
 #' @importFrom utils capture.output
@@ -394,11 +395,14 @@ flowReMix <- function(formula,
       if(clusterType=="FORK") {
         cl = makeForkCluster(detectCores())
         registerDoParallel(cl)
+
       } else if(clusterType=="SOCK") {
         cl = makePSOCKCluster(detectCores())
         registerDoParallel(cl)
+
       } else {
         registerDoParallel()
+
       }
       if(!is.null(control$seed)){
         set.seed(control$seed)
@@ -407,11 +411,14 @@ flowReMix <- function(formula,
       if(clusterType=="FORK") {
         cl = makeForkCluster(ncores)
         registerDoParallel(cl)
+
       } else if(clusterType=="SOCK") {
         cl = makePSOCKCluster(ncores)
         registerDoParallel(cl)
+
       } else {
         cl <- registerDoParallel(ncores)
+
       }
       if(!is.null(control$seed)){
         set.seed(control$seed)
@@ -425,7 +432,7 @@ flowReMix <- function(formula,
     }
   }
 
-  ncores <- getDoParWorkers()
+  # ncores <- getDoParWorkers()
   if(ncores == 1) {
     message("Estimating model via sequential computation")
   } else {
@@ -756,8 +763,8 @@ flowReMix <- function(formula,
           mu <- 1 / (1 + exp(-eta))
           N <- popDat[[1]]$N
           y <- popDat[[1]]$y
-          M <- dispersionMLE(y, N, mu)
-          fit$M <- M
+          thisM <- dispersionMLE(y, N, mu)
+          fit$M <- thisM
           return(fit)
         }
         for(j in 1:nSubsets) {
@@ -766,7 +773,11 @@ flowReMix <- function(formula,
             if(!is.null(glmFits[[j]]$M)) {
               M[j] <- max(glmFits[[j]]$M, minDispersion)
             }
+          }else{
+            # browser() # we have a NULL.. want to capture it right away.
           }
+          #What if it's null?
+
         }
         # Beta-Binomial
       } else if(betaDispersion & !smallCounts) {
@@ -817,8 +828,8 @@ flowReMix <- function(formula,
             mu <- 1 / (1 + exp(-eta))
             N <- popDat[[1]]$N
             y <- popDat[[1]]$y
-            M <- dispersionMLE(y, N, mu)
-            fit$M <- M
+            Mthis <- dispersionMLE(y, N, mu)
+            fit$M <- thisM
           }
           return(fit)
         }
@@ -850,6 +861,9 @@ flowReMix <- function(formula,
         }
       }
 
+      if(length(M)!=nSubsets){
+        browser() # do we still have a bug?
+      }
       coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
                                 iter, Inf, rate, flagEquation,
                                 SIMPLIFY = FALSE)
@@ -928,22 +942,46 @@ flowReMix <- function(formula,
       nsamp <- settingNsamp
     }
 
-    inds <- splitIndices(length(listForMH), ncores)
-    listForMH <- lapply(inds, function(x) listForMH[x])
-    iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
+    # inds <- splitIndices(length(listForMH), ncores)
+    # listForMH <- lapply(inds, function(x) listForMH[x])
+    # iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
     # print(mem_used()) #### MEMORY CHECK
     if(!newSampler){
-      MHresult <- foreach(sublist = listForMH, .combine = c,.noexport="listForMH") %dorng% {
-        CppFlowSstepList_mc(sublist, nsamp, nSubsets, intSampSize,
-                         isingCoefs, covariance, keepEach, MHcoef,
-                         betaDispersion, randomAssignProb, modelprobs,
-                         iterAssignCoef, prior, zeroPosteriorProbs,
-                         M, invcov, mixed, sampleRandom = TRUE,
-                         doNotSample = doNotSampleSubset,
-                         markovChainEM = markovChainEM)
+      inds <- splitIndices(length(listForMH), 1)
+      listForMH <- lapply(inds, function(x) listForMH[x])
+      iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
+      mhList = extractFromList(listForMH)
 
-      }
+      # MHresult <- foreach(sublist = listForMH, .combine = c,.noexport="listForMH") %dorng% {
+        # CppFlowSstepList_mc(sublist, nsamp, nSubsets, intSampSize,
+        #                  isingCoefs, covariance, keepEach, MHcoef,
+        #                  betaDispersion, randomAssignProb, modelprobs,
+        #                  iterAssignCoef, prior, zeroPosteriorProbs,
+        #                  M, invcov, mixed, sampleRandom = TRUE,
+        #                  doNotSample = doNotSampleSubset,
+        #                  markovChainEM = markovChainEM)
+      MHresult = CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
+                                         N = mhList$TOT, subpopInd = mhList$subpopInd,
+                                         clusterassignments = mhList$clusterassignments,
+                                         nullEta = mhList$nullEta, altEta = mhList$altEta,
+                                         rand = mhList$rand, index = mhList$index, preassign = mhList$preassign,
+                                         nsamp = nsamp, nsubsets = nSubsets,
+                                         intSampSize = intSampSize, isingCoefs = isingCoefs,
+                                         covariance = covariance, keepEach = keepEach,
+                                         MHcoef = MHcoef, betaDispersion = TRUE,
+                                         randomAssignProb = randomAssignProb,
+                                         iterAssignCoef = iterAssignCoef, prior = prior,
+                                         zeroPosteriorProbs = FALSE,
+                                         M = M, invcov = invcov, mixed = mixed,
+                                         sampleRandom = TRUE,
+                                         doNotSample = doNotSampleSubset, markovChainEM = markovChainEM, cpus=ncores)
+
+      # }
     }else{
+      inds <- splitIndices(length(listForMH), ncores)
+      listForMH <- lapply(inds, function(x) listForMH[x])
+      iterAssignCoef <- preAssignCoefs[min(iter, length(preAssignCoefs))]
+
       MHresult = foreach(sublist = listForMH, .combine = c) %dorng% {
         lapply(sublist, function(subjectData) {
           newSstep(subjectData, nsamp, nSubsets, intSampSize,
@@ -957,9 +995,12 @@ flowReMix <- function(formula,
     }
     # print(mem_used()) #### MEMORY CHECK
 
-    assignmentList <- lapply(MHresult, function(x) x$assign)
-    MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
-    randomList <- lapply(MHresult, function(x) x$rand)
+    # assignmentList <- lapply(MHresult, function(x) x$assign)
+    assignmentList = (plyr::alply(MHresult$assign,3,function(x)x))
+    # MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
+    MHrates = colMeans(MHresult$rate)
+    # randomList <- lapply(MHresult, function(x) x$rand)
+    randomList = (plyr::alply(MHresult$rand,3,function(x)x))
     rm(MHresult)
 
     for(i in 1:nSubjects) {
@@ -1278,6 +1319,8 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   N <- subjectData$dat$N
   y <- subjectData$dat$y
   prop <- y/N
+  nsamp = floor(nsamp / keepEach) * keepEach
+  msize = nsamp/keepEach;
   unifVec <- runif(nsamp * nSubsets)
   normVec <- rnorm(intSampSize)
   if(mixed) {
@@ -1301,7 +1344,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                        randomAssignProb, modelprobs, iterAssignCoef,
                                        prior, zeroPosteriorProbs,
                                        doNotSample,
-                                       as.numeric(subjassign))
+                                       as.numeric(subjassign),msize)
   }
 
   unifVec <- runif(nsamp * nSubsets)
@@ -1325,7 +1368,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
                                              MHattempts, MHsuccess,
                                              unifVec,
                                              M, betaDispersion,
-                                             keepEach)
+                                             keepEach,msize)
   } else {
     randomMat <- NULL
   }
