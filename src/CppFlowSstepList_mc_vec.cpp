@@ -69,15 +69,10 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
     arma::cube clusterDensities(intSampSize,2,nsubjects) ;
     arma::mat iterPosteriors(nsubsets,nsubjects) ;
 
-      clusterassignments.rows(doNotSample==1.0).fill(0);
-      if((iterAssignCoef < 10e-4) & !zeroPosteriorProbs){
-        arma::umat assigninds = preassign != -1;
-        clusterassignments(assigninds) = preassign(assigninds);
-      }
-
 #pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, betaDispersion, preassign, clusterDensities, intSampSize, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {
   int abort = 0;
+
 #pragma omp for
   for(int subject=0;subject<nsubjects;++subject){
       int unifPosition = 0 ;
@@ -92,11 +87,11 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
         for( subset = 0; subset < nsubsets ; subset++){
           if(!abort){
           if(doNotSample(subset) == 1.0 || (preassign(subset,subject) != -1 &  iterAssignCoef < 10e-4 & !zeroPosteriorProbs)) {
-            // clusterassignments(subset,subject) = 0 ;
+            clusterassignments(subset,subject) = 0 ;
             continue ;
-          // } else if(preassign(subset,subject) != -1 & iterAssignCoef < 10e-4 & !zeroPosteriorProbs) {
-            // clusterassignments(subset,subject) = preassign(subset,subject) ;
-            // continue;
+          } else if(preassign(subset,subject) != -1 & iterAssignCoef < 10e-4 & !zeroPosteriorProbs) {
+            clusterassignments(subset,subject) = preassign(subset,subject) ;
+            continue;
           }
           // }else if(preassign(subset,subject) == 0 ) {
           //   isingOffset = -prior ;

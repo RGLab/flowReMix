@@ -730,8 +730,8 @@ flowReMix <- function(formula,
     # Updating Regression Equation -------------------
     if(iter > 1) {
 #      if(!verbose) setTxtProgressBar(pb, iter)
-	if(!verbost)message("iteration ",i);
-      if(verbose) print("Updating Regression")
+	if(!verbose)message("iteration ",iter)
+      if(!verbose) print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
       popList <- lapply(1:nSubsets, function(j) list(accumDat[[j]], separation[j], clusterAssignments[, j]))
@@ -774,8 +774,6 @@ flowReMix <- function(formula,
             if(!is.null(glmFits[[j]]$M)) {
               M[j] <- max(glmFits[[j]]$M, minDispersion)
             }
-          }else{
-            # browser() # we have a NULL.. want to capture it right away.
           }
           #What if it's null?
 
@@ -862,9 +860,7 @@ flowReMix <- function(formula,
         }
       }
 
-      if(length(M)!=nSubsets){
-        browser() # do we still have a bug?
-      }
+
       coefficientList <- mapply(updateCoefs, coefficientList, glmFits,
                                 iter, Inf, rate, flagEquation,
                                 SIMPLIFY = FALSE)
@@ -954,13 +950,13 @@ flowReMix <- function(formula,
       mhList = extractFromList(listForMH)
 
       # MHresult <- foreach(sublist = listForMH, .combine = c,.noexport="listForMH") %dorng% {
-        # CppFlowSstepList_mc(sublist, nsamp, nSubsets, intSampSize,
-        #                  isingCoefs, covariance, keepEach, MHcoef,
-        #                  betaDispersion, randomAssignProb, modelprobs,
-        #                  iterAssignCoef, prior, zeroPosteriorProbs,
-        #                  M, invcov, mixed, sampleRandom = TRUE,
-        #                  doNotSample = doNotSampleSubset,
-        #                  markovChainEM = markovChainEM)
+      # CppFlowSstepList_mc(sublist, nsamp, nSubsets, intSampSize,
+      #                  isingCoefs, covariance, keepEach, MHcoef,
+      #                  betaDispersion, randomAssignProb, modelprobs,
+      #                  iterAssignCoef, prior, zeroPosteriorProbs,
+      #                  M, invcov, mixed, sampleRandom = TRUE,
+      #                  doNotSample = doNotSampleSubset,
+      #                  markovChainEM = markovChainEM)
       MHresult = CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                          N = mhList$TOT, subpopInd = mhList$subpopInd,
                                          clusterassignments = mhList$clusterassignments,
@@ -975,7 +971,8 @@ flowReMix <- function(formula,
                                          zeroPosteriorProbs = FALSE,
                                          M = M, invcov = invcov, mixed = mixed,
                                          sampleRandom = TRUE,
-                                         doNotSample = doNotSampleSubset, markovChainEM = markovChainEM, cpus=ncores)
+                                         doNotSample = doNotSampleSubset,
+                                         markovChainEM = markovChainEM, cpus=ncores)
 
       # }
     }else{
@@ -1139,7 +1136,6 @@ flowReMix <- function(formula,
     # Updating Covariance -------------------------
     if(verbose) print("Estimating Covariance!")
 
-    #Note there is a bug here where if iter is < updateLag, the names never get assigned and we have an error downstream in stabilityGraph
     if(iter == updateLag + 1) {
       names(randomList) <- names(databyid)
       if(keepSamples) randomOutput <- randomList
