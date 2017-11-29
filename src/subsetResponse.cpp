@@ -81,14 +81,14 @@ NumericVector computeBinomDensity(NumericVector subsetCount,
                                   NumericVector subsetN,
                                   NumericMatrix randomEta,
                                   double M,
-                                  bool betaDispersion) {
+                                  bool betaDispersion,int num_threads = 1) {
   int sampSize = randomEta.nrow() ;
   int subsetSize = subsetCount.length() ;
   int count, N;
   double density, prob ;
 
   NumericVector binomDensity(sampSize) ;
-
+#pragma omp parallel for num_threads(num_threads) private(density,prob,count,N)
   for(int i = 0; i < sampSize ; i++) {
     density = 0;
     for(int j = 0; j < subsetSize; j++) {
@@ -141,7 +141,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
                                 NumericVector mprobs, double preAssignCoef,
                                 double prior, bool zeroPosteriorProbs,
                                 LogicalVector doNotSample,
-                                NumericVector init) {
+                                NumericVector init, int num_threads = 1) {
   NumericVector subsetNullEta, subsetAltEta, empEta, eta, etaResid ;
   NumericVector subsetProp, subsetCount, subsetN ;
   NumericVector vsample, sampNormDens, normDens, importanceWeights ;
@@ -226,7 +226,7 @@ NumericMatrix subsetAssignGibbs(NumericVector y, NumericVector prop, NumericVect
         importanceWeights = normDens - sampNormDens ;
         randomEta = computeRandomEta(eta, vsample) ;
         binomDensity = computeBinomDensity(subsetCount, subsetN, randomEta,
-                                           dispersion[j], betaDispersion) ;
+                                           dispersion[j], betaDispersion, num_threads) ;
         clusterDensities(k, _) = binomDensity + importanceWeights ;
       }
 
@@ -325,7 +325,7 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
                               NumericVector MHattempts, NumericVector MHsuccess,
                               NumericVector unifVec,
                               NumericVector dispersion, bool betaDispersion,
-                              int keepEach) {
+                              int keepEach, int num_threads = 1) {
   int m, j ;
   NumericVector subsetEta ;
   NumericVector subsetCount, subsetN ;
@@ -338,7 +338,7 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
   nsamp = floor(nsamp / keepEach) * keepEach ;
   NumericMatrix sampleMatrix(int(nsamp / keepEach), nSubsets) ;
   int assignNum = 0 ;
-
+#pragma omp parallel for num_threads(num_threads) private(current,proposal,condmean,newdens,olddens)
   for(m = 0; m < nsamp ; m++) {
     for(j = 0; j < nSubsets; j++) {
       MHattempts[j] +=  1 ;
@@ -362,19 +362,23 @@ NumericMatrix simRandomEffectCoordinateMH(NumericVector y, NumericVector N,
 
       newdens = newdens + R::dnorm(proposal, condmean, sqrt(condvar[j]), TRUE) ;
       olddens = olddens + R::dnorm(current, condmean, sqrt(condvar[j]), TRUE) ;
-
+#pragma omp critical
+{
       if(unifVec[unifIndex++] < std::exp(newdens - olddens))  {
         randomEst[j] = proposal ;
         MHsuccess[j] += 1 ;
       }
+}
     }
-
+#pragma omp critical
+{
     if((m % keepEach) == 0) {
       for(int i = 0 ; i < randomEst.length() ; i ++ ){
         sampleMatrix(assignNum, i) = randomEst[i] ;
       }
       assignNum++ ;
     }
+}
   }
 
   return sampleMatrix ;

@@ -1301,6 +1301,7 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
+    #supports an additional argument num_threads, default of 1.
     assignmentMat <- subsetAssignGibbs(y, prop, N, isingCoefs,
                                        subjectData$dat$nullEta, subjectData$dat$altEta,
                                        covariance, nsamp, nSubsets, keepEach, intSampSize,
