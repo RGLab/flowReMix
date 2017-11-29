@@ -69,7 +69,7 @@ estimateIntercept <- function(propMat) {
 initializeModel <- function(dat, formula, method, mixed) {
   if(is.null(dat)) {
     warning("Some cell-subsets are empty!")
-    return("empty!")
+    return(list(empty=TRUE))
   }
   if(!mixed) {
     if(all(dat$treatmentvar == 1)) {
@@ -143,7 +143,7 @@ initializeModel <- function(dat, formula, method, mixed) {
   randomEffects <- as.numeric(by(propMat, dat$id, estimateIntercept))
   randomEffects <- randomEffects[order(unique(dat$id))]
   return(list(fit = fit, coef = coef, randomEffects = randomEffects,
-              separation = outputsep))
+              separation = outputsep,empty=FALSE))
 }
 
 #' Fitting a Mixture of Mixed Effect Models for Binomial Data
@@ -565,7 +565,8 @@ flowReMix <- function(formula,
     initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
   }
 
-  isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
+  # isEmpty <- sapply(initialization, function(x) x[1] == "empty!")
+  isEmpty <- sapply(initialization, function(x) x$empty)
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
     newlevels <- levels(sub.population)[!(levels(sub.population) %in% empty)]
