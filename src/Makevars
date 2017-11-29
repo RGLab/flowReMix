@@ -1,0 +1,2 @@
+#CXX_STD=-std=c++1z 
+PKG_CXXFLAGS=-std=c++1z -g -O3 -fopenmp -DDEBUG

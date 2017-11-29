@@ -123,6 +123,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// weightedMean
+NumericVector weightedMean(NumericVector x, NumericVector weights, bool na_rm);
+RcppExport SEXP _flowReMix_weightedMean(SEXP xSEXP, SEXP weightsSEXP, SEXP na_rmSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    rcpp_result_gen = Rcpp::wrap(weightedMean(x, weights, na_rm));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_flowReMix_vecBetaBinomDens", (DL_FUNC) &_flowReMix_vecBetaBinomDens, 4},
@@ -130,6 +143,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_flowReMix_subsetAssignGibbs", (DL_FUNC) &_flowReMix_subsetAssignGibbs, 25},
     {"_flowReMix_simRandomEffectCoordinateMH", (DL_FUNC) &_flowReMix_simRandomEffectCoordinateMH, 19},
     {"_flowReMix_newMHsampler", (DL_FUNC) &_flowReMix_newMHsampler, 20},
+    {"_flowReMix_weightedMean", (DL_FUNC) &_flowReMix_weightedMean, 3},
     {NULL, NULL, 0}
 };
 

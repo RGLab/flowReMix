@@ -21,3 +21,7 @@ newMHsampler <- function(assign, random, initAssign, initRand, y, N, keepEach, p
     invisible(.Call('_flowReMix_newMHsampler', PACKAGE = 'flowReMix', assign, random, initAssign, initRand, y, N, keepEach, prior, isingCoefs, preAssignment, invcov, covariance, condvar, dispersion, nullEta, altEta, popInd, MHattempts, MHsuccess, MHcoef))
 }
 
+weightedMean <- function(x, weights, na_rm) {
+    .Call('_flowReMix_weightedMean', PACKAGE = 'flowReMix', x, weights, na_rm)
+}
+

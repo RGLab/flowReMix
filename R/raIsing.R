@@ -88,7 +88,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
     covs <- as.matrix(mat[, -i])
     eta <- as.numeric(covs %*% coefs)
     # if(verbose) cat(pResp, " ")
-    isingOffset[i] <- uniroot(f = function(off) weighted.mean(expit(eta + off), w = weights) - pResp,
+    isingOffset[i] <- uniroot(f = function(off) weightedMean(expit(eta + off), w = weights,na_rm = TRUE) - pResp,
                               interval = c(-50, 50))$root
   }
   # if(verbose) cat("\n")
@@ -166,7 +166,7 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
       coefs <- as.numeric(isingmat[i, -i])
       covs <- as.matrix(mat[, -i])
       eta <- as.numeric(covs %*% coefs)
-      isingOffset[i] <- uniroot(f = function(off) weighted.mean(expit(eta + off), w = weights) - targetResp[i],
+      isingOffset[i] <- uniroot(f = function(off) weightedMean(expit(eta + off), w = weights,na_rm=TRUE) - targetResp[i],
                                 interval = c(-50, 50))$root
     }
     diag(isingmat) <- isingOffset
