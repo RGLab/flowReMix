@@ -731,7 +731,7 @@ flowReMix <- function(formula,
     if(iter > 1) {
 #      if(!verbose) setTxtProgressBar(pb, iter)
 	if(!verbose)message("iteration ",iter)
-      if(!verbose) print("Updating Regression")
+      if(verbose) print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
       popList <- lapply(1:nSubsets, function(j) list(accumDat[[j]], separation[j], clusterAssignments[, j]))
