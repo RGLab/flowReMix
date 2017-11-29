@@ -60,18 +60,13 @@ NumericMatrix computeRandomEta(NumericVector eta, NumericVector vsample) {
 double betaBinomDens(int count, int N, double prob, double M) {
   double a = M * prob ;
   double b = M * (1 - prob) ;
-  if(b==0){
-    b = 0.5;
-  }
-  if(a==0){
-    a = 0.5;
-  }
+
   double logdens;
 
   try{
-  logdens = flowReMix::lchoose(N, count) ;
-  logdens += log(boost::math::beta(count + a, N - count + b)) ;
-  logdens -= log(boost::math::beta(a, b)) ;
+  logdens = lchoose_cpp(N, count) ;
+  logdens += lbeta_cpp(count + a, N - count + b) ;
+  logdens -= lbeta_cpp(a, b);
   }catch(const boost::exception &e){
     std::cout<<boost::diagnostic_information(e);
     std::cout<<"a "<<a<<" N "<<N<<" count "<<count<<" b "<<b<< " prob "<<prob<<" M "<<M<<"\n";

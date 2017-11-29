@@ -132,11 +132,10 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat Y,
                              const arma::vec doNotSample,const bool markovChainEM);
 
 
+double lbeta_cpp(double a, double b);
+double lchoose_cpp(double n, double k);
 namespace flowReMix
 {
-
-double lchoose(double n, double k);
-
 // lambdas for the flowReMix namespace
 auto myrnorm = [](int s){
   arma::vec r(s);
