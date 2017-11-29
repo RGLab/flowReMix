@@ -17,6 +17,13 @@ static
     return std::lgamma(n + 1.) - std::lgamma(k + 1.) - r;
   }
 
+double lbeta_cpp(double a, double b)
+{
+  double r;
+  r = std::lgamma(a+b);
+  return std::lgamma(a) + std::lgamma(b) - r;
+}
+
 double lchoose_cpp(double n, double k)
 {
   double k0 = k;
