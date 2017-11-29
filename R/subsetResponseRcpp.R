@@ -1297,7 +1297,7 @@ flowReMix <- function(formula,
     result$assignmentList <- NULL
   }
 
-  if(!verbose) close(pb)
+  # if(!verbose) close(pb)
   return(result)
 }
 
