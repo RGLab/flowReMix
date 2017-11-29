@@ -1,11 +1,40 @@
 #include <RcppArmadillo.h>
 #include <boost/throw_exception.hpp>
-
+#include <random>
+#include <omp.h>
 using namespace Rcpp;
 
 #ifndef FLOWREMIX_H
 #define FLOWREMIX_H
 
+
+namespace ParallelNormalGenerator {
+  static std::vector<std::mt19937> generatorlist;
+static void initialize(int t){
+  for(int i=0;i<t;i++){
+    std::mt19937 g(i);
+    generatorlist.push_back(g);
+  }
+}
+static double generate(double mean,double sigma){
+  std::normal_distribution<double> d(mean,sigma);
+  return d(generatorlist.at(omp_get_thread_num()));
+}
+}
+
+namespace ParallelUnifGenerator {
+static std::vector<std::mt19937> generatorlist;
+static void initialize(int t){
+  for(int i=0;i<t;i++){
+    std::mt19937 g(i);
+    generatorlist.push_back(g);
+  }
+}
+static double generate(double lower,double upper){
+  std::uniform_real_distribution<double> d(lower,upper);
+  return d(generatorlist.at(omp_get_thread_num()));
+}
+}
 class SubjectDat {
 public:
   arma::vec rand, N, y, nullEta, altEta, popInd, preAssignment, prop, subjassign;
@@ -134,8 +163,10 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat Y,
 
 double lbeta_cpp(double a, double b);
 double lchoose_cpp(double n, double k);
+
 namespace flowReMix
 {
+
 // lambdas for the flowReMix namespace
 auto myrnorm = [](int s){
   arma::vec r(s);
@@ -144,14 +175,23 @@ auto myrnorm = [](int s){
 };
 auto myrunif = [](int s){
   arma::vec r(s);
-  std::transform(r.begin(),r.end(),r.begin(),[](auto a){return (double) R::runif(0,1);});
+  std::transform(r.begin(),r.end(),r.begin(),[](auto a){
+    return ParallelUnifGenerator::generate(0,1);
+    // return (double) R::runif(0,1);
+    });
   return(r);
 };
 
 
+
+
+
 auto myrnorm3 = [](int s, double mean, double sigma){
   arma::vec r(s);
-  std::transform(r.begin(),r.end(),r.begin(),[&mean,&sigma](auto a){return (double) R::rnorm(mean,sigma);});
+  std::transform(r.begin(),r.end(),r.begin(),[&mean,&sigma](auto a){
+    // return (double) R::rnorm(mean,sigma);
+    return ParallelNormalGenerator::generate(mean,sigma);
+    });
   return(r);
 };
 

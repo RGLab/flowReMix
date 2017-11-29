@@ -22,6 +22,9 @@ void printDims(arma::mat a,std::string c){
   Rcout<<c<<" "<<a.n_rows<<" x "<<a.n_cols<<"\n";
 };
 
+
+
+
 //[[Rcpp::export]]
 List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
                         const arma::mat& N,const arma::mat& subpopInd, arma::mat& clusterassignments,
@@ -68,6 +71,8 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
     //Gibbs for each subject
     arma::cube clusterDensities(intSampSize,2,nsubjects) ;
     arma::mat iterPosteriors(nsubsets,nsubjects) ;
+    ParallelNormalGenerator::initialize(cpus);
+    ParallelUnifGenerator::initialize(cpus);
 
 #pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, betaDispersion, preassign, clusterDensities, intSampSize, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {
