@@ -148,6 +148,7 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
      }
      warning(paste0("All PFS weights are the same! Splitting functionality by ",split," : verify that this is correct!"),call. = FALSE)
   }
+  post$score = post$weight*post$posterior
   subjid = x$subject_id
   subjid = enquo(subjid)
     post = x$data %>%
