@@ -17,7 +17,7 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
   if(is.null(modelprobs)) {
     modelprobs <- (1 + nvars)^-1 / choose(nvars, 0:nvars)
   }
-  offsets <- diff(log(modelprobs))
+  off <- diff(log(modelprobs))
 
   if(gamma < 0) gamma <- 0
 
@@ -206,7 +206,7 @@ getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, min
   }
 
   if(method == "raIsing") {
-    off <- offsets[rowSums(X) + 1]
+    off <- off[rowSums(X) + 1]
   } else {
     off <- NULL
   }
