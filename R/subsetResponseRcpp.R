@@ -754,8 +754,8 @@ flowReMix <- function(formula,
           mu <- 1 / (1 + exp(-eta))
           N <- popDat[[1]]$N
           y <- popDat[[1]]$y
-          M <- dispersionMLE(y, N, mu)
-          fit$M <- M
+          thisM <- dispersionMLE(y, N, mu)
+          fit$M <- thisM
           return(fit)
         }
         for(j in 1:nSubsets) {
@@ -815,8 +815,8 @@ flowReMix <- function(formula,
             mu <- 1 / (1 + exp(-eta))
             N <- popDat[[1]]$N
             y <- popDat[[1]]$y
-            M <- dispersionMLE(y, N, mu)
-            fit$M <- M
+            thisM <- dispersionMLE(y, N, mu)
+            fit$M <- thisM
           }
           return(fit)
         }
