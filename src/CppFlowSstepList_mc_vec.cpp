@@ -74,7 +74,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
     ParallelNormalGenerator::initialize(cpus);
     ParallelUnifGenerator::initialize(cpus);
 
-#pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, betaDispersion, preassign, clusterDensities, intSampSize, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
+#pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, preassign, clusterDensities, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {
   int abort = 0;
 

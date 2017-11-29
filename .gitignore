@@ -4,9 +4,10 @@ data/rv144.rda
 data/malaria.rda
 data/*
 data-raw/*
-
+*.rds
 Data Analysis/results/*
 Data Analysis/old/*
+Data Analysis/*
 tables/*
 write-ups/*
 figures/*
