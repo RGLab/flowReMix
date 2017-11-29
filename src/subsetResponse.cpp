@@ -1,4 +1,7 @@
 #include  <RcppArmadillo.h>
+#include <boost/math/special_functions/beta.hpp>
+
+double lchoose_cpp(double n, double k);
 using namespace Rcpp;
 
 // headers
@@ -50,9 +53,13 @@ double betaBinomDens(int count, int N, double prob, double M) {
   double a = M * prob ;
   double b = M * (1 - prob) ;
 
-  double logdens = R::lchoose(N, count) ;
+  // double logdens = R::lchoose(N, count) ;
+  double logdens = lchoose_cpp(N, count) ;
   logdens += R::lbeta(count + a, N - count + b) ;
   logdens -= R::lbeta(a, b) ;
+  // logdens += log(boost::math::beta(count + a,N - count + b));
+  // logdens -= log(boost::math::beta(a,b));
+
   return logdens ;
 }
 
