@@ -597,7 +597,7 @@ flowReMix <- function(formula,
   invCovAvg <- invcov
   invCovVar <- invcov^2
   isingfit <- NULL
-  modelprobs <- rep(1, nSubsets + 1)
+  modelprobs <- rep(1, nSubsets + 1) #why?
 
   # Setting up preAssignment ----------------------
   if(length(cluster_assignment) == 1) {
@@ -1272,6 +1272,31 @@ flowSstep <- function(subjectData, nsamp, nSubsets, intSampSize,
   prop <- y/N
   unifVec <- runif(nsamp * nSubsets)
   normVec <- rnorm(intSampSize)
+  #print info about the parameters
+  {
+    stopifnot(length(y)==length(prop));
+    stopifnot(length(prop)==length(N));
+    stopifnot(dim(isingCoefs)[1]==nSubsets);
+    stopifnot(length(subjectData$dat$nullEta)==length(subjectData$dat$altEta))
+    stopifnot(length(subjectData$dat$nullEta)==length(y))
+    stopifnot(all.equal(dim(covariance),dim(isingCoefs)))
+    stopifnot(all(nsamp>0,    nSubsets>0,    keepEach>0,    intSampSize>0))
+    stopifnot(length(MHcoef)==(nSubsets))
+    stopifnot(length(popInd)==length(y))
+    stopifnot(length(unifVec)==nsamp*nSubsets*control$nPosteriors)
+    stopifnot(length(normVec)==intSampSize)
+    stopifnot(length(M)==nSubsets)
+    stopifnot(any(!is.na(M)))
+    stopifnot(betaDispersion)
+    stopifnot(length(subjectData$pre$assign)==nSubsets*control$nPosteriors)
+    stopifnot(length(randomAssignProb)==1)
+    stopifnot(length(modelprobs)==nSubsets+1)
+    stopifnot(length(iterAssignCoef)==1)
+    stopifnot(length(prior)==1)
+    stopifnot(length(zeroPosteriorProbs)==1)
+    stopifnot(length(doNotSample)==nSubsets)
+    stopifnot(length(as.numeric(subjectData$assign))==nSubsets*control$nPosteriors)
+  }
   if(mixed) {
     assignmentMat <- matrix(1, nrow = 1, ncol = nSubsets)
   } else {
