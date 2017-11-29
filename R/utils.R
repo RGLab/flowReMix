@@ -131,6 +131,9 @@ weightForPFS = function(x, M = NULL, parsefun = degreeFromStringFun, split = "\\
 #' data(fit505)
 #' flowReMixPFS(fit505,M=5, stimVar = stimGroup, parentVar = parent)
 #' flowReMixPFS(fit505,M=5,stimVar=stimGroup,parentVar=parent,outcomeVar=infection)
+#'\dontrun{
+#' flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,split=",")
+#' }
 flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL, ...){
   mc  =  match.call()
   if(is.null(mc$stimVar)|is.null(mc$parentVar)){
@@ -138,7 +141,13 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
   }
   stimVar = enquo(stimVar)
   parentVar = enquo(parentVar)
-  post = getPosteriors(x) %>% gather(pop,posterior,-1) %>% mutate(score=posterior*weightForPFS(pop,M=M, ...))
+  post = getPosteriors(x) %>% gather(pop,posterior,-1) %>% mutate(weight=weightForPFS(pop,M=M, ...))
+  if(length(unique(post$weight))==1){
+     if(class("split")=="character"){
+	split="\\+"
+     }
+     warning(paste0("All PFS weights are the same! Splitting functionality by ",split," : verify that this is correct!"),call. = FALSE)
+  }
   subjid = x$subject_id
   subjid = enquo(subjid)
     post = x$data %>%
