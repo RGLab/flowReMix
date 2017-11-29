@@ -97,15 +97,14 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
           } else if(preassign(subset,subject) != -1 & iterAssignCoef < 10e-4 & !zeroPosteriorProbs) {
             clusterassignments(subset,subject) = preassign(subset,subject) ;
             continue;
+          }else if(preassign(subset,subject) == 0 ) {
+            isingOffset = -prior ;
+          } else if(preassign(subset,subject) == 1) {
+            isingOffset = prior ;
+          } else {
+            isingOffset = 0 ;
           }
-          // }else if(preassign(subset,subject) == 0 ) {
-          //   isingOffset = -prior ;
-          // } else if(preassign(subset,subject) == 1) {
-          //   isingOffset = prior ;
-          // } else {
-          //   isingOffset = 0 ;
-          // }
-          isingOffset = 0 ;
+          // isingOffset = 0 ;
             arma::uvec subset_indicator = flowReMix::find(subpopInd.col(subject),subset+1);
           if(subset_indicator.size() == 0) {
             continue ;

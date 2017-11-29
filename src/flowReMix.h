@@ -176,8 +176,8 @@ auto myrnorm = [](int s){
 auto myrunif = [](int s){
   arma::vec r(s);
   std::transform(r.begin(),r.end(),r.begin(),[](auto a){
-    return ParallelUnifGenerator::generate(0,1);
-    // return (double) R::runif(0,1);
+    // return ParallelUnifGenerator::generate(0,1);
+    return (double) R::runif(0,1);
     });
   return(r);
 };
@@ -189,8 +189,8 @@ auto myrunif = [](int s){
 auto myrnorm3 = [](int s, double mean, double sigma){
   arma::vec r(s);
   std::transform(r.begin(),r.end(),r.begin(),[&mean,&sigma](auto a){
-    // return (double) R::rnorm(mean,sigma);
-    return ParallelNormalGenerator::generate(mean,sigma);
+    return (double) R::rnorm(mean,sigma);
+    // return ParallelNormalGenerator::generate(mean,sigma);
     });
   return(r);
 };
