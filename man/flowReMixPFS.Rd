@@ -41,6 +41,9 @@ Uses rlang quosures to pass variable information. PFS are NOT normalized to the 
 data(fit505)
 flowReMixPFS(fit505,M=5, stimVar = stimGroup, parentVar = parent)
 flowReMixPFS(fit505,M=5,stimVar=stimGroup,parentVar=parent,outcomeVar=infection)
+\dontrun{
+flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,split=",")
+}
 }
 \seealso{
 \code{\link{degreeFromStringFun}} \code{\link{weightForPFS}}

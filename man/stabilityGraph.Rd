@@ -6,7 +6,7 @@
 \usage{
 stabilityGraph(obj, type = c("ising", "randomEffects"), cv = FALSE,
   reps = 100, cpus = 1, gamma = 0.9, AND = TRUE, seed = NULL,
-  sampleNew = FALSE)
+  sampleNew = FALSE, keepEach = 10)
 }
 \arguments{
 \item{obj}{\code{flowReMix} model fit.}

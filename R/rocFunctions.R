@@ -59,7 +59,7 @@ plotROC <- function(obj, target, direction = "auto",
 
 rocTable <- function(obj, target, direction = "auto", adjust = "BH",
                      pvalue = c("wilcoxon", "logistic", "ttest"),
-                     sortAUC = FALSE) {
+                     sortAUC = FALSE,...) {
   mc = match.call()
   if(!is.null(mc$minProbFilter)){
     minProbFilter = eval(mc$minProbFilter,envir=parent.frame())

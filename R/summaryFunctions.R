@@ -138,7 +138,7 @@ summary.flowReMix <- function(object, target, type = c("ROC", "FDR"), direction 
   outcome = suppressWarnings(left_join(object$posteriors,outcome, by = quo_name(subject_id)) %>% select(outcome) %>%unlist)
   if("ROC" == type) {
     table <- rocTable(object, outcome, direction = direction, adjust = adjust,
-                         pvalue = test, sortAUC = sortAUC)
+                         pvalue = test, sortAUC = sortAUC,...)
     return(table)
   } else if(type == "FDR") {
     return(fdrTable(object, ifelse(is.factor(outcome),outcome,factor(outcome))))

@@ -5,7 +5,7 @@
 \alias{summary.flowReMix}
 \title{summary of a flowReMix fit}
 \usage{
-\method{summary}{flowReMix}(object, target, type = c("ROC", "FDR"),
+summary.flowReMix(object, target, type = c("ROC", "FDR"),
   direction = "auto", adjust = "BH", test = c("wilcoxon", "logistic",
   "ttest"), sortAUC = FALSE, ...)
 }

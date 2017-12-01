@@ -514,3 +514,24 @@ extractFromList = function(mhlist){
   }
   return(list(N=N,J=J,Y=Y,TOT=TOT,subpopInd = subpopInd,nullEta=nullEta,altEta=altEta,rand=rand,index=index,preassign=preassign,clusterassignments=clusterassignments))
 }
+
+#'@name zeroPosteriorProbs
+#'@title zeroPosteriorProbs
+#'description return the posterior probabilities with preassignments set to zero.
+#'@param modelfit A flowReMix model fit
+#'@return matrix of posterior probabilities
+#'@export
+zeroPosteriorProbs = function(modelfit){
+  pre = modelfit$preAssignment
+  posteriors = reshape2::melt(getPosteriors(modelfit),value.name="posterior",variable.name="subset",id=quo_name(modelfit$subject_id))
+  
+  colnames(posteriors)[1]="id"
+  pre$id  = unlist(map(.x = strsplit(pre$id,"%%%"),.f=function(x)x[1]))
+  posteriors$id = factor(posteriors$id)
+  pre$id = factor(pre$id)
+  zpost = pre%>%unique%>%inner_join(posteriors)%>%mutate(zpost = ifelse(assign==0,0,posterior))
+  zpost = zpost%>%select(-assign,-posterior)%>%reshape2::dcast(id~subset,value.var="zpost")
+  colnames(zpost)[1]=as.character(modelfit$subject_id)
+  return(zpost)
+}
+  
