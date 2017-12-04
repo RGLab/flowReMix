@@ -57,5 +57,5 @@ test_that("RV144 polyfunctionality scores are reproducible",{
                    newSampler = FALSE);
   fit$data$parent="CD4";
   suppressWarnings({results = flowReMixPFS(fit,parentVar = "parent", stimVar = "stim", split=",",M=6,outcomeVar = "hiv")%>%inner_join(pfs_test%>%select(PFS_COMPASS=PFS,ptid=PTID)%>%mutate(ptid=factor(ptid)))})
-  expect_gt(cor(results$PFS,results$PFS_COMPASS),0.98)
+  expect_gt(cor(results$PFS,results$PFS_COMPASS),0.97)
 })

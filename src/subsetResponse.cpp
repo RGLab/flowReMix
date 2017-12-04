@@ -1,8 +1,6 @@
 #include  <RcppArmadillo.h>
 #include <omp.h>
 #include <exception>
-#include <boost/exception/all.hpp>
-#include <boost/math/special_functions/beta.hpp>
 #include "flowReMix.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp17)]]
@@ -63,14 +61,9 @@ double betaBinomDens(int count, int N, double prob, double M) {
 
   double logdens;
 
-  try{
   logdens = lchoose_cpp(N, count) ;
   logdens += lbeta_cpp(count + a, N - count + b) ;
   logdens -= lbeta_cpp(a, b);
-  }catch(const boost::exception &e){
-    std::cout<<boost::diagnostic_information(e);
-    std::cout<<"a "<<a<<" N "<<N<<" count "<<count<<" b "<<b<< " prob "<<prob<<" M "<<M<<"\n";
-  }
   return logdens ;
 }
 

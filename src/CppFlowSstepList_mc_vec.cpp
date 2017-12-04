@@ -1,7 +1,6 @@
 #include <RcppArmadillo.h>
 #include "flowReMix.h"
 #include <exception>
-#include <boost/exception/all.hpp>
 // [[Rcpp::depends(RcppProgress)]]
 //[[Rcpp::plugins(openmp)]]
 #ifdef _OPENMP

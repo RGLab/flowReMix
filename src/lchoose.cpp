@@ -1,5 +1,4 @@
 #include <math.h>
-#include <boost/math/special_functions/beta.hpp>
 #include <tgmath.h>
 #define ISINT(x) !(fabs((x) - std::nearbyint(x)) > 1e-7)
 // double  lfastchoose(double n, double k)
