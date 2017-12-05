@@ -70,8 +70,12 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
     //Gibbs for each subject
     arma::cube clusterDensities(intSampSize,2,nsubjects) ;
     arma::mat iterPosteriors(nsubsets,nsubjects) ;
-    ParallelNormalGenerator::initialize(cpus, seed);
-    ParallelUnifGenerator::initialize(cpus, seed);
+    if(!ParallelNormalGenerator::isinit()){
+      ParallelNormalGenerator::initialize(cpus, seed);
+    }
+    if(!ParallelUnifGenerator::isinit()){
+      ParallelUnifGenerator::initialize(cpus, seed);
+    }
 
 #pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, preassign, clusterDensities, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {

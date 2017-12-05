@@ -9,6 +9,13 @@ using namespace Rcpp;
 
 namespace ParallelNormalGenerator {
   static std::vector<std::mt19937> generatorlist;
+static bool isinit(void){
+  if(generatorlist.size()>0){
+    return true;
+  }else{
+    return false;
+  }
+}
 static void initialize(int t, int seed){
   static std::seed_seq seq{seed};
   static std::vector<std::uint32_t> seeds(t);
@@ -26,6 +33,13 @@ static double generate(double mean,double sigma){
 
 namespace ParallelUnifGenerator {
 static std::vector<std::mt19937> generatorlist;
+static bool isinit(void){
+  if(generatorlist.size()>0){
+    return true;
+  }else{
+    return false;
+  }
+}
 static void initialize(int t, int seed){
   static std::seed_seq seq{seed};
   static std::vector<std::uint32_t> seeds(t);
