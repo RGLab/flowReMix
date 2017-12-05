@@ -50,47 +50,46 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
       throw std::domain_error("nSubsets and dimensions of rand don't match!");
     }
     // allocate objects for return values;
-    arma::cube assignmentMats(mat_size,nsubsets,nsubjects);
-    arma::cube randomeffectMats(mat_size,nsubsets,nsubjects);
-    arma::mat MHsuccessrates(nsubsets,nsubjects);
-    arma::mat  proportions = Y/N; //should be a double since Y, N, and proportions are mat which is Mat<double>
+    arma::cube assignmentMats(mat_size, nsubsets, nsubjects);
+    arma::cube randomeffectMats(mat_size, nsubsets, nsubjects);
+    arma::mat MHsuccessrates(nsubsets, nsubjects);
+    arma::mat proportions = Y/N; //should be a double since Y, N, and proportions are mat which is Mat<double>
     //compute the conditional variance
     arma::vec condvar = (1.0)/(invcov.diag());
 
-
     //preallocate and precompute random samples
-    arma::mat unifVec = flowReMix::myrunif2(nsamp_floor*nsubsets,nsubjects);
-    arma::mat normVec = flowReMix::myrnorm2(intSampSize,nsubjects);
+    arma::mat unifVec = flowReMix::myrunif2(nsamp_floor * nsubsets, nsubjects);
+    arma::mat normVec = flowReMix::myrnorm2(intSampSize, nsubjects);
 
     //some conditional operations
     if(mixed){
-      std::fill(assignmentMats.begin(),assignmentMats.end(),1.0);
+      std::fill(assignmentMats.begin(), assignmentMats.end(), 1.0);
     }
 
     //Gibbs for each subject
-    arma::cube clusterDensities(intSampSize,2,nsubjects) ;
-    arma::mat iterPosteriors(nsubsets,nsubjects) ;
+    arma::cube clusterDensities(intSampSize, 2, nsubjects) ;
+    arma::mat iterPosteriors(nsubsets, nsubjects) ;
     ParallelNormalGenerator::initialize(cpus, seed);
     ParallelUnifGenerator::initialize(cpus, seed);
 
-#pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, preassign, clusterDensities, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
+#pragma omp parallel shared(unifVec, nsamp_floor, normVec, clusterassignments, proportions, assignmentMats,prog, preassign, clusterDensities, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {
   int abort = 0;
 
 #pragma omp for
-  for(int subject=0;subject<nsubjects;++subject){
+  for(int subject = 0 ; subject < nsubjects; ++subject){
       int unifPosition = 0 ;
       double isingOffset = 0 ;
       int assignNum = 0;
       arma::uvec subject_indicator(1);
       subject_indicator(0) = subject;
 
-      int sample = 0, subset=0;
+      int sample = 0, subset = 0;
 
-      for( sample = 0; sample < nsamp_floor ; sample++){
-        for( subset = 0; subset < nsubsets ; subset++){
+      for(sample = 0; sample < nsamp_floor ; sample++){
+        for(subset = 0; subset < nsubsets ; subset++){
           if(!abort){
-          if(doNotSample(subset) == 1.0 || (preassign(subset,subject) != -1 &  iterAssignCoef < 10e-4 & !zeroPosteriorProbs)) {
+          if(doNotSample(subset) == 1.0 || (preassign(subset,subject) != -1 & iterAssignCoef < 10e-4 & !zeroPosteriorProbs)) {
             clusterassignments(subset,subject) = 0 ;
             continue ;
           } else if(preassign(subset,subject) != -1 & iterAssignCoef < 10e-4 & !zeroPosteriorProbs) {
@@ -104,16 +103,16 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
             isingOffset = 0 ;
           }
           // isingOffset = 0 ;
-            arma::uvec subset_indicator = flowReMix::find(subpopInd.col(subject),subset+1);
+          arma::uvec subset_indicator = flowReMix::find(subpopInd.col(subject), subset + 1);
           if(subset_indicator.size() == 0) {
             continue ;
           }
           arma::mat subsetNullEta, subsetAltEta, subsetN, subsetProp, subsetCount;
-          subsetNullEta = nullEta(subset_indicator,subject_indicator);
-          subsetAltEta = altEta(subset_indicator,subject_indicator);
-          subsetN = N(subset_indicator,subject_indicator);
-          subsetProp = proportions(subset_indicator,subject_indicator)  ;
-          subsetCount = Y(subset_indicator,subject_indicator) ;
+          subsetNullEta = nullEta(subset_indicator, subject_indicator);
+          subsetAltEta = altEta(subset_indicator, subject_indicator);
+          subsetN = N(subset_indicator, subject_indicator);
+          subsetProp = proportions(subset_indicator, subject_indicator)  ;
+          subsetCount = Y(subset_indicator, subject_indicator) ;
 
           // Some cell populations for a specific subject may be missing
           double sigmaHat = sqrt(covariance(subset, subset)) ;
@@ -142,12 +141,9 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
             if(cluster == 0) {
               // muHat = mean(etaResid) ; //this is removed because we are just doing random walk.
               muHat = 0;
-
               vsample = flowReMix::myrnorm3(intSampSize, muHat, sigmaHat * mcoef) ; //vsample is fixed across clusters.
-
             }
             arma::vec importanceWeights;
-
             arma::vec sampNormDens = flowReMix::dnorm4(vsample, muHat, sigmaHat * mcoef, true) ;
             arma::vec normDens = flowReMix::dnorm4(vsample, 0, sigmaHat, true) ; // presumably we're tuning mcoef.
             importanceWeights = normDens - sampNormDens ;
@@ -177,7 +173,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
                 prob = expit(prob) ;
                 count = subsetCount(j) ;
                 n = subsetN(j) ;
-                if(betaDispersion & (disp < 150000) ) {
+                if(betaDispersion & (disp < 150000)) {
                   density += betaBinomDens(count, n ,prob, disp) ;
                 } else {
                   density += R::dbinom(count, n, prob, 1) / subsetSize ;
@@ -188,7 +184,6 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
 
 
             clusterDensities.slice(subject).col(cluster) = binomDensity + importanceWeights ;
-
           }
 
           arma::vec integratedDensities ;
@@ -209,12 +204,9 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
           }
 
           double pResponder;
-          {
-            double densityRatio;
-
-            densityRatio = integratedDensities(0) / integratedDensities(1) * (1.0 - priorProb) / priorProb ;
-            pResponder = 1.0 / (1.0 + densityRatio) ;
-          }
+          double densityRatio;
+          densityRatio = integratedDensities(0) / integratedDensities(1) * (1.0 - priorProb) / priorProb ;
+          pResponder = 1.0 / (1.0 + densityRatio) ;
 
           if(preassign(subset,subject) == 1) {
             pResponder = 1 - (1 - pResponder) * iterAssignCoef ;
@@ -287,17 +279,16 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
 
       prog.increment();
     }
+  }
 
-}
-
-    //Iterate over columns and assign to lists or just return a list of the three matrices..
-      List retval = List::create(
-        Named("assign") = wrap(assignmentMats),
-        Named("rand") = wrap(randomeffectMats),
-        Named("rate") = wrap(MHsuccessrates)
-      );
-      std::cout<<"\n";
-      return retval;
+  //Iterate over columns and assign to lists or just return a list of the three matrices..
+  List retval = List::create(
+    Named("assign") = wrap(assignmentMats),
+    Named("rand") = wrap(randomeffectMats),
+    Named("rate") = wrap(MHsuccessrates)
+    );
+  std::cout<<"\n";
+  return retval;
   }
   catch (std::exception &ex){
     forward_exception_to_r(ex);

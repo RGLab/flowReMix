@@ -506,13 +506,13 @@ extractFromList = function(mhlist){
   altEta = matrix(unlist(map(map(mhlist[[1]],"dat"),"altEta")),ncol=N)
   rand = matrix(unlist(map(mhlist[[1]],"rand")),ncol=N)
   index = unlist(map(mhlist[[1]],"index"))
-  preassign = matrix(unlist(map(map(mhlist[[1]],"pre"),"assign")),ncol=N)
-  if(length(mhlist[[1]][[1]]$assign)!=0){
-    clusterassignments = matrix(unlist(map(mhlist[[1]],"assign")),ncol=N);
+  preassign = matrix(unlist(map(map(mhlist[[1]], "pre"),"assign")), ncol=N)
+  if(length(mhlist[[1]][[1]]$assign) != 0){
+    clusterassignments = matrix(unlist(map(mhlist[[1]], "assign")), ncol=N);
   }else{
-    clusterassignments = matrix(0,nrow=J,ncol=N)
+    clusterassignments = matrix(0, nrow = J, ncol = N)
   }
-  return(list(N=N,J=J,Y=Y,TOT=TOT,subpopInd = subpopInd,nullEta=nullEta,altEta=altEta,rand=rand,index=index,preassign=preassign,clusterassignments=clusterassignments))
+  return(list(N=N, J=J,Y=Y,TOT=TOT,subpopInd = subpopInd,nullEta=nullEta,altEta=altEta,rand=rand,index=index,preassign=preassign,clusterassignments=clusterassignments))
 }
 
 #'@name zeroPosteriorProbs
