@@ -1,5 +1,6 @@
 #include <math.h>
 #include <tgmath.h>
+#include <limits>
 #define ISINT(x) !(fabs((x) - std::nearbyint(x)) > 1e-7)
 // double  lfastchoose(double n, double k)
 // {

@@ -370,9 +370,9 @@ flowReMix <- function(formula,
 
   subjid = as.character(substitute(subject_id))
   ctype  = as.character(substitute(cell_type))
-  S1 = try(dataReplicates*nlevels(factor(get(x=subjid,pos=data))), silent=TRUE)
-  S2 = try(nlevels(factor(get(x=ctype,pos=data))),silent=TRUE)
-  if(inherits(S1,"try-error")|inherits(S2,"try-error")){
+  S1 = try(dataReplicates * nlevels(factor(get(x = subjid, pos = data))), silent=TRUE)
+  S2 = try(nlevels(factor(get(x = ctype, pos = data))), silent=TRUE)
+  if(inherits(S1, "try-error")|inherits(S2, "try-error")){
     stop(paste0("Failed to find ",subjid," or ",ctype," in data"), call. = FALSE)
   }
   if(S1 <= S2){
@@ -386,8 +386,8 @@ flowReMix <- function(formula,
     keepSamples <- TRUE
   }
 
-  if(nsamp<=updateLag){
-    stop("nsamp should be > updateLag")
+  if(iterations <= updateLag){
+    stop("iterations should be > updateLag")
   }
 
   if(parallel) {
@@ -450,7 +450,7 @@ flowReMix <- function(formula,
   # Checking if inputs are valid --------------------------
   if(!is.null(data)) {
     if(is.data.table(data)) {
-      data <- as.data.frame(data,check.names=FALSE)
+      data <- as.data.frame(data, check.names = FALSE)
     }
   }
 
@@ -460,10 +460,6 @@ flowReMix <- function(formula,
   maxIter <- as.integer(iterations)
   rate <- 1
   updateLag <- max(ceiling(updateLag), 1)
-
-  if(maxIter <= updateLag){
-    stop("iter should be > updateLag")
-  }
 
   if(updateLag < 2) {
     warning("We recommend using an updateLag of at least 3 to let the algorithm warm up.")
@@ -488,11 +484,11 @@ flowReMix <- function(formula,
     treatmentvar <- 1
   }
 
-  isingMethod<- isingMethod[1]
-  isingMethod = match.arg(isingMethod,  c("raIsing", "sparse", "dense", "none"))
+  isingMethod <- isingMethod[1]
+  isingMethod <- match.arg(isingMethod,  c("raIsing", "sparse", "dense", "none"))
 
   regressionMethod <- regressionMethod[1]
-  regressionMethod = match.arg(regressionMethod,c("firth", "binom", "betabinom", "sparse", "robust"))
+  regressionMethod <- match.arg(regressionMethod,c("firth", "binom", "betabinom", "sparse", "robust"))
   if(regressionMethod == "binom") {
     smallCounts <- FALSE
     betaDispersion <- FALSE
@@ -546,7 +542,7 @@ flowReMix <- function(formula,
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
-    dat <- do.call("rbind", c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)),make.row.names=FALSE))
+    dat <- do.call("rbind", c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)), make.row.names = FALSE))
   } else {
     dataReplicates <- 1
   }
@@ -561,10 +557,9 @@ flowReMix <- function(formula,
   if(verbose) print("Initializing Regression Equations")
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
   initialization <- foreach(j = 1:length(dataByPopulation)) %dorng% {
-    #print(unique(as.character(dataByPopulation[[j]]$sub.population)))
     initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
   }
-  names(initialization) = names(dataByPopulation)
+  names(initialization) <- names(dataByPopulation)
 
   isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
 
@@ -608,7 +603,7 @@ flowReMix <- function(formula,
       preAssignment = dat %>% dplyr::group_by(id, subset = sub.population) %>% dplyr::summarize(assign = {
         prop = y / N
         baseline = ifelse(is.factor(treatmentvar), levels(treatmentvar)[1], 0)
-        -as.numeric(min(prop[treatmentvar == baseline]) < max(prop[treatmentvar !=
+        - as.numeric(min(prop[treatmentvar == baseline]) < max(prop[treatmentvar !=
                                                                      baseline]))
       }) %>% arrange(id, as.character(subset))%>%as.data.frame
       # preAssignment <- do.call("rbind", c(preAssignment,make.row.names=FALSE))
@@ -634,7 +629,7 @@ flowReMix <- function(formula,
   }
 
   # preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
-  preAssignmentMat = preAssignment%>%arrange(id,subset)
+  preAssignmentMat = preAssignment %>% arrange(id, subset)
   preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
     x$id <- as.character(x$id)
     return(x)
@@ -725,12 +720,8 @@ flowReMix <- function(formula,
     rm(dataByPopulation)
 
     oldM <- M
-    # create progress bar
-#    if(!verbose) pb <- txtProgressBar(min = 1, max = iterations, style = 3)
     # Updating Regression Equation -------------------
     if(iter > 1) {
-#      if(!verbose) setTxtProgressBar(pb, iter)
-	if(!verbose)message("iteration ",iter)
       if(verbose) print("Updating Regression")
       minDispersion <- pmax(minDispersion / 10, maxDispersion)
       randomAssignProb <- randomAssignProb / 2
@@ -923,7 +914,8 @@ flowReMix <- function(formula,
     } else {
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
-    listForMH = vector('list',nSubjects)
+
+    listForMH = vector('list', nSubjects)
     for(i in 1:length(listForMH)){
       listForMH[[i]] = list(dat = databyid[[i]][, keepcols],
            pre = preAssignment[[i]],
@@ -994,11 +986,11 @@ flowReMix <- function(formula,
     # print(mem_used()) #### MEMORY CHECK
 
     # assignmentList <- lapply(MHresult, function(x) x$assign)
-    assignmentList = (plyr::alply(MHresult$assign,3,function(x)x))
+    assignmentList = (plyr::alply(MHresult$assign, 3, function(x) x))
     # MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
     MHrates = colMeans(MHresult$rate)
     # randomList <- lapply(MHresult, function(x) x$rand)
-    randomList = (plyr::alply(MHresult$rand,3,function(x)x))
+    randomList = (plyr::alply(MHresult$rand, 3, function(x) x))
     rm(MHresult)
 
     for(i in 1:nSubjects) {
@@ -1284,11 +1276,11 @@ flowReMix <- function(formula,
 
   if(control$randStabilityReps > 0) {
     if(verbose) print("Performing stability selection for random effects!")
-    result$randomStability <- stabilityGraph(result, type = "randomEffects",
+    result$randomStability <- try(stabilityGraph(result, type = "randomEffects",
                                             reps = control$randStabilityReps,
                                             seed = control$seed,
                                             cpus = cpus,
-                                            sampleNew = sampleNew)
+                                            sampleNew = sampleNew))
   }
 
   #If ising stability did not error out, then toss out samples

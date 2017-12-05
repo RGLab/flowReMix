@@ -51,7 +51,7 @@ control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
                              isingInit = -2)
 
 data$stim <- factor(data$stim, levels = c("negctrl", "env"))
-assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))
+# assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = population,
@@ -60,7 +60,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 iterations = 6, parallel = FALSE,
+                 iterations = 20, parallel = TRUE,
                  cluster_assignment = TRUE, keepSamples = FALSE,
                  verbose = TRUE, control = control, newSampler = FALSE))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
@@ -69,7 +69,6 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed indepdent.Robj")
 
 system.time(stab <- stabilityGraph(fit, sampleNew = FALSE, reps = 100, cpus = 2))
-system.time(stab <- stabilityGraph(fit, sampleNew = TRUE, reps = 10))
 
 # S3 methods ----------
 plot(stab, fill = roctab$auc, fillRange = c(0.4, 1), plotAll = TRUE,
