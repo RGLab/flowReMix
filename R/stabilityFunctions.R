@@ -96,7 +96,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                                          zeroPosteriorProbs = FALSE,
                                          M = dispersion, invcov = invcov, mixed = mixed,
                                          sampleRandom = (type != "ising"),
-                                         doNotSample = doNotSample, markovChainEM = mcEM, cpus=cpus)
+                                         doNotSample = doNotSample, markovChainEM = mcEM, cpus=cpus, seed = seed)
 
     # MHresult =   CppFlowSstepList_mc(mhList[[1]], nsamp = nsamp, nSubsets = nSubsets,
     #                         intSampSize = intSampSize, isingCoefs = isingCoefs,

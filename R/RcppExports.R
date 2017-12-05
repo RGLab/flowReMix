@@ -5,8 +5,8 @@ CppFlowSstepList <- function(subjectDataList, nsamp, nSubsets, intSampSize, isin
     .Call('_flowReMix_CppFlowSstepList', PACKAGE = 'flowReMix', subjectDataList, nsamp, nSubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, modelprobs, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM)
 }
 
-CppFlowSstepList_mc_vec <- function(nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus) {
-    .Call('_flowReMix_CppFlowSstepList_mc_vec', PACKAGE = 'flowReMix', nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus)
+CppFlowSstepList_mc_vec <- function(nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus, seed) {
+    .Call('_flowReMix_CppFlowSstepList_mc_vec', PACKAGE = 'flowReMix', nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus, seed)
 }
 
 CppFlowSstepList_mc <- function(subjectDataList, nsamp, nSubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, modelprobs, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM) {

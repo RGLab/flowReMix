@@ -37,8 +37,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // CppFlowSstepList_mc_vec
-List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y, const arma::mat& N, const arma::mat& subpopInd, arma::mat& clusterassignments, const arma::mat& nullEta, const arma::mat altEta, const arma::mat& rand, arma::vec& index, const arma::mat& preassign, const int nsamp, const int nsubsets, const int intSampSize, const arma::mat& isingCoefs, const arma::mat& covariance, const int keepEach, const arma::vec& MHcoef, const bool betaDispersion, const double randomAssignProb, const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs, const arma::vec& M, const arma::mat& invcov, const bool mixed, const bool sampleRandom, const arma::vec& doNotSample, const bool markovChainEM, int cpus);
-RcppExport SEXP _flowReMix_CppFlowSstepList_mc_vec(SEXP nsubjectsSEXP, SEXP YSEXP, SEXP NSEXP, SEXP subpopIndSEXP, SEXP clusterassignmentsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP randSEXP, SEXP indexSEXP, SEXP preassignSEXP, SEXP nsampSEXP, SEXP nsubsetsSEXP, SEXP intSampSizeSEXP, SEXP isingCoefsSEXP, SEXP covarianceSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP betaDispersionSEXP, SEXP randomAssignProbSEXP, SEXP iterAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP MSEXP, SEXP invcovSEXP, SEXP mixedSEXP, SEXP sampleRandomSEXP, SEXP doNotSampleSEXP, SEXP markovChainEMSEXP, SEXP cpusSEXP) {
+List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y, const arma::mat& N, const arma::mat& subpopInd, arma::mat& clusterassignments, const arma::mat& nullEta, const arma::mat altEta, const arma::mat& rand, arma::vec& index, const arma::mat& preassign, const int nsamp, const int nsubsets, const int intSampSize, const arma::mat& isingCoefs, const arma::mat& covariance, const int keepEach, const arma::vec& MHcoef, const bool betaDispersion, const double randomAssignProb, const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs, const arma::vec& M, const arma::mat& invcov, const bool mixed, const bool sampleRandom, const arma::vec& doNotSample, const bool markovChainEM, int cpus, int seed);
+RcppExport SEXP _flowReMix_CppFlowSstepList_mc_vec(SEXP nsubjectsSEXP, SEXP YSEXP, SEXP NSEXP, SEXP subpopIndSEXP, SEXP clusterassignmentsSEXP, SEXP nullEtaSEXP, SEXP altEtaSEXP, SEXP randSEXP, SEXP indexSEXP, SEXP preassignSEXP, SEXP nsampSEXP, SEXP nsubsetsSEXP, SEXP intSampSizeSEXP, SEXP isingCoefsSEXP, SEXP covarianceSEXP, SEXP keepEachSEXP, SEXP MHcoefSEXP, SEXP betaDispersionSEXP, SEXP randomAssignProbSEXP, SEXP iterAssignCoefSEXP, SEXP priorSEXP, SEXP zeroPosteriorProbsSEXP, SEXP MSEXP, SEXP invcovSEXP, SEXP mixedSEXP, SEXP sampleRandomSEXP, SEXP doNotSampleSEXP, SEXP markovChainEMSEXP, SEXP cpusSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -71,7 +71,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type doNotSample(doNotSampleSEXP);
     Rcpp::traits::input_parameter< const bool >::type markovChainEM(markovChainEMSEXP);
     Rcpp::traits::input_parameter< int >::type cpus(cpusSEXP);
-    rcpp_result_gen = Rcpp::wrap(CppFlowSstepList_mc_vec(nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus));
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(CppFlowSstepList_mc_vec(nsubjects, Y, N, subpopInd, clusterassignments, nullEta, altEta, rand, index, preassign, nsamp, nsubsets, intSampSize, isingCoefs, covariance, keepEach, MHcoef, betaDispersion, randomAssignProb, iterAssignCoef, prior, zeroPosteriorProbs, M, invcov, mixed, sampleRandom, doNotSample, markovChainEM, cpus, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -240,7 +241,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_flowReMix_CppFlowSstepList", (DL_FUNC) &_flowReMix_CppFlowSstepList, 20},
-    {"_flowReMix_CppFlowSstepList_mc_vec", (DL_FUNC) &_flowReMix_CppFlowSstepList_mc_vec, 29},
+    {"_flowReMix_CppFlowSstepList_mc_vec", (DL_FUNC) &_flowReMix_CppFlowSstepList_mc_vec, 30},
     {"_flowReMix_CppFlowSstepList_mc", (DL_FUNC) &_flowReMix_CppFlowSstepList_mc, 20},
     {"_flowReMix_vecBetaBinomDens", (DL_FUNC) &_flowReMix_vecBetaBinomDens, 4},
     {"_flowReMix_setNumericVectorToZero", (DL_FUNC) &_flowReMix_setNumericVectorToZero, 1},

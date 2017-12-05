@@ -972,7 +972,7 @@ flowReMix <- function(formula,
                                          M = M, invcov = invcov, mixed = mixed,
                                          sampleRandom = TRUE,
                                          doNotSample = doNotSampleSubset,
-                                         markovChainEM = markovChainEM, cpus=ncores)
+                                         markovChainEM = markovChainEM, cpus=ncores, seed = as.integer(control$seed))
 
       # }
     }else{

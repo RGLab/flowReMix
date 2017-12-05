@@ -10,9 +10,12 @@ using namespace Rcpp;
 
 namespace ParallelNormalGenerator {
   static std::vector<std::mt19937> generatorlist;
-static void initialize(int t){
+static void initialize(int t, int seed){
+  static std::seed_seq seq{seed};
+  static std::vector<std::uint32_t> seeds(t);
+  seq.generate(seeds.begin(),seeds.end());
   for(int i=0;i<t;i++){
-    std::mt19937 g(i);
+    std::mt19937 g(seeds.at(i));
     generatorlist.push_back(g);
   }
 }
@@ -24,9 +27,12 @@ static double generate(double mean,double sigma){
 
 namespace ParallelUnifGenerator {
 static std::vector<std::mt19937> generatorlist;
-static void initialize(int t){
+static void initialize(int t, int seed){
+  static std::seed_seq seq{seed};
+  static std::vector<std::uint32_t> seeds(t);
+  seq.generate(seeds.begin(),seeds.end());
   for(int i=0;i<t;i++){
-    std::mt19937 g(i);
+    std::mt19937 g(seeds.at(i));
     generatorlist.push_back(g);
   }
 }

@@ -39,7 +39,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
                         const bool zeroPosteriorProbs,
                         const arma::vec& M, const arma::mat& invcov, const bool mixed,
                         const bool sampleRandom,
-                        const arma::vec& doNotSample,const bool markovChainEM, int cpus){
+                        const arma::vec& doNotSample,const bool markovChainEM, int cpus, int seed){
   int nsamp_floor = floor(nsamp / keepEach) * keepEach ;
   int mat_size = int(nsamp_floor/keepEach);
   Progress prog(nsubjects,true);
@@ -71,8 +71,8 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
     //Gibbs for each subject
     arma::cube clusterDensities(intSampSize,2,nsubjects) ;
     arma::mat iterPosteriors(nsubsets,nsubjects) ;
-    ParallelNormalGenerator::initialize(cpus);
-    ParallelUnifGenerator::initialize(cpus);
+    ParallelNormalGenerator::initialize(cpus, seed);
+    ParallelUnifGenerator::initialize(cpus, seed);
 
 #pragma omp parallel shared(unifVec,nsamp_floor,normVec,clusterassignments,proportions, assignmentMats,prog, preassign, clusterDensities, flowReMix::dnorm4, flowReMix::pmax, flowReMix::myrnorm3) num_threads(cpus)
 {
