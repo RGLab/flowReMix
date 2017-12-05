@@ -6,9 +6,6 @@ using namespace Rcpp;
 #include <omp.h>
 #include "flowReMix.h"
 
-
-
-
 subjectResult CppFlowSstep_mc(const SubjectDat subjectData, const int nsamp, const int nSubsets, const int intSampSize,
                   const arma::mat isingCoefs, const arma::mat covariance, const int keepEach, const arma::vec MHcoef,
                   const bool betaDispersion, const double randomAssignProb, const arma::vec modelprobs,

@@ -1,5 +1,4 @@
 #include <RcppArmadillo.h>
-#include <boost/throw_exception.hpp>
 #include <random>
 #include <omp.h>
 using namespace Rcpp;

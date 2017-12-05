@@ -4,7 +4,7 @@
 \alias{print.flowReMix}
 \title{print.flowReMix}
 \usage{
-print.flowReMix(x, ...)
+\method{print}{flowReMix}(x, ...)
 }
 \arguments{
 \item{x}{a flowReMix fit}
