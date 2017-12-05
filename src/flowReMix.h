@@ -54,57 +54,6 @@ static double generate(double lower,double upper){
   return d(generatorlist.at(omp_get_thread_num()));
 }
 }
-class SubjectDat {
-public:
-  arma::vec rand, N, y, nullEta, altEta, popInd, preAssignment, prop, subjassign;
-  int index;
-  SubjectDat(const List& l,const int &nSubsets,const bool &markovChainEM){
-    DataFrame dat = (SEXP) l["dat"];
-    DataFrame pre = (SEXP) l["pre"];
-
-    NumericVector _rand = (SEXP) l["rand"];
-    rand = arma::vec(_rand.begin(),_rand.length(),false);
-
-    int index = as<int>(l["index"]);
-
-    NumericVector _N = (SEXP) dat["N"];
-    N = arma::vec(_N.begin(),_N.length(),false);
-
-    NumericVector _y = (SEXP) dat["y"];
-    y = arma::vec(_y.begin(),_y.length(),false);
-
-    NumericVector _nullEta = (SEXP) dat["nullEta"];
-    nullEta = arma::vec(_nullEta.begin(),_nullEta.length(),false);
-
-    NumericVector _altEta = (SEXP) dat["altEta"];
-    altEta = arma::vec(_altEta.begin(),_altEta.length(),false);
-
-    IntegerVector _popInd = (SEXP) dat["subpopInd"];
-    popInd = arma::vec(_popInd.length());
-    std::copy(_popInd.begin(),_popInd.end(),popInd.begin());
-
-    IntegerVector _preAssignment = (SEXP) pre["assign"];
-    preAssignment = arma::vec(_preAssignment.length());
-    std::copy(_preAssignment.begin(),_preAssignment.end(),preAssignment.begin());
-
-
-    index = as<IntegerVector>(l["index"]).at(0);
-
-    prop = y/N;
-
-    if(markovChainEM || ((CharacterVector) l.names()).cend() == std::find(((CharacterVector) l.names()).cbegin(),((CharacterVector) l.names()).cend(),"assign")){
-      subjassign = arma::vec(nSubsets);
-    }else{
-      subjassign = arma::vec(((NumericVector)(SEXP) l["assign"]));
-    }
-  };
-};
-
-struct subjectResult{
-  arma::mat assignmentMat;
-  arma::mat randomMat;
-  arma::vec rate;
-};
 
 
 arma::mat subsetAssignGibbs_mc(const arma::vec y,
@@ -134,13 +83,6 @@ arma::mat simRandomEffectCoordinateMH_mc(const arma::vec y, const arma::vec N,
                                          const int msize);
 double expit(double);
 double betaBinomDens(int count, int N, double prob, double M);
-
-subjectResult CppFlowSstep_mc(const SubjectDat subjectData, const int nsamp, const int nSubsets, const int intSampSize,
-                              const arma::mat isingCoefs, const arma::mat covariance, const int keepEach, const arma::vec MHcoef,
-                              const bool betaDispersion, const double randomAssignProb, const arma::vec modelprobs,
-                              const double iterAssignCoef, const double prior, const bool zeroPosteriorProbs,
-                              const arma::vec M, const arma::mat invcov, const bool mixed, const bool sampleRandom,
-                              const arma::vec doNotSample,const  bool markovChainEM, const int msize);
 
 arma::mat computeRandomEta_arma(arma::vec eta, arma::vec vsample);
 arma::mat computeRandomEta_arma(arma::mat eta, arma::vec vsample);
