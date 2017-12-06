@@ -21,7 +21,7 @@
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
                            gamma = 0.9, AND = TRUE, seed = NULL,
-                           sampleNew = FALSE,keepEach=10) {
+                           sampleNew = FALSE,keepEach=1) {
   if(cpus == 1) {
     foreach::registerDoSEQ()
   } else {
@@ -32,7 +32,8 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   if(!is.null(seed)) {
     set.seed(seed)
   }else{
-    set.seed(100)
+    seed=100
+    set.seed(seed)
   }
 
   type <- type[1]
