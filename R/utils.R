@@ -496,14 +496,24 @@ parser = function(x,separator,functions){
    dat
 }
 
+completeVec <- function(vec, maxlength, impute = -1) {
+  if(length(vec) == maxlength) {
+    return(vec)
+  } else {
+    return(c(vec, rep(impute, maxlength - length(vec))))
+  }
+}
+
 extractFromList = function(mhlist){
   N = length(mhlist[[1]])
   J = nrow(mhlist[[1]][[1]]$pre)
-  Y = matrix(unlist(map(map(mhlist[[1]],"dat"),"y")),ncol=N)
-  TOT = matrix(unlist(map(map(mhlist[[1]],"dat"),"N")),ncol=N)
-  subpopInd = matrix(unlist(map(map(mhlist[[1]],"dat"),"subpopInd")),ncol=N)
-  nullEta = matrix(unlist(map(map(mhlist[[1]],"dat"),"nullEta")),ncol=N)
-  altEta = matrix(unlist(map(map(mhlist[[1]],"dat"),"altEta")),ncol=N)
+  Y <- map(map(mhlist[[1]],"dat"),"y")
+  maxlength <- max(sapply(Y, length))
+  Y <- matrix(unlist(lapply(Y, completeVec, maxlength)), ncol = N)
+  TOT = matrix(unlist(lapply(map(map(mhlist[[1]],"dat"),"N"), completeVec, maxlength)), ncol = N)
+  subpopInd = matrix(unlist(lapply(map(map(mhlist[[1]],"dat"),"subpopInd"), completeVec, maxlength)), ncol = N)
+  nullEta = matrix(unlist(lapply(map(map(mhlist[[1]],"dat"),"nullEta"), completeVec, maxlength)), ncol = N)
+  altEta = matrix(unlist(lapply(map(map(mhlist[[1]],"dat"),"altEta"), completeVec, maxlength)), ncol = N)
   rand = matrix(unlist(map(mhlist[[1]],"rand")),ncol=N)
   index = unlist(map(mhlist[[1]],"index"))
   preassign = matrix(unlist(map(map(mhlist[[1]], "pre"),"assign")), ncol=N)

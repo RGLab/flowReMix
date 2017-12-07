@@ -22,8 +22,6 @@ void printDims(arma::mat a,std::string c){
 };
 
 
-
-
 //[[Rcpp::export]]
 List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
                         const arma::mat& N,const arma::mat& subpopInd, arma::mat& clusterassignments,
@@ -140,7 +138,6 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
               eta = subsetAltEta ;
             }
             // arma::vec etaResid = empEta - eta;
-
             //the next conditions are totally pointless.
             if(cluster == 0) {
               // muHat = mean(etaResid) ; //this is removed because we are just doing random walk.
@@ -153,11 +150,8 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
             importanceWeights = normDens - sampNormDens ;
 
             arma::mat randomEta;
-
             randomEta = computeRandomEta_arma(eta, vsample) ;
-
             double disp;
-
             disp = M(subset);
 
             // arma::vec binomDensity = computeBinomDensity_arma(subsetCount, subsetN, randomEta, disp, betaDispersion) ;
@@ -169,8 +163,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
 
             arma::vec binomDensity(sampSize) ;
             int i = 0, j = 0;
-
-            for( i = 0; i < sampSize ; i++) {
+            for(i = 0; i < sampSize ; i++) {
               density = 0;
               for( j = 0; j < subsetSize; j++) {
                 prob = randomEta(i, j) ;
@@ -185,24 +178,15 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
               }
               binomDensity(i) = density ;
             }
-
-
             clusterDensities.slice(subject).col(cluster) = binomDensity + importanceWeights ;
           }
 
           arma::vec integratedDensities ;
-
           integratedDensities = computeIntegratedDensities_arma(clusterDensities.slice(subject)) ;
-
-
           double priorProb = 0.5;
           if(sample >= 0) {
-
             clusterassignments(subset,subject) = 1 ;
-
-
             priorProb = expit(sum(isingCoefs.row(subset) * clusterassignments.col(subject)) + isingOffset) ;
-
           } else {
             priorProb = 0.5 ;
           }
@@ -211,6 +195,11 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
           double densityRatio;
           densityRatio = integratedDensities(0) / integratedDensities(1) * (1.0 - priorProb) / priorProb ;
           pResponder = 1.0 / (1.0 + densityRatio) ;
+
+          // std::cout<<subsetNullEta ;
+          // std::cout<<subsetAltEta ;
+          // std::cout<<subsetN ;
+          // std::cout<<subsetProp ;
 
           if(preassign(subset,subject) == 1) {
             pResponder = 1 - (1 - pResponder) * iterAssignCoef ;
@@ -233,36 +222,20 @@ List CppFlowSstepList_mc_vec(const int nsubjects,const arma::mat& Y,
             assignmentMats(assignNum, i,subject) = clusterassignments(i,subject) ;
           }
           assignNum++ ;
-
         }
       }
 
-
       arma::vec unifVec2;
-
       unifVec2 = flowReMix::myrunif(nsamp_floor * nsubsets);
-
       arma::vec newEta(altEta.n_rows);
       newEta = nullEta.col(subject);//should copy
       arma::rowvec assignment;
-
       assignment = assignmentMats.slice(subject).row(assignmentMats.n_rows-1);
-
       std::vector<int> responderSubset;
-
       responderSubset = flowReMix::match2(subpopInd.col(subject),flowReMix::which2(assignment));
-
-
-      // newEta[responderSubset] = altEta[responderSubset];
-
       flowReMix::mapByVec(newEta,altEta.col(subject),responderSubset);
-
-
       arma::vec randomEst;
-
       randomEst = rand.col(subject); // randomEst will  be modified?
-
-
       arma::vec MHattempts(nsubsets,arma::fill::zeros);
       arma::vec MHsuccess(nsubsets,arma::fill::zeros);
 
