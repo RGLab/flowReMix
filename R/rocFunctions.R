@@ -223,6 +223,8 @@ plotScatter <- function(obj, subsets = NULL,
   if(!is.null(target)) {
     shapes <- data.frame(id = obj$posteriors[, 1], shape = target)
     post <- merge(post, shapes, all.x = TRUE, all.y = FALSE)
+  } else {
+    post$shape <- NA
   }
   dat <- merge(dat, post, all.x = TRUE, all.y = FALSE,
                by.x = c("id", "sub.population"),
