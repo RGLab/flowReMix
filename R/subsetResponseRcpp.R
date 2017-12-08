@@ -949,7 +949,7 @@ flowReMix <- function(formula,
       #                  M, invcov, mixed, sampleRandom = TRUE,
       #                  doNotSample = doNotSampleSubset,
       #                  markovChainEM = markovChainEM)
-      MHresult = CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
+      time <- system.time(MHresult <- CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                          N = mhList$TOT, subpopInd = mhList$subpopInd,
                                          clusterassignments = mhList$clusterassignments,
                                          nullEta = mhList$nullEta, altEta = mhList$altEta,
@@ -964,7 +964,9 @@ flowReMix <- function(formula,
                                          M = M, invcov = invcov, mixed = mixed,
                                          sampleRandom = TRUE,
                                          doNotSample = doNotSampleSubset,
-                                         markovChainEM = markovChainEM, cpus=ncores, seed = as.integer(control$seed))
+                                         markovChainEM = markovChainEM, cpus=ncores, seed = as.integer(control$seed)))
+      print("S-STEP TIME:")
+      print(time)
 
       # }
     }else{

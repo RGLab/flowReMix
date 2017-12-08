@@ -124,8 +124,7 @@ subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 
 # Loading files ----------------------
-
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12_*"))
+filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_33_*"))
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 postList <- list()
@@ -147,7 +146,7 @@ postid <- fit$posteriors[, 1, drop = FALSE]
 hiv <- merge(postid, hiv)
 
 # Variability at the fit level --------------------
-it35 <- sapply(filenames, grepl, pattern = "35")
+it35 <- sapply(filenames, grepl, pattern = "40")
 sa <- sapply(filenames, grepl, pattern = "SA")
 groups <- list(which(it35 & sa), which(it35 & !sa))
 resList <- list()
@@ -201,7 +200,7 @@ probplot <- do.call("rbind", probplot)
 probplot <- melt(probplot, id = "group")
 names(probplot)[2:3] <- c("subset", "responseProb")
 ggplot(probplot) +
-  geom_boxplot(aes(x = subset, y = responseProb, col = factor(iterations), outlier.size = 0.01)) +
+  geom_boxplot(aes(x = subset, y = responseProb, col = factor(group), outlier.size = 0.01)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 # Graphical models -----------------

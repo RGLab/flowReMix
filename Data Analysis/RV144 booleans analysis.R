@@ -77,11 +77,11 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 prior <- 0
 npost <- 1
-niter <- 30 
+niter <- 14
 seed <- 1
 lastSample <- NULL
-cpus <- 6
-control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
+cpus <- 2
+control <- flowReMix_control(updateLag = 7, nsamp = 50, initMHcoef = 1,
                              keepEach = 5, isingWprior = TRUE,
                              zeroPosteriorProbs = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
@@ -107,9 +107,8 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              iterations =  niter,
                              cluster_assignment = TRUE,
                              parallel = TRUE, keepSamples = TRUE,
-                             verbose = FALSE, control = control,
-                             newSampler = FALSE))
-# save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
+                             verbose = TRUE, control = control))
+            # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")
 
 # add_ptid <- function(x, subject_id) {

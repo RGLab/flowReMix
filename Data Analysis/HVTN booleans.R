@@ -133,8 +133,8 @@ control <- flowReMix_control(updateLag = 5, nsamp = 60, initMHcoef = 2.5,
 
 subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
-preAssign <- by(subsetDat, subsetDat$ptid, assign)
-preAssign <- do.call("rbind", preAssign)
+# preAssign <- by(subsetDat, subsetDat$ptid, assign)
+# preAssign <- do.call("rbind", preAssign)
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
@@ -150,21 +150,11 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 
 
 # Loading files -------------------
-<<<<<<< HEAD
-filenames <- as.list(dir(path = 'data analysis/results', pattern="hvtn_12__*"))
-select1 <- sapply(filenames, function(x) length(grep("prior0", x) > 0)) == 1
-select2 <- sapply(filenames, function(x) length(grep("niter35", x) > 0)) == 1
-select3 <- sapply(filenames, function(x) length(grep("SA", x) > 0)) == 1
-filenames <- filenames[select1 & select2 & select3]
-=======
-filenames <- as.list(c(dir(path = 'data analysis/results', pattern="hvtn_13__*"),
-                       dir(path = 'data analysis/results', pattern="hvtn_12__*")))
-select1 <- sapply(filenames, function(x) length(grep("SA", x) > 0)) == 1
-select2 <- sapply(filenames, function(x) length(grep("niter70", x) > 0)) == 1
-select3 <- sapply(filenames, function(x) length(grep("_13_", x) > 0)) == 1
+filenames <- as.list(c(dir(path = 'data analysis/results', pattern="hvtn_33__*")))
+select1 <- sapply(filenames, function(x) length(grep("MC", x) > 0)) == 1
+select2 <- sapply(filenames, function(x) length(grep("niter40", x) > 0)) == 1
 select4 <- sapply(filenames, function(x) length(grep("prior2", x) > 0)) == 1
-filenames <- filenames[select2 & select1 & select3 & select4]
->>>>>>> memoryFix-
+filenames <- filenames[select2 & select1 & select4]
 filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
 post <- list()
 for(i in 1:length(filenames)) {
