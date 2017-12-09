@@ -19,7 +19,6 @@ autoPreAssign <- function(x) {
   return(result)
 }
 
-
 randomizeAssignments <- function(x, prob = 0.5) {
   if(runif(1) < prob) {
     coordinate <- sample.int(length(x), 1)

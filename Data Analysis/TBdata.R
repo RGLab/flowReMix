@@ -108,13 +108,6 @@ index = (args-1)*1 + settings
 config = configurations[index,]
 niter = 80
 npost = 40
-preAssignCoefs = config[[1]]
-isingWprior = config[[2]]
-markovChainEM = config[[3]]
-zeroPosteriorProbs = config[[4]]
-prior = config[[5]]
-sampleNew = config[[6]]
-seed = config[[7]]
 
 
 # Analysis ----------------------------------
@@ -158,17 +151,30 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 #   return(x)
 # }
 
-filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat2_*"))
-filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
+# filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat3_perm_*"))
+# keep <- which(apply(matrix(as.character(groups), nrow = 2), 2, function(x) any(sapply(x, function(y) grepl("MP.NKrainbow", y)))))
+# filenum <- as.numeric(sapply(sapply(sapply(filenames, function(x) strsplit(x, "perm")), function(x) x[2]), function(x) strsplit(x, "rds")))
+# filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[filenum %in% keep][9]
+filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat4_full_*"))
+iter30 <- sapply(filenames, function(x) grepl("niter30", x))
+post10 <-sapply(filenames, function(x) grepl("npost10", x))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))#[keep30 & post10]
 post <- list()
 for(i in 1:length(filenames)) {
-  load(file = filenames[[i]])
+  fit <- readRDS(file = filenames[[i]])
   post[[i]] <- fit$posteriors[, -1]
 }
 post <- Reduce("+", post) / length(filenames)
 fit$posteriors[, -1] <- post
-fit$data <- tempdat
-fit <- add_ptid(fit, ptid)
+
+# stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$stimgroup):factor(tempdat$parent))),unique)
+# scboxplot <- plot(fit, type = "boxplot",
+#                   target = type, test = "wilcoxon",
+#                   #weights = weights,
+#                   groups = stimcell, ncol = 4, jitter=TRUE)
+# scboxplot
+# scat <- plot(fit, type = "scatter", target = type)
+# ggsave("figures/temptbscatter.pdf", plot = scat, width = 15, height = 15)
 
 
 # Scatter plots with posteriors ---------------
@@ -184,13 +190,13 @@ outcome <- post[, ncol(post)]
 #           base_width = 20, base_height = 20)
 
 # Fitting ROC curves -----------------
+exclude <- sapply(fit$coefficients, function(x) max(x[-1]) < 0)
 rocTable <- summary(fit, type = "ROC", test = "wilcoxon",
                     target = type)
-rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
 post <- fit$posteriors[, -1]
 level <- .99
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
-select <- nresponders[1, ] < level
+select <- exclude == 0 #nresponders[1, ] < level
 rocTable$qvalue <- NA
 rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
 rocTable[order(rocTable$auc, decreasing = TRUE), ]
@@ -201,7 +207,7 @@ sum(rocTable$qvalue < 0.1, na.rm = TRUE)
 #   arrange(-auc) %>% mutate(qvalue = p.adjust(pvalue,"BH")) %>% filter(responseProb>0.5,qvalue<0.1)
 
 # Graph -----------------
-stab <- stability
+stab <- fit$isingStability
 plot(stab, threshold = 0.25, fill = rocTable$auc)
 
 # Boxplot by graph clusters -------------
@@ -220,10 +226,13 @@ poly <- nfunctions / choose(rep(M, length(nfunctions)), nfunctions)
 weights <- list()
 # weights$polyfunctionality <- poly
 # weights$Functionality <- rep(1, length(subsets))
-weights$weightedAvg <- apply(fit$posteriors[, -1], 2, sd)
+# weights$weightedAvg <- apply(fit$posteriors[, -1], 2, sd)
+weights <- list()
+weights$exc <- rep(1, length(fit$coefficients))
+weights$exc[exclude] <- 0
 
 allbox <- plot(fit, type = "boxplot",
-                target = type, #weights = weights,
+                target = type, weights = weights,
                 test = "wilcoxon",
                 one_sided = TRUE,
                 groups = "all", jitter = TRUE)
@@ -237,10 +246,10 @@ allbox
 # stimnames <- unique(stimgroups)
 # stimgroups <- lapply(stimnames, function(x) subsets[stimgroups == x])
 # names(stimgroups) <- stimnames
-stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
-stimbox <- plot(fit, type = "boxplot", #weights = weights,
+stimgroups  = lapply(split(fit$data$subset,tempdat$stimgroup),unique)
+stimbox <- plot(fit, type = "boxplot", weights = weights,
                 target = type, test = "wilcoxon",
-                one_sided = TRUE,
+                # one_sided = TRUE,
                 jitter = TRUE,
                 groups = stimgroups)
 stimbox
@@ -252,10 +261,9 @@ stimbox
 # cellgroups <- lapply(cellnames, function(x) subsets[cellgroups == x])
 # names(cellgroups) <- cellnames
 cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
-
 cellbox <- plot(fit, type = "boxplot",
                 target = type, test = "wilcoxon",
-     groups = cellgroups, ncol = 3, #weights = weights,
+     groups = cellgroups, ncol = 3, weights = weights,
      jitter=TRUE)
 cellbox
 # save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
@@ -266,12 +274,11 @@ scnames <- unique(stimcell)
 stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
 names(stimcell) <- scnames
 stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
-
 stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
 
 scboxplot <- plot(fit, type = "boxplot",
                   target = type, test = "wilcoxon",
-                  #weights = weights,
+                  weights = weights,
                   groups = stimcell, ncol = 4, jitter=TRUE)
 scboxplot
 # save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",

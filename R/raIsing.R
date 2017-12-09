@@ -25,7 +25,6 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     minprob <- 1 / nrow(mat)
   }
 
-
   if(parallel) {
     isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
       getNeighborhood(j, mat, family, off, gamma, weights, cv, method, minprob)
