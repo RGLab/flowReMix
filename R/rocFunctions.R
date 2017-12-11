@@ -360,8 +360,10 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
                                      var.equal = TRUE)$p.value)
   } else if(test == "wilcoxon") {
     pvalues <- by(forplot, list(forplot$group, forplot$measure),
-                  function(x) wilcox.test(x$score[tempTarget == 1], x$score[tempTarget == 0],
+                  function(x) { t <- NA
+                    try(t <- wilcox.test(x$score[tempTarget == 1], x$score[tempTarget == 0],
                                      exact = FALSE)$p.value)
+                    })
   }
 
   if(test %in% c("t-test", "wilcoxon", "logistic")) {

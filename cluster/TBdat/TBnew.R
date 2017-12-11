@@ -106,7 +106,7 @@ control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50, initMHcoe
 tempdat$stim <- tempdat$stimtemp
 tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
 tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
-preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
+# preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
@@ -115,7 +115,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
-                 cluster_assignment = preAssign,
+                 cluster_assignment = TRUE,
                  iterations = niter,
                  parallel = TRUE,
                  verbose = TRUE, control = control)

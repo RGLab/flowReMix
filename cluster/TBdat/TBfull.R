@@ -1,9 +1,18 @@
-ncores <- 15
-getwd()
+args <- commandArgs(TRUE)
+eval(parse(text=args[[1]]))
+setting <- as.numeric(setting)
+ncores <- 8
+
+assign <- function(x) {
+  x$prop <- x$count / x$parentcount
+  assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != "aUNS"]) > min(y$prop[y$stim == "aUNS"])))
+  assign[assign == 1] <- -1
+  result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
+  return(result)
+}
 
 geomean <- function(x) exp(mean(log(x)))
 library(flowReMix)
-library(pryr)
 # Loading data -------------------------
 tbdat <- readRDS("data/TB_rozot_booleans.rds")
 names(tbdat) <- tolower(names(tbdat))
@@ -32,9 +41,9 @@ for(i in 1:nrow(map)) {
 
 # Defining subsets w stim ---------------------
 tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
-# tbdat <- subset(tbdat, stim != "EBV")
+tbdat <- subset(tbdat, stim != "EBV")
 tbdat$stimtemp <- tbdat$stim
-# tbdat$stim[tbdat$stim %in% c("P1", "P2", "P3")] <- "MP"
+tbdat$stim[tbdat$stim %in% c("P1", "P2", "P3")] <- "MP"
 datlist <- list()
 stims <- unique(tbdat$stim)
 stims <- stims[stims != "UNS"]
@@ -45,7 +54,6 @@ for(i in 1:length(stims)) {
   datlist[[i]] <- temp
 }
 tbdat <- do.call("rbind", datlist)
-tbdat$stimgroup[tbdat$stim %in% c("P1", "P2", "P3")] <- "MP"
 tbdat$subset <- paste(tbdat$stimgroup, tbdat$subset, sep = "/")
 nonzerocounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
 nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocounts)))
@@ -60,33 +68,53 @@ nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocount
 
 # Choosing subset of data for analysis -----------------
 countkeep <- nonzerocounts[nonzerocounts[, 2] >= 0.2, 1]
-popkeep <- c("cd4", "MAIT", "NKrainbow", "DCs", "Bcells", "conCD8")
-stimkeep <- c("MP", "Mtbaux")
-tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep) & (stimgroup %in% stimkeep))
-# tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep))
-stimlevels <- as.character(unique(tempdat$stim))
-stimlevels <- c("ctrl", stimlevels[stimlevels != "ctrl"])
-tempdat$stim <- factor(tempdat$stim, levels = stimlevels)
+popkeep <- c("cd4", "MAIT", "NKrainbow", "DCs", "Bcells", "conCD*")
+stimkeep <- c("P", "MP", "Mtbaux")
+# tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep) & (stimgroup %in% stimkeep))
+tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep))
+#tempdat$stim <- factor(tempdat$stim, levels = c("ctrl", stimkeep))
 tempdat$subset <- factor(tempdat$subset)
 rm(tbdat)
 
-# Visuaizations ------------------------------
-library(ggplot2)
-tempdat$prop <- tempdat$count / tempdat$parentcount #+ 1 / tempdat$parentcount
-subctrl <- subset(tempdat, stim == "ctrl")
-substim <- subset(tempdat, stim != "ctrl")
-wide <- merge(subctrl, substim, by = c("ptid", "subset"))
+# Analysis Setting -------------
+configurations <- expand.grid(mcEM = c(TRUE, FALSE),
+                              seed = 1:20,
+                              npost = c(10, 20),
+                              niter = c(30, 60))
+
+mcEM <- configurations[["mcEM"]][setting]
+seed <- configurations[["seed"]][setting]
+npost <- configurations[["npost"]][setting]
+niter <- configurations[["niter"]][setting]
+lag <- round(niter / 3)
 
 # Analysis ----------------------------------
-npost <- 30
-control <- flowReMix_control(updateLag = 30, nsamp = 50, initMHcoef = 1,
+control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
+                             keepEach = 5,
                              nPosteriors = npost, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
+                             lastSample = NULL, isingInit = -log(99),
+                             markovChainEM = mcEM,
+                             initMethod = "robust",
+                             preAssignCoefs = 1,
+                             seed = seed,
                              ncores = ncores,
-                             lastSample = round(100 / npost), isingInit = -log(99),
-                             initMethod = "robust")
+                             isingWprior = FALSE,
+                             zeroPosteriorProbs = FALSE,
+                             isingStabilityReps = 100,
+                             randStabilityReps = 0,
+                             learningRate = 0.75,
+                             keepWeightPercent = 0.9,
+                             sampleNew = FALSE)
 
+tempdat$stim <- tempdat$stimtemp
+tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
+tempdat$stim <- as.character(tempdat$stim)
+tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
+tempdat$subset <- factor(as.character(tempdat$subset))
+tempdat <- data.frame(tempdat)
+# preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
@@ -95,21 +123,17 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
+                 cluster_assignment = TRUE,
                  iterations = niter,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
-save(fit, file = "TBsep18iter40post30moreInit.Robj")
 
-stability <- stabilityGraph(fit, type = "ising", cv = FALSE,
-                            gamma = 0.25,
-                            reps = 200, cpus = ncores)
-save(stability, file = "TBising18.Robj")
-
-random <- stabilityGraph(fit, type = "randomEffects", cv = FALSE,
-                         gamma = 0.25,
-                         reps = 200, cpus = ncores)
-save(random, file = "TBrandom18.Robj")
-
+file <- paste("results/TBdat4_full_mcEM", as.integer(mcEM),
+              "seed", seed,
+              "npost", npost,
+              "niter", niter,
+              ".rds", sep ="")
+saveRDS(fit, file = file)
 
 
 

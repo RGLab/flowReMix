@@ -77,7 +77,6 @@ instance <- groups[, setting]
 tempdat <- subset(tempdat, groups %in% instance)
 set.seed(100)
 index = (args-1)*1 + settings
-config = configurations[index,]
 seed = round(runif(50, min=1, max=500))
 
 # Analysis ----------------------------------
@@ -99,14 +98,12 @@ control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
                              learningRate = 1,
                              keepWeightPercent = 0.9,
                              sampleNew = FALSE)
-
 tempdat$stim <- tempdat$stimtemp
 tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
 tempdat$stim <- as.character(tempdat$stim)
 tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
 tempdat$subset <- factor(as.character(tempdat$subset))
 tempdat <- data.frame(tempdat)
-# preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
@@ -119,7 +116,6 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  iterations = niter,
                  parallel = TRUE,
                  verbose = FALSE, control = control)
-
 
 saveRDS(fit, file = paste0("TBfit_",index%%1+1,"_seed_",seed[index],".rds"))
 system("sync")
