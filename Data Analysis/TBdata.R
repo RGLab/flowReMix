@@ -1,18 +1,12 @@
-library(dplyr)
-library(flowReMix)
-library(ggplot2)
+args = as.numeric(commandArgs(trailingOnly = TRUE)[[2]])
+settings = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+ncores = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK"))
 
-assign <- function(x) {
-  x$prop <- x$count / x$parentcount
-  assign <- as.numeric(by(x, x$subset, function(y) max(y$prop[y$stim != "aUNS"]) > min(y$prop[y$stim == "aUNS"])))
-  assign[assign == 1] <- -1
-  result <- data.frame(ptid = x$ptid[1], subset = unique(x$subset), assign = assign)
-  return(result)
-}
 
 geomean <- function(x) exp(mean(log(x)))
+library(flowReMix)
 # Loading data -------------------------
-tbdat <- readRDS("../data/TB_Rozot_booleans.rds")
+tbdat <- readRDS("data/TB_rozot_booleans.rds")
 names(tbdat) <- tolower(names(tbdat))
 tbdat$ptid <- sapply(strsplit(tbdat$samplename, "_"), function(x) x[[1]])
 tbdat$count[is.na(tbdat$count)] <- 0
@@ -74,79 +68,51 @@ tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep))
 tempdat$subset <- factor(tempdat$subset)
 rm(tbdat)
 
-# Visuaizations ------------------------------
-tempdat$prop <- tempdat$count / tempdat$parentcount #+ 1 / tempdat$parentcount
-subctrl <- subset(tempdat, stim == "ctrl")
-substim <- subset(tempdat, stim != "ctrl")
-wide <- merge(subctrl, substim, by = c("ptid", "subset"))
-# pdf("figures/TBscat.pdf", width = 15, height = 15)
-# ggplot(wide) +
-#   geom_point(aes(x = prop.x, y = prop.y, col = type.x, shape = type.x)) +
-#   facet_wrap(~ subset, scales = "free", nrow = floor(sqrt(length(unique(wide$subset))))) +
-#   geom_abline(intercept = 0, slope = 1) +
-#   theme_bw()
-# dev.off()
-
-
+# Analysis Setting -------------
+npost <- 10
+niter <- 20
+groups <- combn(unique(interaction(tempdat$stimgroup, tempdat$parent)), 2)
+tempdat$groups <- interaction(tempdat$stimgroup, tempdat$parent)
+instance <- groups[, setting]
+tempdat <- subset(tempdat, groups %in% instance)
 set.seed(100)
-seed = round(runif(50,min=1,max=500))
-configurations = expand.grid(preAssignCoefs = 1,
-                             isingWprior=FALSE,
-                             markovChainEM=TRUE,
-                             zeroPosteriorProbs = FALSE,
-                             prior = 0,
-                             sampleNew=FALSE,
-                             seed=seed
-                             )
-args = as.numeric(commandArgs(trailingOnly = TRUE)[[2]])
-settings = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-cpus = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK"))
-# args=1
-# settings=1
-# cpus=6
 index = (args-1)*1 + settings
 config = configurations[index,]
-niter = 80
-npost = 40
-preAssignCoefs = config[[1]]
-isingWprior = config[[2]]
-markovChainEM = config[[3]]
-zeroPosteriorProbs = config[[4]]
-prior = config[[5]]
-sampleNew = config[[6]]
-seed = config[[7]]
-
+seed = round(runif(50, min=1, max=500))
 
 # Analysis ----------------------------------
-control <- flowReMix_control(updateLag = 15, nsamp = 100, initMHcoef = 1,
+control <- flowReMix_control(updateLag = 10, nsamp = 50, initMHcoef = 1,
+                             keepEach = 5,
                              nPosteriors = npost, centerCovariance = TRUE,
                              maxDispersion = 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = 100, isingInit = -log(99),
-                             initMethod = "sparse",
-                             preAssignCoefs = preAssignCoefs,prior = prior,
-                             ncores = cpus,
-                             keepEach = 1,
-                             markovChainEM = TRUE,seed = seed,
+                             lastSample = NULL, isingInit = -log(99),
+                             markovChainEM = TRUE,
+                             initMethod = "robust",
+                             preAssignCoefs = 1,
+                             seed = as.numeric(seed[index]),
+                             ncores = ncores,
                              isingWprior = FALSE,
-                             zeroPosteriorProbs = FALSE,sampleNew = FALSE
-                            )
+                             zeroPosteriorProbs = FALSE,
+                             isingStabilityReps = 0,
+                             randStabilityReps = 0,
+                             learningRate = 1,
+                             keepWeightPercent = 0.9,
+                             sampleNew = FALSE)
 
 tempdat$stim <- tempdat$stimtemp
 tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
+tempdat$stim <- as.character(tempdat$stim)
 tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
-library(dplyr)
-library(data.table)
-# temptemp = tempdat%>%filter(stimgroup%like%"MP",subset%like%"NKrainbow")
-# temptemp$subset = factor(temptemp$subset)
-# temptemp$stim = factor(temptemp$stim)
-
+tempdat$subset <- factor(as.character(tempdat$subset))
+tempdat <- data.frame(tempdat)
+# preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = stim,
-                 data = as.data.frame(tempdat),
-                 covariance = "sparse",
+                 data = tempdat,
+                 covariance = "diagonal",
                  ising_model = "sparse",
                  regression_method = "robust",
                  cluster_assignment = TRUE,
@@ -154,131 +120,6 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  verbose = FALSE, control = control)
 
-# add_ptid <- function(x, subject_id) {
-#   x$subject_id <- match.call()$subject_id
-#   return(x)
-# }
-#
-# filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat2_*"))
-# filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))
-#
-# post <- list()
-# for(i in 1:length(filenames)) {
-#   load(file = filenames[[i]])
-#   post[[i]] <- fit$posteriors[, -1]
-# }
-# post <- Reduce("+", post) / length(filenames)
-# fit$posteriors[, -1] <- post
-# fit$data <- tempdat
-# fit <- add_ptid(fit, ptid)
-#
-#
-# # Scatter plots with posteriors ---------------
-# library(cowplot)
-# post <- fit$posteriors
-# outcome <- by(tempdat, tempdat$ptid, function(x) unique(x$type))
-# outcome <- data.frame(ptid = names(outcome), outcome = as.character(outcome))
-# post <- merge(post, outcome)
-# outcome <- post[, ncol(post)]
-# # scatter <- plot(fit, type = "scatter", target = outcome,
-# #                 ncol = 10)
-# # save_plot(scatter, filename = "figures/TBscatter.pdf",
-# #           base_width = 20, base_height = 20)
-#
-# # Fitting ROC curves -----------------
-# rocTable <- summary(fit, type = "ROC", test = "wilcoxon",
-#                     target = type)
-# rocTable <- rocTable(fit, outcome, pvalue = "wilcoxon")
-# post <- fit$posteriors[, -1]
-# level <- .99
-# nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
-# select <- nresponders[1, ] < level
-# rocTable$qvalue <- NA
-# rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
-# rocTable[order(rocTable$auc, decreasing = TRUE), ]
-# sum(rocTable$qvalue < 0.05, na.rm = TRUE)
-# sum(rocTable$qvalue < 0.1, na.rm = TRUE)
-# # flowReMix:::summary.flowReMix(fit,target = outcome,type=c("ROC")) %>%
-# #   filter(subset %in% names(which(select))) %>%
-# #   arrange(-auc) %>% mutate(qvalue = p.adjust(pvalue,"BH")) %>% filter(responseProb>0.5,qvalue<0.1)
-#
-# # Graph -----------------
-# load(file = "data analysis/results/tbAggreageStability1.Robj")
-# load(file = "data analysis/results/tbAggStab2.Robj")
-# stab <- stability
-# plot(stab, threshold = 0.25, fill = rocTable$auc)
-#
-# # Boxplot by graph clusters -------------
-# # groups <- getGraphComponents(stability, threshold = 0.5, minsize = 3)
-# # plot(fit, type = "boxplot", target = outcome, groups = groups,
-# #      test = "logistic", ncol = 2)
-#
-# # Boxplots by categories -----------
-# subsets <- names(fit$posteriors)[-1]
-# functions <- sapply(subsets, function(x) strsplit(x, "/")[[1]][3])
-# functions <- unlist(lapply(functions, function(x) strsplit(x, "+", fixed = TRUE)[[1]]))
-# M <- length(unique(functions))
-# nfunctions <- sapply(subsets, function(x) strsplit(x, "/")[[1]][3])
-# nfunctions <- sapply(nfunctions, function(x) length(strsplit(x, "+", fixed = TRUE)[[1]]))
-# poly <- nfunctions / choose(rep(M, length(nfunctions)), nfunctions)
-# weights <- list()
-# # weights$polyfunctionality <- poly
-# # weights$Functionality <- rep(1, length(subsets))
-# weights$weightedAvg <- apply(fit$posteriors[, -1], 2, sd)
-#
-# allbox <- plot(fit, type = "boxplot",
-#                 target = type, #weights = weights,
-#                 test = "wilcoxon",
-#                 one_sided = TRUE,
-#                 groups = "all", jitter = TRUE)
-# allbox
-# # save_plot(allbox, filename = "figures/TBallboxplot2.pdf",
-# #           base_height = 4, base_width = 8)
-#
-# #
-# # group <- outcome
-# # stimgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[1]])
-# # stimnames <- unique(stimgroups)
-# # stimgroups <- lapply(stimnames, function(x) subsets[stimgroups == x])
-# # names(stimgroups) <- stimnames
-# stimgroups  = lapply(split(tempdat$subset,tempdat$stimgroup),unique)
-# stimbox <- plot(fit, type = "boxplot", #weights = weights,
-#                 target = type, test = "wilcoxon",
-#                 one_sided = TRUE,
-#                 jitter = TRUE,
-#                 groups = stimgroups)
-# stimbox
-# # save_plot(stimbox, filename = "figures/TBstimBoxplots2.pdf",
-# #           base_height = 4, base_width = 8)
-#
-# # cellgroups <- sapply(subsets, function(x) strsplit(x, "/")[[1]][[2]])
-# # cellnames <- unique(cellgroups)
-# # cellgroups <- lapply(cellnames, function(x) subsets[cellgroups == x])
-# # names(cellgroups) <- cellnames
-# cellgroups  = lapply(split(tempdat$subset,tempdat$parent),unique)
-#
-# cellbox <- plot(fit, type = "boxplot",
-#                 target = type, test = "wilcoxon",
-#      groups = cellgroups, ncol = 3, #weights = weights,
-#      jitter=TRUE)
-# cellbox
-# # save_plot(cellbox, filename = "figures/TBparentBoxplots2.pdf",
-# #           base_height = 4, base_width = 8)
-#
-# stimcell <- sapply(subsets, function(x) paste(strsplit(x, "/")[[1]][1:2], collapse = "/"))
-# scnames <- unique(stimcell)
-# stimcell <- lapply(scnames, function(x) subsets[stimcell == x])
-# names(stimcell) <- scnames
-# stimcell <- stimcell[sapply(stimcell, function(x) length(x) > 0)]
-#
-# stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):factor(tempdat$stimgroup))),unique)
-#
-# scboxplot <- plot(fit, type = "boxplot",
-#                   target = type, test = "wilcoxon",
-#                   #weights = weights,
-#                   groups = stimcell, ncol = 4, jitter=TRUE)
-# scboxplot
-# # save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",
-# #           base_height = 5, base_width = 10)
-saveRDS(fit, file = paste0("TBfit_",index%%1+1,"_seed_",seed,".rds"))
+
+saveRDS(fit, file = paste0("TBfit_",index%%1+1,"_seed_",seed[index],".rds"))
 system("sync")
