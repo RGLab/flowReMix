@@ -158,7 +158,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 filenames <- as.list(dir(path = 'data analysis/results', pattern="TBdat4_full_*"))
 iter30 <- sapply(filenames, function(x) grepl("niter30", x))
 post10 <-sapply(filenames, function(x) grepl("npost10", x))
-filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))#[keep30 & post10]
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))#[!iter30 & !post10]
 post <- list()
 for(i in 1:length(filenames)) {
   fit <- readRDS(file = filenames[[i]])
@@ -194,9 +194,9 @@ exclude <- sapply(fit$coefficients, function(x) max(x[-1]) < 0)
 rocTable <- summary(fit, type = "ROC", test = "wilcoxon",
                     target = type)
 post <- fit$posteriors[, -1]
-level <- .99
+level <- .50
 nresponders <- apply(post, 2, function(x) cummean(sort(1 - x)))
-select <- exclude == 0 #nresponders[1, ] < level
+select <- exclude == 0  & nresponders[1, ] < level
 rocTable$qvalue <- NA
 rocTable$qvalue[select] <- p.adjust(rocTable$pvalue[select], method = "BH")
 rocTable[order(rocTable$auc, decreasing = TRUE), ]
@@ -229,7 +229,7 @@ weights <- list()
 # weights$weightedAvg <- apply(fit$posteriors[, -1], 2, sd)
 weights <- list()
 weights$exc <- rep(1, length(fit$coefficients))
-weights$exc[exclude] <- 0
+#weights$exc[exclude] <- 0
 
 allbox <- plot(fit, type = "boxplot",
                 target = type, weights = weights,
@@ -279,7 +279,7 @@ stimcell  = lapply(split(tempdat$subset,interaction(factor(tempdat$parent):facto
 scboxplot <- plot(fit, type = "boxplot",
                   target = type, test = "wilcoxon",
                   weights = weights,
-                  groups = stimcell, ncol = 4, jitter=TRUE)
+                  groups = stimcell, ncol = 3, jitter=TRUE)
 scboxplot
 # save_plot(scboxplot, filename = "figures/TBstimParentBoxplot2.pdf",
 #           base_height = 5, base_width = 10)
