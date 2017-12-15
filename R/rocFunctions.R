@@ -240,9 +240,9 @@ plotScatter <- function(obj, subsets = NULL,
     stop("treatmentvar must be numeric or factor. How did we even get this far?!")
   }
   ctrl <- dplyr::summarise(dplyr::group_by(ctrl, sub.population, id, shape, post),
-                           ctrlprop = mean(prop))
+                           ctrlprop = min(prop))
   treat <- dplyr::summarise(dplyr::group_by(treat, sub.population, id, shape, post),
-                           trtprop = mean(prop))
+                           trtprop = max(prop))
   forplot <- merge(ctrl, treat)
   forplot$shape <- factor(forplot$shape)
   if(!is.null(subsets)){

@@ -545,3 +545,47 @@ zeroPosteriorProbs = function(modelfit){
   return(zpost)
 }
 
+#' Translate COMPASS markere names to FlowReMix format
+#'
+#' @param x \code{matrix} with column names in COMPASS format
+#'
+#' @return \code{matrix} with column names in FlowReMix format.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' #x is a matrix with columns named by COMPASS.
+#' translateCOMPASStoFlowReMixNames(x)
+#' }
+translateCOMPASStoflowReMixNames = function(x){
+   frmmn = map(.x=strsplit(gsub("!.*?$","",gsub(perl=TRUE,"!.*?[&$]","",colnames(x))),"&"),.f=function(x)paste0(paste(x,collapse="+"),"+"))
+   colnames(x) = frmmn
+   return(x)
+ }
+
+#' Create a table suitable for FlowReMix modeling from a list of COMPASS container objects
+#'
+#' @param x \code{list} of COMPASSContainer objects
+#'
+#' @return \code{data.frame} suitable for input to flowReMix.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' #x is a list of COMPASSContainer
+#' FlowReMixFromCOMPASSContainers(x)
+#'
+#' }
+FlowReMixFromCOMPASSContainers = function(x){
+  counts = map(.x = x,.f=CellCounts)
+   counts = map(.x=counts,translateCOMPASStoflowReMixNames)
+   counts = map(counts,reshape2::melt)
+   counts = plyr::ldply(counts)
+   colnames(counts) = c("parent",x[[1]]$sample_id,"population","count")
+   counts = inner_join(counts,unique(do.call(rbind,map(x,function(x)x$meta))))
+   totals = unique(reshape2::melt(plyr::ldply(map(x,function(x)x$counts))))
+   colnames(totals) = c("parent",x[[1]]$sample_id,"parentcount")
+   counts = inner_join(totals,counts)
+   counts
+ }
+
