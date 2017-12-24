@@ -339,11 +339,11 @@ plotChordDiagram  = function(x,threshold = 0.6,
   }
   nw = nw[respfilt&aucfilt&degfilt,respfilt&aucfilt&degfilt]
 
-
   if(!functions.name%in%varnames){
     stop("functions.name not in varnames",call. = FALSE)
   }
-    gr = igraph::graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
+
+  gr = igraph::graph_from_adjacency_matrix(nw,weighted = TRUE,mode = "undirected",diag = FALSE)
   gr = as_tbl_graph(gr)
   nodes = gr %>% activate(nodes) %>% as.data.frame()
   edges = gr %>% activate(edges) %>% as.data.frame()

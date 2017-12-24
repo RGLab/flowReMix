@@ -330,7 +330,7 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
       ingroup <- which(colnames(post)[-1] %in% group)
       probs <- post[, ingroup + 1, drop = FALSE]
       w <- w[ingroup]
-      score <- apply(probs, 1, function(x) weighted.mean(x, w))
+      score <- apply(probs, 1, function(x) sum(x * w))
 
       datlist[[slot]] <- data.frame(id = post[, 1],
                                     group = names(groups)[j],
@@ -399,7 +399,8 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
   }
 
   figure <- figure + facet_wrap(~ group, ncol = ncol) +
-    theme_bw() + scale_y_continuous(name = unique(forplot$measure)) + scale_x_discrete(name="",labels = "") + theme(axis.ticks.x = element_blank())
+    theme_bw() + scale_y_continuous(name = unique(forplot$measure)) +
+    scale_x_discrete(name="",labels = "") + theme(axis.ticks.x = element_blank())
 
 
   return(figure)

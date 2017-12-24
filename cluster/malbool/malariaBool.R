@@ -22,7 +22,7 @@ malbool$stim <- factor(malbool$stim)
 # Defining and screening subsets ---
 malbool$subset <- factor(with(malbool, (interaction(stimgroup, subset, sep = "/"))))
 counts <- by(malbool, list(malbool$subset), function(x) x$count)
-dropsubsets <- sapply(counts, function(x) mean(x >= 5) < .1)
+dropsubsets <- sapply(counts, function(x) mean(x >= 2) < 0.1)
 names(counts)[!dropsubsets]
 malbool$subset <- as.character(malbool$subset)
 malbool <- subset(malbool, subset %in% names(counts)[!dropsubsets])
@@ -38,10 +38,10 @@ malbool$visitno[malbool$visitno %in% c("Day 13-Pos (day of blood stage parasitem
 malbool$visitno <- factor(malbool$visitno, levels = c("Day 0", "Day 9", "pos", "Day 28", "Day 56", "Day 168"))
 
 # Analysis Parameters -----
-configurations <- expand.grid(iterations = c(20, 40, 80),
+configurations <- expand.grid(iterations = c(20, 40),
                               mcEM = TRUE,
-                              npost = c(10, 20, 40),
-                              seed = 1:3)
+                              npost = c(20),
+                              seed = 1:20)
 config <- configurations[setting, ]
 niter <- config[["iterations"]]
 lag <- round(niter / 3)
@@ -83,7 +83,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/malboolA_mcEM", as.integer(mcEM),
+file <- paste("results/malboolB_mcEM", as.integer(mcEM),
               "seed", seed,
               "npost", npost,
               "niter", niter,
