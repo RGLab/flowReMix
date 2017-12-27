@@ -52,9 +52,9 @@ booldata <- with(booldata, booldata[order(Subset, PTID, stim, decreasing = FALSE
 names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
-configurations <- expand.grid(niters = c(40, 80),
-                              npost = c(3),
-                              seed = c(1:50))
+configurations <- expand.grid(niters = c(60),
+                              npost = c(5),
+                              seed = c(1:100))
 config <- configurations[setting, ]
 niter <- config[[1]]
 npost <- config[[2]]
@@ -62,20 +62,20 @@ seed <- config[[3]]
 
 # Analysis -------------
 library(flowReMix)
-control <- flowReMix_control(updateLag = round(niter / 2), nsamp = 50,
+control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50,
                              keepEach = 5, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^4, minDispersion = 10^7,
-                             randomAssignProb = 10^-8, intSampSize = 100,
+                             randomAssignProb = 10^-8, intSampSize = 50,
                              isingInit = -log(99),
                              seed = seed,
                              ncores = cpus, preAssignCoefs = 1,
-                             prior = 1, isingWprior = FALSE,
+                             prior = 0, isingWprior = FALSE,
                              markovChainEM = TRUE,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = .9,
-                             lastSample = 100,
-                             isingStabilityReps = 200)
+                             lastSample = NULL,
+                             isingStabilityReps = 100)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -91,5 +91,5 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = preAssignment,
                              parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_28_niter", niter, "npost", npost, "seed", seed, "sa06.rds", sep = "")
+file <- paste("results/rv144_40_niter", niter, "npost", npost, "seed", seed, "MC.rds", sep = "")
 saveRDS(fit, file = file)

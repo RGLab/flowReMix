@@ -4,7 +4,7 @@
 \alias{aggregateModels}
 \title{Aggregate flowReMix model fits}
 \usage{
-aggregateModels(x, verbose = TRUE)
+aggregateModels(x, verbose = TRUE, summarizeCoefs = FALSE)
 }
 \arguments{
 \item{x}{A \code{list} of flowReMix model fits or a \code{character} vector of \code{rds} files storing model fits.}

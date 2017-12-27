@@ -119,7 +119,7 @@ fdrTable <- function(obj, target) {
 
   if(is.factor(target)) {
     temp <- rep(0, length(target))
-    temp[target == levels(target[2])] <- 1
+    temp[target == levels(target)[2]] <- 1
   } else if(is.numeric(target)) {
     temp <- rep(0, length(target))
     temp[target > min(target)] <- 1

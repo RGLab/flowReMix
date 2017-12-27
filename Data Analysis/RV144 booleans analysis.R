@@ -116,21 +116,19 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
 #   return(x)
 # }
 #
-# filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_18_*"))
-# filenames <- c(filenames, filenames2)
-# filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
-# post <- list()
-# postList <- list()
-# for(i in 1:length(filenames)) {
-#   load(file = filenames[[i]])
-#   post[[i]] <- fit$posteriors[, -1]
-#   postList[[i]] <- fit$posteriors[, -1]
-# }
-# post <- Reduce("+", post) / length(filenames)
-# fit$data <- booldata
-# fit <- add_ptid(fit, ptid)
-# fit$posteriors[, -1] <- post
-# fit$data <- booldata
+filenames <- as.list(dir(path = 'data analysis/results', pattern="rv144_40_*"))
+filenames <- lapply(filenames, function(x) paste0('data analysis/results/', x))[-c(3, 4)]
+post <- list()
+postList <- list()
+for(i in 1:length(filenames)) {
+  fit <- readRDS(file = filenames[[i]])
+  post[[i]] <- fit$posteriors[, -1]
+  postList[[i]] <- fit$posteriors[, -1]
+}
+post <- Reduce("+", post) / length(filenames)
+fit$posteriors[, -1] <- post
+fit$data <- booldata
+fit$posteriors <- zeroPosteriorProbs(fit)
 
 # Plots -------------
 scatter <- plot(fit, type = "scatter", target = vaccine)
@@ -163,6 +161,7 @@ rocResults[order(rocResults$auc, decreasing = TRUE), ]
 
 # ROC for infection status -------------------
 infectDat <- data.frame(ptid = rv144_correlates_data$PTID, infect = rv144_correlates_data$infect.y)
+rv144_correlates_data$ptid <- factor(as.character(rv144_correlates_data$PTID), levels = levels(fit$posteriors$ptid))
 datId <- as.character(fit$posteriors$ptid)
 infectID <- as.character(infectDat$ptid)
 infectDat <- infectDat[infectID %in% datId, ]
@@ -174,8 +173,8 @@ infect[infect == "PLACEBO"] <- NA
 infect <- factor(as.character(infect), levels = c("INFECTED", "NON-INFECTED"))
 
 infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
-                         sortAUC = FALSE, pvalue = "wilcoxon",
-                         minProbFilter = 0.01)
+                         sortAUC = FALSE,
+                         minProbFilter = 0)
 infectResults$responseProb <- colMeans(fit$posteriors[, -1])
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
@@ -184,7 +183,25 @@ stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,
 plot(stab, threshold = .85, fill = infectResults$auc)
 # save(stab, file = "data analysis/results/rv144_15_niter30npost6_stab.Robj")
 # Graph
+# preAssignment <- fit$preAssignment
+M <- 6
+weights <- nfunctions / (choose(M, nfunctions))
+infectDat
 
+preAssignment$ptid <- factor(preAssignment$ptid, levels = levels(fit$posteriors$ptid))
+# FS <- fit$posteriors
+FS <- zeroPosteriorProbs(fit)
+PFS <- FS
+FS[, 2] <- rowMeans(FS[, -1])/ (M * (M - 1) / 2)
+FS <- FS[, 1:2]
+names(FS) <- c("ptid", "flowFS")
+weights <- nfunctions / (choose(M, nfunctions)) / (M * (M - 1) / 2)
+FS$flowPFS <- apply(PFS[, - 1], 1, function(x) sum(weights * x))
+FS <- merge(FS, rv144_correlates_data, by = "ptid")
+cor(FS$flowFS, FS$FS)
+plot(FS$flowFS, FS$FS)
+cor(FS$flowPFS, FS$PFS)
+plot(FS$flowPFS, FS$PFS)
 
 #######################
 func <- rowSums(fit$posteriors[, -1])
@@ -196,8 +213,9 @@ pwilcox(funcAUC * n0 * n1, n0, n1, lower.tail = FALSE)
 nfunctions <- sapply(subsets, function(x) length(gregexpr(",", paste(",", x))[[1]]))
 M <- 6
 weights <- nfunctions / (choose(M, nfunctions))
-poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weights))
-# poly <- apply(fit$posteriors[, -1], 1, function(x) median(weights * x))
+post <- fit$posteriors[, - 1]
+post <- zeroPosteriorProbs(fit)[, -1]
+poly <- apply(post, 1, function(x) weighted.mean(x, weights))
 polyAUC <- roc(infect ~ poly)$auc
 n0 <- sum(infect == "INFECTED", na.rm = TRUE)
 n1 <- sum(infect == "NON-INFECTED", na.rm = TRUE)
