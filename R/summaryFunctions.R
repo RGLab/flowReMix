@@ -141,7 +141,7 @@ summary.flowReMix <- function(object, target, type = c("ROC", "FDR"), direction 
                          pvalue = test, sortAUC = sortAUC,...)
     return(table)
   } else if(type == "FDR") {
-    return(fdrTable(object, ifelse(is.factor(outcome),outcome,factor(outcome))))
+    return(fdrTable(object, outcome))
   } else {
     stop("Unknown summary method!")
   }

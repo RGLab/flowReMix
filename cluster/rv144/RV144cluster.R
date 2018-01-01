@@ -75,7 +75,7 @@ control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = .9,
                              lastSample = NULL,
-                             isingStabilityReps = 100)
+                             isingStabilityReps = 0)
 
 booldata$subset <- factor(booldata$subset)
 preAssignment <- do.call("rbind", by(booldata, booldata$ptid, assign))
@@ -84,12 +84,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cell_type = subset,
                              cluster_variable = treatment,
                              data = booldata,
-                             covariance = "sparse",
-                             ising_model = "sparse",
+                             covariance = "diagonal",
+                             ising_model = "none",
                              regression_method = "robust",
                              iterations =  niter,
                              cluster_assignment = preAssignment,
                              parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_40_niter", niter, "npost", npost, "seed", seed, "MC.rds", sep = "")
+file <- paste("results/rv144_41_nodep_niter", niter, "npost", npost, "seed", seed, "MC.rds", sep = "")
 saveRDS(fit, file = file)

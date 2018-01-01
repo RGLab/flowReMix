@@ -1,4 +1,4 @@
-cpus <- 4
+cpus <- 8
 print(cpus)
 
 args <- commandArgs(TRUE)
@@ -111,6 +111,7 @@ subsetDat$subset <- factor(subsetDat$subset)
 
 # Finding problematic subsets?
 keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$count > 1) > 0.02)
+# keep <- by(subsetDat, list(subsetDat$subset), function(x) sum(x$count > 5) > 2)
 keep <- names(keep[sapply(keep, function(x) x)])
 #result$subsets[result$qvals < 0.1] %in% keep
 subsetDat <- subset(subsetDat, subset %in% keep)

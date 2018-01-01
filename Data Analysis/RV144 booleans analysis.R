@@ -96,6 +96,8 @@ control <- flowReMix_control(updateLag = 7, nsamp = 50, initMHcoef = 1,
                              isingInit = -7)
 
 booldata$subset <- factor(booldata$subset)
+# dim(booldata)
+# saveRDS(booldata, file = "data/rv144bool.rds")
 system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              subject_id = ptid,
                              cell_type = subset,
