@@ -119,17 +119,17 @@ nsamp = as.integer(config[2])
 # plot(fit, type = "ROC", target = hiv, direction = ">",varname="hiv")
 # summary(fit,target=hiv)%>%arrange(-auc)%>%head(10)
 # summary(fit,target=vaccine)%>%arrange(-auc)%>%head(10)
-# M <- 6
-# weights <- nfunctions / (choose(M, nfunctions))
-# poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weights))
-# post = gather(data=fit$posteriors,key = subset,value = posterior,-1)%>%left_join(preAssignment)
-#
-# post%>%mutate(posterior_new = ifelse(assign==0,0,posterior))%>%group_by(ptid,subset)%>%mutate(weight=length(stringr::str_split(pattern = ",",subset)[[1]]))%>%mutate(weight = weight/choose(6,weight))%>%group_by(ptid)%>%
-#   summarize(poly_postassign=weighted.mean(posterior_new,weights),poly=weighted.mean(posterior,weights))%>%left_join(correlates%>%select(ptid,PFS))%>%
-#   do(data.frame(correlation=cor(.$poly,.$PFS)))
-# post%>%mutate(posterior_new = ifelse(assign==0,0,posterior))%>%group_by(ptid,subset)%>%mutate(weight=length(stringr::str_split(pattern = ",",subset)[[1]]))%>%mutate(weight = weight/choose(6,weight))%>%group_by(ptid)%>%
-#   summarize(poly_postassign=weighted.mean(posterior_new,weights),poly=weighted.mean(posterior,weights))%>%left_join(correlates%>%select(ptid,PFS))%>%
-#   ggplot()+geom_point()+aes(x=PFS,y=poly)+geom_smooth(method="lm")+theme_classic()+scale_y_continuous("Total Response")
+M <- 6
+weights <- nfunctions / (choose(M, nfunctions))
+poly <- apply(fit$posteriors[, -1], 1, function(x) weighted.mean(x, weights))
+post = gather(data=fit$posteriors,key = subset,value = posterior,-1)%>%left_join(preAssignment)
+
+post%>%mutate(posterior_new = ifelse(assign==0,0,posterior))%>%group_by(ptid,subset)%>%mutate(weight=length(stringr::str_split(pattern = ",",subset)[[1]]))%>%mutate(weight = weight/choose(6,weight))%>%group_by(ptid)%>%
+  summarize(poly_postassign=weighted.mean(posterior_new,weights),poly=weighted.mean(posterior,weights))%>%left_join(correlates%>%select(ptid,PFS))%>%
+  do(data.frame(correlation=cor(.$poly,.$PFS)))
+post%>%mutate(posterior_new = ifelse(assign==0,0,posterior))%>%group_by(ptid,subset)%>%mutate(weight=length(stringr::str_split(pattern = ",",subset)[[1]]))%>%mutate(weight = weight/choose(6,weight))%>%group_by(ptid)%>%
+  summarize(poly_postassign=weighted.mean(posterior_new,weights),poly=weighted.mean(posterior,weights))%>%left_join(correlates%>%select(ptid,PFS))%>%
+  ggplot()+geom_point()+aes(x=PFS,y=poly)+geom_smooth(method="lm")+theme_classic()+scale_y_continuous("Total Response")
 #
 # #outliers
 # post%>%mutate(posterior_new = ifelse(assign==0,0,posterior))%>%group_by(ptid,subset)%>%mutate(weight=length(stringr::str_split(pattern = ",",subset)[[1]]))%>%mutate(weight = weight/choose(6,weight))%>%group_by(ptid)%>%

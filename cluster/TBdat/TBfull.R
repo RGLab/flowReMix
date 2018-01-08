@@ -77,10 +77,10 @@ tempdat$subset <- factor(tempdat$subset)
 rm(tbdat)
 
 # Analysis Setting -------------
-configurations <- expand.grid(mcEM = c(TRUE, FALSE),
-                              seed = 1:20,
-                              npost = c(10, 20),
-                              niter = c(30, 60))
+configurations <- expand.grid(mcEM = c(TRUE),
+                              seed = 1:50,
+                              npost = c(20),
+                              niter = c(60))
 
 mcEM <- configurations[["mcEM"]][setting]
 seed <- configurations[["seed"]][setting]
@@ -128,7 +128,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/TBdat4_full_mcEM", as.integer(mcEM),
+file <- paste("results/TBdat5_full_mcEM", as.integer(mcEM),
               "seed", seed,
               "npost", npost,
               "niter", niter,

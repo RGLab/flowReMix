@@ -6,7 +6,7 @@
 #'@importFrom purrr flatten
 #'@importFrom purrr map
 #'@export
-aggregateModels = function(x, verbose=TRUE){
+aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
   if(is.list(x)){
       if(!all(unlist(flatten(map(.x = x, .f = function(z)inherits(z,"flowReMix")))))){
         stop("x must be a list of flowReMix model fits.", call. = FALSE)
@@ -82,7 +82,11 @@ aggregateModels = function(x, verbose=TRUE){
   output$isingCount = round(output$isingCount) #Should be an integer
   #next we compute the CIs
 
-  coef_summary = .summarizeCoefs(coefList)
+  if(summarizeCoefs) {
+    coef_summary = .summarizeCoefs(coefList)
+  } else {
+    coef_summary <- NULL
+  }
   post_summary = .summarizePost(postList)
   rownames(levelProbsMatrix) = colnames(this$posteriors)[-1L]
   levelProbs_summary = .summarizeLevelProbs(levelProbsMatrix)
@@ -102,7 +106,7 @@ aggregateModels = function(x, verbose=TRUE){
 #'@importFrom plyr ldply
 #'@importFrom tidyr gather
 #'@importFrom tidyr spread
-.averageModels <- function(output,this,i,x) {
+.averageModels <- function(output, this, i, x, hasIsing) {
   if(!all.equal(output$posteriors[,1],this$posteriors[,1])|!all.equal(output$data,this$data))
     stop("Models ",x[i], " and ", x[i-1]," are not compatible.")
   #running average of coefficients
@@ -113,13 +117,18 @@ aggregateModels = function(x, verbose=TRUE){
   output$randomEffects[,-1L] = as.data.frame(map2_df(output$randomEffects[,-1L],this$randomEffects[,-1L],function(x,y)x*(i-1)/i+y*1/i),check.names=FALSE)
   output$dispersion = map2_dbl(output$dispersion,this$dispersion,function(x,y)x*(i-1)/i+y*1/i)
   output$isingCov = matrix(map2_dbl(output$isingCov,this$isingCov,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingCov), dimnames = list(rownames(output$isingCov),colnames(output$isingCov)))
-  output$isingfit = matrix(map2_dbl(output$isingfit,this$isingfit,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingfit), dimnames = list(rownames(output$isingfit),colnames(output$isingfit)))
+  if(!is.null(output$isingfit)) {
+    output$isingfit = matrix(map2_dbl(output$isingfit,this$isingfit,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingfit), dimnames = list(rownames(output$isingfit),colnames(output$isingfit)))
+  }
   output$posteriors[,-1L] = as.data.frame(map2_df(output$posteriors[,-1L],this$posteriors[,-1L],function(x,y)x*(i-1)/i+y*1/i),check.names=FALSE)
   output$levelProbs = map2_dbl(output$levelProbs,this$levelProbs,function(x,y)x*(i-1)/i+y*1/i)
   output$isingAvg = matrix(map2_dbl(output$isingAvg,this$isingAvg,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingAvg), dimnames = list(rownames(output$isingAvg),colnames(output$isingAvg)))
   output$isingVar = matrix(map2_dbl(output$isingVar,this$isingVar,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingVar), dimnames = list(rownames(output$isingVar),colnames(output$isingVar)))
   output$isingCount = matrix(map2_dbl(output$isingCount,this$isingCount,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingCount), dimnames = list(rownames(output$isingCount),colnames(output$isingCount)))
-  output$isingStability$network = NULL
+  if(!is.null(output$isingStability)) {
+    output$isingStability$network = matrix(map2_dbl(output$isingStability$network,this$isingStability$network,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(this$isingCount), dimnames = list(rownames(this$isingStability$network),colnames(this$isingStability$network)))
+  }
+
   #set the class
   if(!inherits(output,"flowReMixAggregate"))
     class(output) = c(class(output),"flowReMixAggregate")

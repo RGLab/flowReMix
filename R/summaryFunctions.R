@@ -35,10 +35,10 @@ plot.flowReMix <- function(x, target = NULL, varname = NULL,
 
   if(type == "FDR") {
     table <- fdrTable(obj = x, target = target)
-    mc[[1]] = as.name("plot")
-    mc$obj = table
-    mc$target = NULL
-    return(eval(mc,envir = parent.frame()))
+    # mc[[1]] = as.name("plot")
+    # mc$obj = table
+    # mc$target = NULL
+    return(plot(table))
   } else if(type == "ROC") {
     # mc[[1]] = as.name("flowReMix:::plotROC")
     mc[[1]] = getFromNamespace("plotROC",ns = "flowReMix")
@@ -141,7 +141,7 @@ summary.flowReMix <- function(object, target, type = c("ROC", "FDR"), direction 
                          pvalue = test, sortAUC = sortAUC,...)
     return(table)
   } else if(type == "FDR") {
-    return(fdrTable(object, ifelse(is.factor(outcome),outcome,factor(outcome))))
+    return(fdrTable(object, outcome))
   } else {
     stop("Unknown summary method!")
   }

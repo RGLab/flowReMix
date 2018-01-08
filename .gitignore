@@ -12,5 +12,6 @@ tables/*
 write-ups/*
 figures/*
 presentation/*
+tex/*
 
 .Rproj.user
