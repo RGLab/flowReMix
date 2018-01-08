@@ -117,5 +117,6 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  verbose = FALSE, control = control)
 
+<<<<<<< HEAD
 saveRDS(fit, file = paste0("TBfit_",index%%1+1,"_seed_",seed[index],".rds"))
 system("sync")
