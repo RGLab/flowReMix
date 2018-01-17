@@ -23,11 +23,12 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
   coefList = list()
   postList = list()
   levelProbsMatrix = NULL
-
+  models=list()
   if(TYPE=="list"){
     if(verbose){
       pb = txtProgressBar(min = 1, max = length(x),style=3)
     }
+    models=x #list of all models
     #average each
     output = x[[1L]]
     coefList = c(coefList,list(output$coefficients))
@@ -53,6 +54,7 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
     }
     for(i in seq_along(x)){
       this = try(readRDS(x[i]),silent==TRUE)
+      models[[i]]=this #keep a list of all models
       if(verbose){
         setTxtProgressBar(pb,i)
       }
@@ -96,6 +98,7 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
   output$postList = postList
   output$levelProbs_summary = levelProbs_summary
   output$levelProbsMatrix = levelProbsMatrix
+  output$models=models #return a list of all models as part of the averaged fit.
   return(output)
 }
 
