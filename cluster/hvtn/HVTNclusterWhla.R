@@ -1,4 +1,4 @@
-cpus <- 5
+cpus <- 8
 print(cpus)
 
 args <- commandArgs(TRUE)
@@ -66,27 +66,34 @@ marginals <- merge(marginals, negctrl, all.x = TRUE)
 #   theme_bw() +
 #   geom_abline(intercept = 0, slope = 1)
 
+# Setting up data for analysis ---------------------------
+unique(marginals$stim)
+gag <- subset(marginals, stim %in% c("VRC GAG B", "negctrl"))
+gag$subset <- factor(paste("gag", gag$population, sep = "/"))
+gag$stimGroup <- "gag"
+pol <-subset(marginals, stim %in% c("negctrl", "VRC POL 1 B", "VRC POL 2 B"))
+pol$subset <- factor(paste("pol", pol$population, sep = "/"))
+pol$stimGroup <- "pol"
+env <- subset(marginals, stim %in% c("negctrl", "VRC ENV C", "VRC ENV B", "VRC ENV A"))
+env$subset <- factor(paste("env", env$population, sep = "/"))
+env$stimGroup <- "env"
+nef <- subset(marginals, stim %in% c("negctrl", "VRC NEF B"))
+nef$subset <- factor(paste("nef", nef$population, sep = "/"))
+nef$stimGroup <- "nef"
+subsetDat <- rbind(gag, pol, env, nef)
+subsetDat$stim <- as.character(subsetDat$stim)
+subsetDat$stim[subsetDat$stim == "negctrl"] <- 0
+subsetDat$stim <- factor(subsetDat$stim)
+
 # Converting subset names ------------------
-subsets <- as.character(unique(marginals$population))
+subsets <- as.character(unique(subsetDat$subset))
 expressed <- sapply(subsets, getExpression)
 map <- cbind(subsets, expressed)
-marginals$population <- as.character(marginals$population)
+subsetDat$subset <- as.character(subsetDat$subset)
 for(i in 1:nrow(map)) {
-  marginals$population[which(marginals$population == map[i, 1])] <- map[i, 2]
+  subsetDat$subset[which(subsetDat$subset == map[i, 1])] <- map[i, 2]
 }
-marginals$population <- factor(marginals$population)
-
-# Setting up data for analysis ---------------------------
-subsetDat <- stimulationModel(marginals,
-                              cell_type = population,
-                              stim_var = stim,
-                              stim_groups = list(gag = "VRC GAG B",
-                                                 pol = c("VRC POL 1 B", "VRC POL 2 B"),
-                                                 env = c("VRC ENV C", "VRC ENV B", "VRC ENV A"),
-                                                 nef = "VRC NEF B"),
-                              controls = c("negctrl"))
-subsetDat$subset <- subsetDat$stimCellType
-subsetDat$stimCellType <- NULL
+subsetDat$subset <- factor(subsetDat$subset)
 
 # Getting outcomes -------------------------------
 # treatmentdat <- read.csv(file = "data/rx_v2.csv")
@@ -96,41 +103,53 @@ subsetDat$stimCellType <- NULL
 
 # Finding problematic subsets?
 keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$count > 1) > 0.02)
+# keep <- by(subsetDat, list(subsetDat$subset), function(x) sum(x$count > 5) > 2)
 keep <- names(keep[sapply(keep, function(x) x)])
+#result$subsets[result$qvals < 0.1] %in% keep
 subsetDat <- subset(subsetDat, subset %in% keep)
 subsetDat$subset <- factor(as.character(subsetDat$subset))
 
-keep <- by(marginals, list(marginals$population), function(x) mean(x$count > 1) > 0.02)
-keep <- names(keep[sapply(keep, function(x) x)])
-marginals <- subset(marginals, population %in% keep)
-marginals$population <- factor(as.character(marginals$population))
-
 configurations <- expand.grid(method = c("MC"),
-                              seed = 1:30,
-                              maxdisp = c(10, 50),
+                              seed = 1:50,
+                              prior = c(0),
                               niter = c(60),
                               includeBatch = FALSE)
 config <- configurations[setting, ]
 print(config)
 niter <- config[["niter"]]
 seed <- config[["seed"]]
-prior <- 0
-maxdisp <- config[["maxdisp"]]
+prior <- config[["prior"]]
 method <- config[["method"]]
 includeBatch <- config[["includeBatch"]]
 if(method == "MC") {
-  npost <- 3
+  npost <- 1 #3
   lag <- round(niter / 3)
   keepeach <- 5
   mcEM <- TRUE
 }
+
+# Keeping max collection -----
+subsetDat$batch <- factor(subsetDat$batch..)
+subsetDat$stimGroup <- factor(subsetDat$stimGroup)
+subsetDat <- data.frame(subsetDat %>% group_by(ptid,population,stim,stimGroup,parent) %>% filter(collection.num==max(collection.num)))
+subsetDat$batch <- factor(as.character(subsetDat$batch), levels = unique(as.character(subsetDat$batch)))
+
+# Merging with hla -------
+hla <- read.csv("data/p505_HLA_category.csv")
+names(hla) <- tolower(names(hla))
+subsetDat <- merge(subsetDat, hla, all.x = TRUE, all.y = FALSE)
+# hla_status <- subsetDat %>% select(ptid, hla_cat) %>% unique() %>%
+#   select(hla_cat) %>% table(useNA = "ifany")
+subsetDat$hla_cat <- as.character(subsetDat$hla_cat)
+subsetDat$hla_cat[is.na(subsetDat$hla_cat)] <- "miss"
+subsetDat$hla_cat <- as.factor(subsetDat$hla_cat)
 
 # Fitting the model ------------------------------
 library(flowReMix)
 control <- flowReMix_control(updateLag = lag, nsamp = 50,
                              keepEach = keepeach, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
-                             maxDispersion = maxdisp * 1000, minDispersion = 10^7,
+                             maxDispersion = 10^4 * 5, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              seed = seed, zeroPosteriorProbs = FALSE,
                              ncores = cpus, preAssignCoefs = 1,
@@ -139,38 +158,20 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50,
                              initMethod = "robust",
                              learningRate = 0.6, keepWeightPercent = 0.9)
 
-subsetDat$batch <- factor(subsetDat$batch..)
-subsetDat$stimGroup <- factor(subsetDat$stimGroup)
-subsetDat <- subsetDat %>% group_by(ptid,population,stim,stimGroup,parent) %>%
-  filter(collection.num==max(collection.num)) %>% data.frame()
-marginals <- marginals %>% group_by(ptid, population, stim ,parent) %>%
-  filter(collection.num==max(collection.num)) %>% data.frame()
-# preAssign <- by(subsetDat, subsetDat$ptid, assign)
-# preAssign <- do.call("rbind", preAssign)
-subsetDat$batch <- factor(as.character(subsetDat$batch), levels = unique(as.character(subsetDat$batch)))
-# unique(data.frame(subsetDat$ptid, subsetDat$batch))
-# by(subsetDat, subsetDat$subset, function(x) table(x$batch))
-
-fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
+fit <- flowReMix(cbind(count, parentcount - count) ~ stim * hla_cat,
                  subject_id = ptid,
-                 cell_type = population,
+                 cell_type = subset,
                  cluster_variable = stim,
-                 data = marginals,
+                 data = subsetDat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "firth",
+                 regression_method = "robust",
                  iterations = niter,
                  parallel = TRUE, keepSamples = TRUE,
                  cluster_assignment = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_firthStims_A",
-              "_maxdisp", maxdisp,
-              "_niter", niter,
-              "npost", npost,
-              "seed", seed,
-              "prior", prior,
-              method, ".rds", sep = "")
+file <- paste("results/hvtn_hla_1_1045_niter", niter, "npost", npost, "seed", seed, "prior", prior, method, ".rds", sep = "")
 print(file)
 saveRDS(object = fit, file = file)
 stab <- stabilityGraph(fit, type = "ising", cpus = cpus, AND = TRUE,

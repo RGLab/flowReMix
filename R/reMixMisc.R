@@ -1,3 +1,75 @@
+#' Preparing a Dataset for a Stimulation Respone Analysis with flowReMix
+#'
+#' Given a dataset and a list of stimulation groups, the function pairs each
+#' stimulation group with control stimulations and defines a new cell_type variable
+#' which is the interaction of the previous cell type with stimulation group.
+#'
+#' @param data the data set to be transformed.
+#'
+#' @param cell_type a factor vector identifying which cell type each row in the data
+#' refers to.
+#'
+#' @param stim_var a vector identifying the which stimulation each row in the data refers to.
+#'
+#' @param controls a vector identifying which of the stimulations are controls.
+#'
+#' @param stim_groups a list detailing which stimulations are to be grouped together.
+#'
+#' @export
+stimulationModel <- function(data, cell_type, stim_var, controls, stim_groups) {
+  mc <- match.call()
+
+  err0 <- length(stim_groups) == 1
+  err1 <- !is.list(stim_groups)
+
+  if(err0 | err1) {
+    stop("stim_groups must be a list, each component of which is a vector of related stimulations.
+         If there is only one group of stimulation, then there is no need to use this function.")
+  }
+
+  for(j in 1:length(stim_groups)) {
+    if(any(controls %in% stim_groups[[j]])) {
+      stop("The control stimulations must not be a part of any of the stimulation groups")
+    }
+  }
+
+  stimvec <- data[[mc$stim_var]]
+  stimvec <- as.character(stimvec)
+  if(!any(controls %in% unique(stimvec))) {
+    stop("Can't find control stimulation in the dataset!")
+  }
+
+  notInGroups <- subset(unique(stimvec), !(unique(stimvec) %in% unlist(stim_groups)))
+  notInGroups <- subset(notInGroups, !(notInGroups %in% controls))
+  if(length(notInGroups) > 0) {
+    warning(paste("The following stimulations are not in stim_groups:", notInGroups, collapse = ", "))
+  }
+
+  stimvec[stimvec %in% controls] <- "ctrl"
+  stimlevels <- unique(stimvec) %>% subset(., . != "ctrl") %>% c("ctrl", .)
+  stimvec <- factor(stimvec, levels = stimlevels)
+  data[[mc$stim_var]] <- stimvec
+  ctrldat <- subset(data, stimvec == "ctrl")
+  if(is.null(names(stim_groups)) | any(is.na(names(stim_groups)))) {
+    sNames <- sapply(stim_groups, function(x) x[1])
+  } else {
+    sNames <- names(stim_groups)
+  }
+  subdat <- vector(length(stim_groups), mode = "list")
+  for(i in 1:length(subdat)) {
+    subdat[[i]] <- subset(data, stimvec %in% stim_groups[[i]]) %>% rbind(ctrldat)
+    subdat[[i]]$stimGroup <- sNames[i]
+  }
+
+  subdat <- do.call("rbind", subdat)
+  subdat$stimCellType <- interaction(subdat$stimGroup, subdat[[mc$cell_type]], sep = "/")
+
+  message("To fit the stimulation response model, run flowReMix with `cell_type = stimCellType'.")
+  return(subdat)
+}
+
+
+
 #' Auxiliary for Controlling flowReMix Fitting.
 #'
 #' @description Auxiliary function for \code{\link{flowReMix}} fitting. Can be

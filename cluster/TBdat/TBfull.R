@@ -1,7 +1,7 @@
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-ncores <- 8
+ncores <- 4
 
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
@@ -74,32 +74,36 @@ stimkeep <- c("P", "MP", "Mtbaux")
 tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep))
 #tempdat$stim <- factor(tempdat$stim, levels = c("ctrl", stimkeep))
 tempdat$subset <- factor(tempdat$subset)
+tempdat$allstims <- interaction(tempdat$parent, tempdat$population, drop = TRUE, sep ="/")
 rm(tbdat)
 
 # Analysis Setting -------------
 configurations <- expand.grid(mcEM = c(TRUE),
-                              seed = 1:50,
-                              npost = c(20),
+                              seed = 1:30,
+                              maxdisp = c(10, 50),
+                              npost = c(10),
                               niter = c(60))
 
 mcEM <- configurations[["mcEM"]][setting]
 seed <- configurations[["seed"]][setting]
 npost <- configurations[["npost"]][setting]
 niter <- configurations[["niter"]][setting]
+maxdisp <- configurations[["maxdisp"]][setting]
 lag <- round(niter / 3)
 
 # Analysis ----------------------------------
 control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
                              keepEach = 5,
                              nPosteriors = npost, centerCovariance = TRUE,
-                             maxDispersion = 10^3, minDispersion = 10^7,
+                             maxDispersion = maxdisp * 1000, minDispersion = 10^8,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = NULL, isingInit = -log(99),
+                             lastSample = NULL, isingInit = -7,
                              markovChainEM = mcEM,
                              initMethod = "robust",
                              preAssignCoefs = 1,
                              seed = seed,
                              ncores = ncores,
+                             prior = -0.5,
                              isingWprior = FALSE,
                              zeroPosteriorProbs = FALSE,
                              isingStabilityReps = 100,
@@ -122,13 +126,14 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  data = tempdat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "robust",
+                 regression_method = "firth",
                  cluster_assignment = TRUE,
                  iterations = niter,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/TBdat5_full_mcEM", as.integer(mcEM),
+file <- paste("results/TBdat_firthStims_A_",
+              "disp", maxdisp,
               "seed", seed,
               "npost", npost,
               "niter", niter,

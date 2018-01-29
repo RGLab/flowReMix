@@ -59,7 +59,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  data = data.frame(data),
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "robust",
+                 regression_method = "firth",
                  iterations = 20, parallel = TRUE,
                  cluster_assignment = TRUE, keepSamples = FALSE,
                  verbose = TRUE, control = control, newSampler = FALSE))
