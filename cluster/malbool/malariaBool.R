@@ -1,4 +1,6 @@
 library(flowReMix)
+library(magrittr)
+library(dplyr)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -74,7 +76,7 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
 
 malbool$allstims <- malbool$subset %>% as.character() %>%
   strsplit("/") %>% sapply(function(x) paste(x[-1], collapse = "/")) %>%
-  unlist() %>% factor()
+  factor()
 
 # Analysis --------
 fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,

@@ -1,0 +1,182 @@
+
+R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(flowReMix)
+> library(magrittr)
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> args <- commandArgs(TRUE)
+> eval(parse(text=args[[1]]))
+> setting <- as.numeric(setting)
+> ncores <- 6
+> 
+> # Loading data ----
+> malbool <- readRDS("data/malaria_booleans.rds")
+> names(malbool) <- tolower(names(malbool))
+> 
+> # Setting up stimulations -----
+> malbool$subset <- with(malbool, (interaction(parent, population, sep = "/")))
+> malbool$stim <- as.character(malbool$stim)
+> malbool$stim[malbool$stim == "Cells Only"] <- "ctrl"
+> malbool$stim[malbool$stim == "ctr SPZ"] <- "ctrl"
+> malbool$stim[malbool$stim == "PfSPZ"] <- "SPZ"
+> malbool$stimgroup <- "SPZ"
+> malbool$stimgroup[malbool$stim %in% c("uRBC", "PfRBC")] <- "RBC"
+> malbool$stim[malbool$stim == "uRBC"] <- "ctrl"
+> malbool$stim <- factor(malbool$stim)
+> 
+> # Defining and screening subsets ---
+> malbool$subset <- factor(with(malbool, (interaction(stimgroup, subset, sep = "/"))))
+> counts <- by(malbool, list(malbool$subset), function(x) x$count)
+> dropsubsets <- sapply(counts, function(x) mean(x >= 2) < 0.15)
+> names(counts)[!dropsubsets]
+ [1] "RBC/4+/EM/IL2+"                 "RBC/4+/Naive/IL2+"             
+ [3] "SPZ/4+/Naive/IL2+"              "RBC/4+/EM/TNFa+"               
+ [5] "RBC/4+/EM/IFNg+"                "SPZ/4+/EM/IFNg+"               
+ [7] "RBC/4+/CM/GzB+"                 "SPZ/4+/CM/GzB+"                
+ [9] "RBC/4+/CXCR5+/CM/GzB+"          "SPZ/4+/CXCR5+/CM/GzB+"         
+[11] "RBC/4+/CXCR5+/EM/GzB+"          "SPZ/4+/CXCR5+/EM/GzB+"         
+[13] "RBC/4+/CXCR5+/Naive/GzB+"       "SPZ/4+/CXCR5+/Naive/GzB+"      
+[15] "RBC/4+/CXCR5+/TD/GzB+"          "SPZ/4+/CXCR5+/TD/GzB+"         
+[17] "RBC/4+/EM/GzB+"                 "SPZ/4+/EM/GzB+"                
+[19] "RBC/4+/Naive/GzB+"              "SPZ/4+/Naive/GzB+"             
+[21] "RBC/4+/TD/GzB+"                 "SPZ/4+/TD/GzB+"                
+[23] "RBC/CXCR5+/PD-1+/CM/GzB+"       "SPZ/CXCR5+/PD-1+/CM/GzB+"      
+[25] "RBC/CXCR5+/PD-1+/EM/GzB+"       "SPZ/CXCR5+/PD-1+/EM/GzB+"      
+[27] "RBC/CXCR5+/PD-1+/Naive/GzB+"    "SPZ/CXCR5+/PD-1+/Naive/GzB+"   
+[29] "RBC/CXCR5+/PD-1+/TD/GzB+"       "SPZ/CXCR5+/PD-1+/TD/GzB+"      
+[31] "RBC/4+/CM/IL21+"                "SPZ/4+/CM/IL21+"               
+[33] "RBC/4+/CXCR5+/CM/IL21+"         "SPZ/4+/CXCR5+/Naive/IL21+"     
+[35] "RBC/4+/EM/IL21+"                "SPZ/4+/EM/IL21+"               
+[37] "RBC/4+/Naive/IL21+"             "SPZ/4+/Naive/IL21+"            
+[39] "RBC/4+/CM/IL4+"                 "SPZ/4+/CM/IL4+"                
+[41] "RBC/4+/CM/CD154+"               "SPZ/4+/CM/CD154+"              
+[43] "RBC/4+/CXCR5+/CM/CD154+"        "SPZ/4+/CXCR5+/CM/CD154+"       
+[45] "RBC/4+/CXCR5+/EM/CD154+"        "SPZ/4+/CXCR5+/EM/CD154+"       
+[47] "RBC/4+/CXCR5+/Naive/CD154+"     "SPZ/4+/CXCR5+/Naive/CD154+"    
+[49] "RBC/4+/EM/CD154+"               "SPZ/4+/EM/CD154+"              
+[51] "RBC/4+/Naive/CD154+"            "SPZ/4+/Naive/CD154+"           
+[53] "RBC/4+/TD/CD154+"               "SPZ/4+/TD/CD154+"              
+[55] "RBC/CXCR5+/PD-1+/CM/CD154+"     "SPZ/CXCR5+/PD-1+/CM/CD154+"    
+[57] "RBC/CXCR5+/PD-1+/EM/CD154+"     "SPZ/CXCR5+/PD-1+/EM/CD154+"    
+[59] "RBC/4+/Naive/IL2+GzB+"          "RBC/4+/EM/IFNg+GzB+"           
+[61] "SPZ/4+/EM/IFNg+GzB+"            "RBC/4+/Naive/GzB+IL21+"        
+[63] "SPZ/4+/Naive/GzB+IL21+"         "RBC/4+/EM/IL2+CD154+"          
+[65] "RBC/4+/CM/TNFa+CD154+"          "RBC/4+/EM/TNFa+CD154+"         
+[67] "SPZ/4+/EM/TNFa+CD154+"          "RBC/4+/EM/IFNg+CD154+"         
+[69] "SPZ/4+/EM/IFNg+CD154+"          "RBC/4+/CM/GzB+CD154+"          
+[71] "SPZ/4+/CM/GzB+CD154+"           "SPZ/4+/CXCR5+/CM/GzB+CD154+"   
+[73] "RBC/4+/CXCR5+/EM/GzB+CD154+"    "SPZ/4+/CXCR5+/EM/GzB+CD154+"   
+[75] "RBC/4+/EM/GzB+CD154+"           "SPZ/4+/EM/GzB+CD154+"          
+[77] "RBC/4+/Naive/GzB+CD154+"        "SPZ/4+/Naive/GzB+CD154+"       
+[79] "RBC/4+/TD/GzB+CD154+"           "SPZ/4+/TD/GzB+CD154+"          
+[81] "RBC/CXCR5+/PD-1+/EM/GzB+CD154+" "RBC/4+/EM/IL21+CD154+"         
+[83] "SPZ/4+/EM/IL21+CD154+"          "RBC/4+/CM/IL2+TNFa+CD154+"     
+[85] "RBC/4+/EM/IL2+TNFa+CD154+"      "RBC/4+/EM/TNFa+IFNg+CD154+"    
+[87] "RBC/4+/EM/TNFa+GzB+CD154+"      "RBC/4+/EM/IFNg+GzB+CD154+"     
+[89] "SPZ/4+/EM/IFNg+GzB+CD154+"      "RBC/4+/EM/IL2+TNFa+IFNg+CD154+"
+[91] "RBC/4+/EM/TNFa+IFNg+GzB+CD154+"
+> malbool$subset <- as.character(malbool$subset)
+> malbool <- subset(malbool, subset %in% names(counts)[!dropsubsets])
+> malbool$subset <- factor(malbool$subset)
+> 
+> # Setting correct order for visits ---
+> malbool$visitno <- as.character(malbool$visitno)
+> malbool$visitno[malbool$visitno %in% c("Day 13-Pos (day of blood stage parasitemia)",
++                                        "Day 14-Pos (day of blood stage parasitemia)",
++                                        "Day 19-Pos (day of blood stage parasitemia)",
++                                        "Day 11-Pos (day of blood stage parasitemia)",
++                                        "Day 17-Pos (day of blood stage parasitemia)")] <- "pos"
+> malbool$visitno <- factor(malbool$visitno, levels = c("Day 0", "Day 9", "pos", "Day 28", "Day 56", "Day 168"))
+> 
+> # Analysis Parameters -----
+> configurations <- expand.grid(iterations = c(60),
++                               mcEM = TRUE,
++                               disp = c(10, 50),
++                               npost = c(20),
++                               seed = 1:30)
+> config <- configurations[setting, ]
+> niter <- config[["iterations"]]
+> lag <- round(niter / 3)
+> mcEM <- config[["mcEM"]]
+> npost <- config[["npost"]]
+> seed <- config[["seed"]]
+> disp <- config[["disp"]]
+> stabilityReps <- 50
+> 
+> # Control Object --------
+> control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
++                              keepEach = 5,
++                              nPosteriors = npost, centerCovariance = TRUE,
++                              maxDispersion = disp * 1000, minDispersion = 10^7,
++                              randomAssignProb = 10^-8, intSampSize = 50,
++                              lastSample = NULL, isingInit = -log(99),
++                              markovChainEM = mcEM,
++                              initMethod = "robust",
++                              preAssignCoefs = 1,
++                              seed = seed,
++                              ncores = ncores,
++                              isingWprior = FALSE,
++                              zeroPosteriorProbs = FALSE,
++                              isingStabilityReps = stabilityReps,
++                              randStabilityReps = 0,
++                              learningRate = 0.75,
++                              keepWeightPercent = 0.9,
++                              sampleNew = FALSE)
+> 
+> malbool$allstims <- malbool$subset %>% as.character() %>%
++   strsplit("/") %>% sapply(function(x) paste(x[-1], collapse = "/")) %>%
++   factor()
+> 
+> # Analysis --------
+> fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
++                  subject_id = ptid,
++                  cell_type = allstims,
++                  cluster_variable = visitno,
++                  data = malbool,
++                  covariance = "sparse",
++                  ising_model = "sparse",
++                  regression_method = "firth",
++                  cluster_assignment = TRUE,
++                  iterations = niter,
++                  parallel = TRUE,
++                  verbose = TRUE, control = control)
+Computing in parallel on 6 cores
+[1] "Initializing Regression Equations"
+Loading required package: foreach
+Loading required package: rngtools
+Loading required package: pkgmaker
+Loading required package: registry
+
+Attaching package: ‘pkgmaker’
+
+The following object is masked from ‘package:base’:
+
+    isNamespaceLoaded
+

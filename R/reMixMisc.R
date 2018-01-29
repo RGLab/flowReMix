@@ -33,7 +33,8 @@ stimulationModel <- function(data, cell_type, stim_var, controls, stim_groups) {
     }
   }
 
-  stimvec <- data[[mc$stim_var]]
+  stimname <- as.character(mc$stim_var)
+  stimvec <- data[[stimname]]
   stimvec <- as.character(stimvec)
   if(!any(controls %in% unique(stimvec))) {
     stop("Can't find control stimulation in the dataset!")
@@ -62,7 +63,7 @@ stimulationModel <- function(data, cell_type, stim_var, controls, stim_groups) {
   }
 
   subdat <- do.call("rbind", subdat)
-  subdat$stimCellType <- interaction(subdat$stimGroup, subdat[[mc$cell_type]], sep = "/")
+  subdat$stimCellType <- interaction(subdat$stimGroup, subdat[[stimname]], sep = "/")
 
   message("To fit the stimulation response model, run flowReMix with `cell_type = stimCellType'.")
   return(subdat)

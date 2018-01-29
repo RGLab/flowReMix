@@ -1,0 +1,299 @@
+
+R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(flowReMix)
+> library(magrittr)
+> require(dplyr)
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(ggplot2)
+> cpus <- 5
+> print(cpus)
+[1] 5
+> 
+> args <- commandArgs(TRUE)
+> eval(parse(text=args[[1]]))
+> setting <- as.numeric(setting)
+> 
+> getExpression <- function(str) {
++   first <- substr(str, 1, 7)
++   second <- substr(str, 8, nchar(str))
++   second <- strsplit(second, "")[[1]]
++   seperators <- c(0, which(second %in% c("-", "+")))
++   expressed <- list()
++   for(i in 2:length(seperators)) {
++     if(second[seperators[i]] == "+") {
++       expressed[[i]] <- paste(second[(seperators[(i - 1)] + 1) : seperators[i]], collapse = '')
++     }
++   }
++ 
++   expressed <- paste(unlist(expressed), collapse = '')
++   expressed <- paste(first, expressed, sep = '')
++   return(expressed)
++ }
+> 
+> # Loading Data --------------------------------
+> # hvtn <- read.csv(file = "data/merged_505_stats.csv")
+> # names(hvtn) <- tolower(names(hvtn))
+> # hvtn <- subset(hvtn, !is.na(ptid))
+> # saveRDS(hvtn, file = "data/505_stats.rds")
+> 
+> # Getting marginals -----------------------------
+> library(flowReMix)
+> hvtn <- readRDS(file = "data/505_stats.rds")
+> length(unique(hvtn$name))
+[1] 4130
+> length(unique(hvtn$ptid))
+[1] 238
+> length(unique(hvtn$population))
+[1] 82
+> unique(hvtn$population)
+ [1] 4+                         4+/107a+                  
+ [3] 4+/107a+154+IFNg+IL2+TNFa+ 4+/107a+154+IFNg+IL2+TNFa-
+ [5] 4+/107a+154+IFNg+IL2-TNFa+ 4+/107a+154+IFNg+IL2-TNFa-
+ [7] 4+/107a+154+IFNg-IL2+TNFa+ 4+/107a+154+IFNg-IL2+TNFa-
+ [9] 4+/107a+154+IFNg-IL2-TNFa+ 4+/107a+154+IFNg-IL2-TNFa-
+[11] 4+/107a+154-IFNg+IL2+TNFa+ 4+/107a+154-IFNg+IL2+TNFa-
+[13] 4+/107a+154-IFNg+IL2-TNFa+ 4+/107a+154-IFNg+IL2-TNFa-
+[15] 4+/107a+154-IFNg-IL2+TNFa+ 4+/107a+154-IFNg-IL2+TNFa-
+[17] 4+/107a+154-IFNg-IL2-TNFa+ 4+/107a+154-IFNg-IL2-TNFa-
+[19] 4+/107a-154+IFNg+IL2+TNFa+ 4+/107a-154+IFNg+IL2+TNFa-
+[21] 4+/107a-154+IFNg+IL2-TNFa+ 4+/107a-154+IFNg+IL2-TNFa-
+[23] 4+/107a-154+IFNg-IL2+TNFa+ 4+/107a-154+IFNg-IL2+TNFa-
+[25] 4+/107a-154+IFNg-IL2-TNFa+ 4+/107a-154+IFNg-IL2-TNFa-
+[27] 4+/107a-154-IFNg+IL2+TNFa+ 4+/107a-154-IFNg+IL2+TNFa-
+[29] 4+/107a-154-IFNg+IL2-TNFa+ 4+/107a-154-IFNg+IL2-TNFa-
+[31] 4+/107a-154-IFNg-IL2+TNFa+ 4+/107a-154-IFNg-IL2+TNFa-
+[33] 4+/107a-154-IFNg-IL2-TNFa+ 4+/107a-154-IFNg-IL2-TNFa-
+[35] 4+/154+                    4+/GzB                    
+[37] 4+/IFNg+                   4+/IFNg\\IL2              
+[39] 4+/IL2+                    4+/IL4+                   
+[41] 4+/TNFa+                   8+                        
+[43] 8+/107a+                   8+/107a+154+IFNg+IL2+TNFa+
+[45] 8+/107a+154+IFNg+IL2+TNFa- 8+/107a+154+IFNg+IL2-TNFa+
+[47] 8+/107a+154+IFNg+IL2-TNFa- 8+/107a+154+IFNg-IL2+TNFa+
+[49] 8+/107a+154+IFNg-IL2+TNFa- 8+/107a+154+IFNg-IL2-TNFa+
+[51] 8+/107a+154+IFNg-IL2-TNFa- 8+/107a+154-IFNg+IL2+TNFa+
+[53] 8+/107a+154-IFNg+IL2+TNFa- 8+/107a+154-IFNg+IL2-TNFa+
+[55] 8+/107a+154-IFNg+IL2-TNFa- 8+/107a+154-IFNg-IL2+TNFa+
+[57] 8+/107a+154-IFNg-IL2+TNFa- 8+/107a+154-IFNg-IL2-TNFa+
+[59] 8+/107a+154-IFNg-IL2-TNFa- 8+/107a-154+IFNg+IL2+TNFa+
+[61] 8+/107a-154+IFNg+IL2+TNFa- 8+/107a-154+IFNg+IL2-TNFa+
+[63] 8+/107a-154+IFNg+IL2-TNFa- 8+/107a-154+IFNg-IL2+TNFa+
+[65] 8+/107a-154+IFNg-IL2+TNFa- 8+/107a-154+IFNg-IL2-TNFa+
+[67] 8+/107a-154+IFNg-IL2-TNFa- 8+/107a-154-IFNg+IL2+TNFa+
+[69] 8+/107a-154-IFNg+IL2+TNFa- 8+/107a-154-IFNg+IL2-TNFa+
+[71] 8+/107a-154-IFNg+IL2-TNFa- 8+/107a-154-IFNg-IL2+TNFa+
+[73] 8+/107a-154-IFNg-IL2+TNFa- 8+/107a-154-IFNg-IL2-TNFa+
+[75] 8+/107a-154-IFNg-IL2-TNFa- 8+/154+                   
+[77] 8+/GzB                     8+/IFNg+                  
+[79] 8+/IFNg\\IL2               8+/IL2+                   
+[81] 8+/IL4+                    8+/TNFa+                  
+82 Levels: 4+ 4+/107a-154-IFNg-IL2-TNFa- ... 8+/TNFa+
+> unique(hvtn$stim)
+ [1] phactrl         negctrl         VRC ENV A       VRC ENV B      
+ [5] VRC ENV C       VRC GAG B       VRC NEF B       VRC POL 1 B    
+ [9] VRC POL 2 B     CMV             GTS negctrl     Empty Ad5 (VRC)
+12 Levels: CMV Empty Ad5 (VRC) GTS negctrl negctrl phactrl ... VRC POL 2 B
+> nchars <- nchar(as.character(unique(hvtn$population)))
+> #marginals <- unique(hvtn$population)[nchars < 26]
+> marginals <- unique(hvtn$population)[nchars == 26]
+> marginals <- subset(hvtn, population %in% marginals)
+> marginals <- subset(marginals, stim %in% c("negctrl", "VRC ENV A",
++                                            "VRC ENV B", "VRC ENV C",
++                                            "VRC GAG B", "VRC NEF B",
++                                            "VRC POL 1 B", "VRC POL 2 B"))
+> marginals <- subset(marginals, !(population %in% c("4+", "8+")))
+> marginals <- subset(marginals, !(population %in% c("8+/107a-154-IFNg-IL2-TNFa-", "4+/107a-154-IFNg-IL2-TNFa-")))
+> marginals$stim <- factor(as.character(marginals$stim))
+> marginals$population <- factor(as.character(marginals$population))
+> 
+> # Descriptives -------------------------------------
+> marginals$prop <- marginals$count / marginals$parentcount
+> # ggplot(marginals) + geom_boxplot(aes(x = population, y = log(prop), col = stim))
+> 
+> negctrl <- subset(marginals, stim == "negctrl")
+> negctrl <- summarize(group_by(negctrl, ptid, population), negprop = mean(prop))
+> negctrl <- as.data.frame(negctrl)
+> marginals <- merge(marginals, negctrl, all.x = TRUE)
+> 
+> # ggplot(subset(marginals, stim != "negctrl" & parent == "4+")) +
+> #   geom_point(aes(x = log(negprop), y = log(prop)), size = 0.25) +
+> #   facet_grid(stim ~ population, scales = "free") +
+> #   theme_bw() +
+> #   geom_abline(intercept = 0, slope = 1)
+> 
+> # Converting subset names ------------------
+> subsets <- as.character(unique(marginals$population))
+> expressed <- sapply(subsets, getExpression)
+> map <- cbind(subsets, expressed)
+> marginals$population <- as.character(marginals$population)
+> for(i in 1:nrow(map)) {
++   marginals$population[which(marginals$population == map[i, 1])] <- map[i, 2]
++ }
+> marginals$population <- factor(marginals$population)
+> 
+> # Setting up data for analysis ---------------------------
+> subsetDat <- stimulationModel(marginals,
++                               cell_type = population,
++                               stim_var = stim,
++                               stim_groups = list(gag = "VRC GAG B",
++                                                  pol = c("VRC POL 1 B", "VRC POL 2 B"),
++                                                  env = c("VRC ENV C", "VRC ENV B", "VRC ENV A"),
++                                                  nef = "VRC NEF B"),
++                               controls = c("negctrl"))
+To fit the stimulation response model, run flowReMix with `cell_type = stimCellType'.
+> subsetDat$subset <- subsetDat$stimCellType
+> subsetDat$stimCellType <- NULL
+> 
+> # Getting outcomes -------------------------------
+> # treatmentdat <- read.csv(file = "data/rx_v2.csv")
+> # names(treatmentdat) <- tolower(names(treatmentdat))
+> # treatmentdat$ptid <- factor(gsub("-", "", (treatmentdat$ptid)))
+> # treatmentdat <- subset(treatmentdat, ptid %in% unique(subsetDat$ptid))
+> 
+> # Finding problematic subsets?
+> keep <- by(subsetDat, list(subsetDat$subset), function(x) mean(x$count > 1) > 0.02)
+> keep <- names(keep[sapply(keep, function(x) x)])
+> subsetDat <- subset(subsetDat, subset %in% keep)
+> subsetDat$subset <- factor(as.character(subsetDat$subset))
+> 
+> keep <- by(marginals, list(marginals$population), function(x) mean(x$count > 1) > 0.02)
+> keep <- names(keep[sapply(keep, function(x) x)])
+> marginals <- subset(marginals, population %in% keep)
+> marginals$population <- factor(as.character(marginals$population))
+> 
+> configurations <- expand.grid(method = c("MC"),
++                               seed = 1:30,
++                               maxdisp = c(10, 50),
++                               niter = c(60),
++                               includeBatch = FALSE)
+> config <- configurations[setting, ]
+> print(config)
+   method seed maxdisp niter includeBatch
+60     MC   30      50    60        FALSE
+> niter <- config[["niter"]]
+> seed <- config[["seed"]]
+> prior <- 0
+> maxdisp <- config[["maxdisp"]]
+> method <- config[["method"]]
+> includeBatch <- config[["includeBatch"]]
+> if(method == "MC") {
++   npost <- 3
++   lag <- round(niter / 3)
++   keepeach <- 5
++   mcEM <- TRUE
++ }
+> 
+> # Fitting the model ------------------------------
+> control <- flowReMix_control(updateLag = lag, nsamp = 50,
++                              keepEach = keepeach, initMHcoef = 2.5,
++                              nPosteriors = npost, centerCovariance = FALSE,
++                              maxDispersion = maxdisp * 1000, minDispersion = 10^7,
++                              randomAssignProb = 10^-8, intSampSize = 50,
++                              seed = seed, zeroPosteriorProbs = FALSE,
++                              ncores = cpus, preAssignCoefs = 1,
++                              prior = prior, isingWprior = FALSE,
++                              markovChainEM = mcEM,
++                              initMethod = "robust",
++                              learningRate = 0.6, keepWeightPercent = 0.9)
+> 
+> subsetDat$batch <- factor(subsetDat$batch..)
+> subsetDat$stimGroup <- factor(subsetDat$stimGroup)
+> subsetDat <- subsetDat %>% group_by(ptid,population,stim,stimGroup,parent) %>%
++   filter(collection.num==max(collection.num)) %>% data.frame()
+> marginals <- marginals %>% group_by(ptid, population, stim ,parent) %>%
++   filter(collection.num==max(collection.num)) %>% data.frame()
+> # preAssign <- by(subsetDat, subsetDat$ptid, assign)
+> # preAssign <- do.call("rbind", preAssign)
+> subsetDat$batch <- factor(as.character(subsetDat$batch), levels = unique(as.character(subsetDat$batch)))
+> # unique(data.frame(subsetDat$ptid, subsetDat$batch))
+> # by(subsetDat, subsetDat$subset, function(x) table(x$batch))
+> 
+> fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
++                  subject_id = ptid,
++                  cell_type = subset,
++                  cluster_variable = stim,
++                  data = subsetDat,
++                  covariance = "sparse",
++                  ising_model = "sparse",
++                  regression_method = "firth",
++                  iterations = niter,
++                  parallel = TRUE, keepSamples = TRUE,
++                  cluster_assignment = TRUE,
++                  verbose = TRUE, control = control)
+Computing in parallel on 5 cores
+[1] "Initializing Regression Equations"
+Loading required package: foreach
+Loading required package: rngtools
+Loading required package: pkgmaker
+Loading required package: registry
+
+Attaching package: ‘pkgmaker’
+
+The following object is masked from ‘package:base’:
+
+    isNamespaceLoaded
+
+Error in { : 
+  task 1 failed - "contrasts can be applied only to factors with 2 or more levels"
+Calls: flowReMix -> %dorng% -> do.call -> %dopar% -> <Anonymous>
+Execution halted
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 [1] "Estimating Covariance!"
+          levelP1  levelP2  levelP3  levelP4  levelP5  levelP6  levelP7 
+   2.000    0.782    0.008    0.051    0.038    0.225    0.785    0.394 
+ levelP8  levelP9 levelP10 levelP11 levelP12 levelP13 levelP14 levelP15 
+   0.329    0.532    0.031    0.004    0.007    0.013    0.011    0.010 
+levelP16 levelP17 levelP18 levelP19 levelP20 levelP21 levelP22 levelP23 
+   0.009    0.009    0.732    0.577    0.118    0.583    0.664    0.009 
+levelP24 levelP25 levelP26 levelP27 levelP28 levelP29 levelP30 levelP31 
+   0.105    0.006    0.657    0.350    0.601    0.632    0.013    0.044 
+   M1    M2    M3    M4    M5    M6    M7    M8    M9   M10   M11   M12   M13 
+1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 
+  M14   M15   M16   M17   M18   M19   M20   M21   M22   M23   M24   M25   M26 
+1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 1e+06 
+  M27   M28   M29   M30   M31 
+1e+06 1e+06 1e+06 1e+06 1e+06 
+         [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]  [,9] [,10] [,11] [,12]
+MH      4.125 4.125 3.375 3.375 2.475 3.375 3.375 3.375 3.375 2.475 2.475 4.125
+ratevec 0.237 0.236 0.234 0.221 0.226 0.228 0.232 0.214 0.219 0.219 0.218 0.234
+var     1.290 0.085 0.189 0.216 0.381 0.910 0.422 0.341 0.509 0.399 0.098 0.078
+        [,13] [,14] [,15] [,16] [,17] [,18] [,19] [,20] [,21] [,22] [,23] [,24]
+MH      4.125 3.375 4.125 2.475 2.475 2.475 3.375 3.375 3.375 4.125 4.125 3.375
+ratevec 0.265 0.229 0.245 0.202 0.209 0.207 0.233 0.227 0.221 0.235 0.256 0.224
+var     0.212 0.175 0.214 0.694 0.829 0.889 1.158 0.101 1.226 1.779 0.090 0.812
+        [,25] [,26] [,27] [,28] [,29] [,30] [,31]
+MH      2.475 1.375 2.475 2.475 2.475 2.475 4.125
+ratevec 0.194 0.175 0.193 0.206 0.205 0.218 0.237
+var     0.115 1.440 0.341 1.329 1.865 0.317 0.991
+[1] "Updating Regression"
+[1] "Sampling!"
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+************************

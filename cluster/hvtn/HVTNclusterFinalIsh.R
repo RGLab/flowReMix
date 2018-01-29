@@ -1,4 +1,8 @@
-cpus <- 5
+library(flowReMix)
+library(magrittr)
+require(dplyr)
+library(ggplot2)
+cpus <- 2
 print(cpus)
 
 args <- commandArgs(TRUE)
@@ -50,11 +54,9 @@ marginals$stim <- factor(as.character(marginals$stim))
 marginals$population <- factor(as.character(marginals$population))
 
 # Descriptives -------------------------------------
-library(ggplot2)
 marginals$prop <- marginals$count / marginals$parentcount
 # ggplot(marginals) + geom_boxplot(aes(x = population, y = log(prop), col = stim))
 
-require(dplyr)
 negctrl <- subset(marginals, stim == "negctrl")
 negctrl <- summarize(group_by(negctrl, ptid, population), negprop = mean(prop))
 negctrl <- as.data.frame(negctrl)
@@ -119,14 +121,13 @@ maxdisp <- config[["maxdisp"]]
 method <- config[["method"]]
 includeBatch <- config[["includeBatch"]]
 if(method == "MC") {
-  npost <- 3
+  npost <- 1
   lag <- round(niter / 3)
   keepeach <- 5
   mcEM <- TRUE
 }
 
 # Fitting the model ------------------------------
-library(flowReMix)
 control <- flowReMix_control(updateLag = lag, nsamp = 50,
                              keepEach = keepeach, initMHcoef = 2.5,
                              nPosteriors = npost, centerCovariance = FALSE,
@@ -164,7 +165,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_firthStims_A",
+file <- paste("results/hvtn_firth_A",
               "_maxdisp", maxdisp,
               "_niter", niter,
               "npost", npost,
