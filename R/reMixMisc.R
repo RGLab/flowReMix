@@ -49,7 +49,7 @@ stimulationModel <- function(data, cell_type, stim_var, controls, stim_groups) {
   stimvec[stimvec %in% controls] <- "ctrl"
   stimlevels <- unique(stimvec) %>% subset(., . != "ctrl") %>% c("ctrl", .)
   stimvec <- factor(stimvec, levels = stimlevels)
-  data[[mc$stim_var]] <- stimvec
+  data[[stimname]] <- stimvec
   ctrldat <- subset(data, stimvec == "ctrl")
   if(is.null(names(stim_groups)) | any(is.na(names(stim_groups)))) {
     sNames <- sapply(stim_groups, function(x) x[1])
@@ -63,7 +63,7 @@ stimulationModel <- function(data, cell_type, stim_var, controls, stim_groups) {
   }
 
   subdat <- do.call("rbind", subdat)
-  subdat$stimCellType <- interaction(subdat$stimGroup, subdat[[stimname]], sep = "/")
+  subdat$stimCellType <- interaction(subdat$stimGroup, subdat[[as.character(mc$cell_type)]], sep = "/")
 
   message("To fit the stimulation response model, run flowReMix with `cell_type = stimCellType'.")
   return(subdat)
