@@ -583,7 +583,7 @@ FlowReMixFromCOMPASSContainers = function(x){
    counts = plyr::ldply(counts)
    colnames(counts) = c("parent",x[[1]]$sample_id,"population","count")
    counts = inner_join(counts,unique(do.call(rbind,map(x,function(x)x$meta))))
-   totals = unique(reshape2::melt(plyr::ldply(map(x,function(x)x$counts))))
+   totals = unique(ldply(map(map(x,function(x)function(y=as.data.frame(x$counts)){data.frame(sample_id=rownames(y),count=y)}),function(x)x())))
    colnames(totals) = c("parent",x[[1]]$sample_id,"parentcount")
    counts = inner_join(totals,counts)
    counts
