@@ -328,7 +328,7 @@ flowReMix <- function(formula,
                       weights = NULL,
                       covariance = c("sparse", "dense", "diagonal"),
                       ising_model = c("sparse", "dense", "none"),
-                      regression_method = c("betabinom", "binom", "sparse", "robust"),
+                      regression_method = c("betabinom", "binom", "sparse", "robust", "firth"),
                       iterations = 80, parallel = TRUE, verbose = FALSE,
                       control = NULL, keepSamples = FALSE,
                       newSampler = FALSE) {
@@ -489,18 +489,22 @@ flowReMix <- function(formula,
   regressionMethod <- regressionMethod[1]
   regressionMethod <- match.arg(regressionMethod,c("firth", "binom", "betabinom", "sparse", "robust"))
   if(regressionMethod == "binom") {
+    firth <- FALSE
     smallCounts <- FALSE
     betaDispersion <- FALSE
     robustreg <- FALSE
   } else if(regressionMethod == "betabinom") {
+    firth <- FALSE
     smallCounts <- FALSE
     betaDispersion <- TRUE
     robustreg <- FALSE
   } else if(regressionMethod == "sparse") {
+    firth <- FALSE
     smallCounts <- TRUE
     betaDispersion <- TRUE
     robustreg <- FALSE
   } else { #fallback firth or robust
+    firth <- regressionMethod == "firth"
     smallCounts <- FALSE
     robustreg <- TRUE
     betaDispersion <- TRUE
@@ -732,17 +736,20 @@ flowReMix <- function(formula,
             return(NULL)
           }
 
-          if(popDat[[2]]) {
-            fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
-                       family = "binomial", method = brglmFit)
-            return(fit)
+          # separation <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
+          #                   family = "binomial", method = "detect_separation")$separation
+          if(popDat[[2]] | firth) {
+            fit <- NULL
+            try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
+                       family = "binomial", method = brglmFit))
+          } else {
+            fit <- NULL
+            try(capture.output(fit <- glmrob(formula = glmformula,
+                                             data = popDat[[1]],
+                                             weights = weights * emWeights,
+                                             family = "binomial")), silent=TRUE)
           }
 
-          fit <- NULL
-          try(capture.output(fit <- glmrob(formula = glmformula,
-                                        data = popDat[[1]],
-                                        weights = weights * emWeights,
-                                        family = "binomial")),silent=TRUE)
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popDat[[1]],
                            weights = weights * emWeights, family = "binomial"),silent=TRUE)
@@ -750,6 +757,7 @@ flowReMix <- function(formula,
               return(NULL)
             }
           }
+
           eta <- predict(fit)
           mu <- 1 / (1 + exp(-eta))
           N <- popDat[[1]]$N

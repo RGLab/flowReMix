@@ -1,3 +1,5 @@
+library(magrittr)
+library(flowReMix)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -11,8 +13,6 @@ assign <- function(x) {
   return(result)
 }
 
-geomean <- function(x) exp(mean(log(x)))
-library(flowReMix)
 # Loading data -------------------------
 tbdat <- readRDS("data/TB_rozot_booleans.rds")
 names(tbdat) <- tolower(names(tbdat))
@@ -39,46 +39,37 @@ for(i in 1:nrow(map)) {
   tbdat$population[tbdat$population == map[i, 1]] <- map[i, 2]
 }
 
-# Defining subsets w stim ---------------------
-tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
-tbdat <- subset(tbdat, stim != "EBV")
-tbdat$stimtemp <- tbdat$stim
-tbdat$stim[tbdat$stim %in% c("P1", "P2", "P3")] <- "MP"
-datlist <- list()
-stims <- unique(tbdat$stim)
-stims <- stims[stims != "UNS"]
-for(i in 1:length(stims)) {
-  temp <- subset(tbdat, stim %in% c(stims[i], "UNS"))
-  temp$stim[temp$stim == "UNS"] <- "ctrl"
-  temp$stimgroup <- stims[i]
-  datlist[[i]] <- temp
-}
-tbdat <- do.call("rbind", datlist)
-tbdat$subset <- paste(tbdat$stimgroup, tbdat$subset, sep = "/")
-nonzerocounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
-nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocounts)))
-
 # Defining subsets wo stim --------------
-# tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
-# tbdat <- subset(tbdat, stim != "EBV")
-# tbdat$stim[tbdat$stim == "UNS"] <- "ctrl"
-# tbdat$stim <- factor(tbdat$stim, levels = c("ctrl", "MP", "Mtbaux", "P1", "P2", "P3"))
-# nonzerocounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
-# nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocounts)))
+tbdat$subset <- interaction(tbdat$parent, tbdat$population, sep = "/")
+tbdat <- subset(tbdat, stim != "EBV")
+tbdat$stim[tbdat$stim == "UNS"] <- "ctrl"
+tbdat$stim <- factor(tbdat$stim, levels = c("ctrl", "MP", "Mtbaux", "P1", "P2", "P3"))
+jointcounts <- by(tbdat, tbdat$subset, function(x) mean(x$count > 0))
+jointcounts <- data.frame(names(jointcounts), as.numeric(unlist(jointcounts)))
+tbdat <- data.frame(tbdat)
+
+# Defining subsets w stim ---------------------
+stimDat <- stimulationModel(tbdat, subset, stim,
+                            controls = "ctrl",
+                            stim_groups = list(MP = c("MP", "P1", "P2", "P3"),
+                                               Mtbaux = "Mtbaux"))
+stimDat$subset <- stimDat$stimCellType
+stimDat$stimCellType <- NULL
+stimcounts <- by(stimDat, stimDat$subset, function(x) mean(x$count > 0))
+stimcounts <- data.frame(names(stimcounts), as.numeric(unlist(stimcounts)))
 
 # Choosing subset of data for analysis -----------------
-countkeep <- nonzerocounts[nonzerocounts[, 2] >= 0.2, 1]
-popkeep <- c("cd4", "MAIT", "NKrainbow", "DCs", "Bcells", "conCD*")
-stimkeep <- c("P", "MP", "Mtbaux")
-# tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep) & (stimgroup %in% stimkeep))
-tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep))
-#tempdat$stim <- factor(tempdat$stim, levels = c("ctrl", stimkeep))
-tempdat$subset <- factor(tempdat$subset)
-rm(tbdat)
+jointkeep <- jointcounts[jointcounts[, 2] >= 0.2, 1]
+stimkeep <- stimcounts[stimcounts[, 2] >= 0.2, 1]
+tbdat <- subset(tbdat, subset %in% jointkeep)
+stimDat <- subset(stimDat, subset %in% stimkeep)
+tbdat$subset <- factor(tbdat$subset)
+stimDat$subset <- factor(stimDat$subset)
 
 # Analysis Setting -------------
 configurations <- expand.grid(mcEM = c(TRUE),
-                              seed = 1:50,
+                              seed = 1:30,
+                              maxdisp = c(10, 50),
                               npost = c(20),
                               niter = c(60))
 
@@ -86,20 +77,22 @@ mcEM <- configurations[["mcEM"]][setting]
 seed <- configurations[["seed"]][setting]
 npost <- configurations[["npost"]][setting]
 niter <- configurations[["niter"]][setting]
+maxdisp <- configurations[["maxdisp"]][setting]
 lag <- round(niter / 3)
 
 # Analysis ----------------------------------
 control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
                              keepEach = 5,
                              nPosteriors = npost, centerCovariance = TRUE,
-                             maxDispersion = 10^3, minDispersion = 10^7,
+                             maxDispersion = maxdisp * 1000, minDispersion = 10^8,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = NULL, isingInit = -log(99),
+                             lastSample = NULL, isingInit = -7,
                              markovChainEM = mcEM,
                              initMethod = "robust",
                              preAssignCoefs = 1,
                              seed = seed,
                              ncores = ncores,
+                             prior = -0.5,
                              isingWprior = FALSE,
                              zeroPosteriorProbs = FALSE,
                              isingStabilityReps = 100,
@@ -108,18 +101,11 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
                              keepWeightPercent = 0.9,
                              sampleNew = FALSE)
 
-tempdat$stim <- tempdat$stimtemp
-tempdat$stim[tempdat$stim == "UNS"] <- "aUNS"
-tempdat$stim <- as.character(tempdat$stim)
-tempdat$stim <- factor(tempdat$stim, levels = sort(unique(tempdat$stim)))
-tempdat$subset <- factor(as.character(tempdat$subset))
-tempdat <- data.frame(tempdat)
-# preAssign <- data.table::rbindlist(by(tempdat, tempdat$ptid, assign))
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = stim,
-                 data = tempdat,
+                 data = stimDat,
                  covariance = "sparse",
                  ising_model = "sparse",
                  regression_method = "robust",
@@ -128,7 +114,8 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/TBdat5_full_mcEM", as.integer(mcEM),
+file <- paste("results/TBdat_rob_A_",
+              "disp", maxdisp,
               "seed", seed,
               "npost", npost,
               "niter", niter,

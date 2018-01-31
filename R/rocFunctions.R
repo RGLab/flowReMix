@@ -183,7 +183,8 @@ plot.flowReMix_fdrTable <- function(x, target, subsets = NULL, varname = NULL, n
 plotScatter <- function(obj, subsets = NULL,
                         target = NULL, varname = NULL,
                         ncol = 5, colPalette = NULL,
-                        paletteRange = NULL) {
+                        paletteRange = NULL,
+                        summary =  "minmax") {
   if(is.null(obj$modelFrame)) {
     dat <- buildFlowFrame(obj$call, obj$data)$frame
   } else {
@@ -239,10 +240,26 @@ plotScatter <- function(obj, subsets = NULL,
   } else {
     stop("treatmentvar must be numeric or factor. How did we even get this far?!")
   }
-  ctrl <- dplyr::summarise(dplyr::group_by(ctrl, sub.population, id, shape, post),
-                           ctrlprop = min(prop))
-  treat <- dplyr::summarise(dplyr::group_by(treat, sub.population, id, shape, post),
-                           trtprop = max(prop))
+
+  if(summary == "minmax") {
+    ctrl <- dplyr::summarise(dplyr::group_by(ctrl, sub.population, id, shape, post),
+                             ctrlprop = min(prop))
+    treat <- dplyr::summarise(dplyr::group_by(treat, sub.population, id, shape, post),
+                              trtprop = max(prop))
+  } else if(summary == "median") {
+    ctrl <- dplyr::summarise(dplyr::group_by(ctrl, sub.population, id, shape, post),
+                             ctrlprop = median(prop))
+    treat <- dplyr::summarise(dplyr::group_by(treat, sub.population, id, shape, post),
+                              trtprop = median(prop))
+  } else if(summary == "mean") {
+    ctrl <- dplyr::summarise(dplyr::group_by(ctrl, sub.population, id, shape, post),
+                             ctrlprop = mean(prop))
+    treat <- dplyr::summarise(dplyr::group_by(treat, sub.population, id, shape, post),
+                              trtprop = mean(prop))
+  } else {
+    stop("unrecognized summary method!")
+  }
+
   forplot <- merge(ctrl, treat)
   forplot$shape <- factor(forplot$shape)
   if(!is.null(subsets)){

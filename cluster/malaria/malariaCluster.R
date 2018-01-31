@@ -1,4 +1,4 @@
-ncores <- 31
+ncores <- 8
 library(pryr)
 library(flowReMix)
 # Malaria dataset ----------------------------
@@ -34,6 +34,7 @@ malaria <- subset(malaria, !(subset %in% toRemove))
 malaria$subset <- factor(malaria$subset)
 malaria$ptid <- factor(malaria$ptid)
 malaria <- malaria[order(malaria$ptid, malaria$stimgroup), ]
+malaria$allstims
 
 # Analysis -----------------------
 library(flowReMix)

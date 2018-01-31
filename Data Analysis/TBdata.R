@@ -39,6 +39,12 @@ for(i in 1:nrow(map)) {
 
 # Defining subsets w stim ---------------------
 tbdat$subset <- paste(tbdat$parent, tbdat$population, sep = "/")
+tbdat <- stimulationModel(tbdat, cell_type = subset,
+                          stim_var = stim,
+                          controls = "UNS",
+                          stim_groups = list(MP = c("MP", "P1", "P2", "P3"),
+                                             MTbaux = "Mtbaux"))
+
 tbdat <- subset(tbdat, stim != "EBV")
 tbdat$stimtemp <- tbdat$stim
 tbdat$stim[tbdat$stim %in% c("P1", "P2", "P3")] <- "MP"
