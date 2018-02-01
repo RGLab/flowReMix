@@ -134,13 +134,14 @@ weightForPFS = function(x, M = NULL, parsefun = degreeFromStringFun, split = "\\
 #'\dontrun{
 #' flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,split=",")
 #' }
-flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL, ...){
+flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL, subsetVar = NULL, ...){
   mc  =  match.call()
   if(is.null(mc$stimVar)|is.null(mc$parentVar)){
     stop("stimVar and parentVar must be provided")
   }
   stimVar = enquo(stimVar)
   parentVar = enquo(parentVar)
+  subsetVar = enquo(subsetVar)
   post = getPosteriors(x) %>% gather(pop,posterior,-1) %>% mutate(weight=weightForPFS(pop,M=M, ...))
   if(length(unique(post$weight))==1){
      if(class("split")=="character"){
@@ -152,7 +153,7 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
   subjid = x$subject_id
   subjid = enquo(subjid)
     post = x$data %>%
-      select(!!parentVar,pop=subset,!!stimVar) %>%
+      select(!!parentVar,pop=!!subsetVar,!!stimVar) %>%
       mutate(pop=as.character(pop)) %>%
       unique() %>%
       inner_join(post) %>%
