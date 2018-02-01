@@ -46,9 +46,15 @@ plot.flowReMix <- function(x, target = NULL, varname = NULL,
     mc$x =NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "scatter") {
+    if(!is.null(mc$summary)) {
+      summary <- mc$summary
+    } else {
+      summary <- "minmax"
+    }
     figure <- plotScatter(x, subsets = subsets, target = target,
                           varname = varname, ncol = ncol,
-                          colPalette = palette, paletteRange = paletteRange)
+                          colPalette = palette, paletteRange = paletteRange,
+                          summary = summary)
     return(figure)
     # mc[[1]] = as.name("flowReMix:::plotScatter")
     # mc[[1]] = getFromNamespace("plotScatter",ns = "flowReMix")

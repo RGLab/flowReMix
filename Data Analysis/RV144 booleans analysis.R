@@ -77,19 +77,19 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 prior <- 0
 npost <- 1
-niter <- 14
+niter <- 15
 seed <- 1
 lastSample <- NULL
 cpus <- 2
-control <- flowReMix_control(updateLag = 7, nsamp = 50, initMHcoef = 1,
+control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50, initMHcoef = 1,
                              keepEach = 5, isingWprior = TRUE,
                              zeroPosteriorProbs = FALSE,
                              nPosteriors = npost, centerCovariance = FALSE,
-                             maxDispersion = 10^3, minDispersion = 10^7,
+                             maxDispersion = 10^4*5, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = cpus,
                              markovChainEM = TRUE,
-                             seed = seed, prior = 0, lastSample = lastSample,
+                             seed = seed, prior = -0.5, lastSample = lastSample,
                              preAssignCoefs = 1, sampleNew = FALSE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
                              isingStabilityReps = 0, randStabilityReps = 0,
@@ -105,12 +105,12 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              data = booldata,
                              covariance = "sparse",
                              ising_model = "sparse",
-                             regression_method = "robust",
+                             regression_method = "firth",
                              iterations =  niter,
                              cluster_assignment = TRUE,
                              parallel = TRUE, keepSamples = TRUE,
                              verbose = TRUE, control = control))
-            # save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
+# save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
 # plot(fit, type = "scatter")
 
 # add_ptid <- function(x, subject_id) {
@@ -178,6 +178,11 @@ infectResults <- summary(fit, target = hiv, direction = "auto", adjust = "BH",
                          sortAUC = FALSE,
                          minProbFilter = 0)
 infectResults$responseProb <- colMeans(fit$posteriors[, -1])
+excludeNonResp <- apply(fit$posteriors[, -1], 2, function(x) max(x) < .95)
+excludeNegative <- sapply(fit$coefficients, function(x) max(x[-1]) < 0)
+keep <- !(excludeNonResp | excludeNegative)
+infectResults <- subset(infectResults, keep)
+infectResults$qvalue <- p.adjust(infectResults$pvalue, method = "BH")
 infectResults[order(infectResults$pvalue, decreasing = FALSE), ]
 
 stab <- stabilityGraph(fit, type = "ising", cv = FALSE, reps = 100, cpus = 2,

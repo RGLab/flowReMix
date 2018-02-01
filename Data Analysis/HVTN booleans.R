@@ -133,6 +133,12 @@ control <- flowReMix_control(updateLag = 5, nsamp = 60, initMHcoef = 2.5,
 
 subsetDat$batch <- factor(subsetDat$batch..)
 subsetDat$stimGroup <- factor(subsetDat$stimGroup)
+subsetDat$batch <- factor(subsetDat$batch..)
+subsetDat$stimGroup <- factor(subsetDat$stimGroup)
+subsetDat <- data.frame(subsetDat %>% group_by(ptid,population,stim,stimGroup,parent) %>% filter(collection.num==max(collection.num)))
+# saveRDS(subsetDat, file = "data/processedHVTN.rds")
+
+
 # preAssign <- by(subsetDat, subsetDat$ptid, assign)
 # preAssign <- do.call("rbind", preAssign)
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
