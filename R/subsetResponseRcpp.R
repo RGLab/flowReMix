@@ -559,8 +559,20 @@ flowReMix <- function(formula,
   # Initializing covariates and random effects------------------
   if(verbose) print("Initializing Regression Equations")
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
-  initialization <- foreach(j = 1:length(dataByPopulation)) %dorng% {
-    initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
+
+  indices <- 1:length(dataByPopulation)
+  chunkSize=min(200,length(dataByPopulation));
+  chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
+  chunks = split(indices,chunkids)
+browser()
+  initialization=list()
+  for(i in seq_along(chunks)){
+      for(j in 1:length(chunks[[i]]))  {
+          print(j)
+          initializeModel(dataByPopulation[[ chunks [[i]] [[j]] ]], initFormula, initMethod, mixed)
+      }
+      initialization = c(initialization,initializationI)
+      ## concatenate
   }
   names(initialization) <- names(dataByPopulation)
 

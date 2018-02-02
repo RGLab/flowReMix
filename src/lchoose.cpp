@@ -26,6 +26,10 @@ double lbeta_cpp(double a, double b) {
 double lchoose_cpp(double n, double k) {
   double k0 = k;
   k = nearbyint(k);
+  if ( n == 1.0 && k <= n ) {
+    return 0.;
+  }
+
   /* NaNs propagated correctly */
 static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 required");
   if (isnan(n) || isnan(k)) return n + k;
