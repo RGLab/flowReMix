@@ -564,15 +564,12 @@ flowReMix <- function(formula,
   chunkSize=min(200,length(dataByPopulation));
   chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
   chunks = split(indices,chunkids)
-browser()
   initialization=list()
   for(i in seq_along(chunks)){
-      for(j in 1:length(chunks[[i]]))  {
-          print(j)
+      initializationI <- foreach(j = 1:length(chunks[[i]])) %dorng%  {
           initializeModel(dataByPopulation[[ chunks [[i]] [[j]] ]], initFormula, initMethod, mixed)
       }
-      initialization = c(initialization,initializationI)
-      ## concatenate
+      initialization = c(initialization,initializationI)      
   }
   names(initialization) <- names(dataByPopulation)
 
