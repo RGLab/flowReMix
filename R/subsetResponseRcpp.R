@@ -559,7 +559,8 @@ flowReMix <- function(formula,
   initFormula <- formulas$initFormula
 
   # Initializing covariates and random effects------------------
-  if(verbose) print("Initializing Regression Equations")
+   if(verbose) print("Initializing Regression Equations")
+   data.table::setDT(dat)
    dataByPopulation <- split(dat,by="sub.population")
 ### dim(dat)
 ### 11,184,300
@@ -952,8 +953,6 @@ flowReMix <- function(formula,
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
 
-    ##:ess-bp-start::browser@nil:##
-browser(expr=is.null(.ESSBP.[["@3@"]]));##:ess-bp-end:##
     listForMH = vector('list', nSubjects)
     
     for(i in 1:length(listForMH)){
@@ -1131,7 +1130,8 @@ browser(expr=is.null(.ESSBP.[["@3@"]]));##:ess-bp-end:##
                               minprob = 1 / nSubjects, verbose=verbose,
                               weights = isingWeights, parallel = parallel)
         } else {
-          isingfit <- pIsing(assignmentList, AND = TRUE,
+            data.table::setDF(preAssignmentMat)
+            isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,
                              prevfit = isingCoefs, verbose=verbose,
                              weights = isingWeights)
