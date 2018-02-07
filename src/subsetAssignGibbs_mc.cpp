@@ -1,15 +1,17 @@
+// Copyright (C) 2018 by Fred Hutchinson Cancer Research Center
+
 #include <RcppArmadillo.h>
-#include "flowReMix.h"
-//[[Rcpp::depends(RcppArmadillo)]]
-using namespace Rcpp;
+#include "./flowReMix.h"
+// [[Rcpp::depends(RcppArmadillo)]]
+using  namespace Rcpp;
 
 
 arma::vec computeIntegratedDensities_arma(arma::mat logdens) {
   double maxdens = logdens.max();
 
-  arma::vec result(2) ;
-  result(0) = sum(exp(logdens.col(0) - maxdens)) ;
-  result(1) = sum(exp(logdens.col(1) - maxdens)) ;
+  arma::vec result(2);
+  result(0) = sum(exp(logdens.col(0) - maxdens));
+  result(1) = sum(exp(logdens.col(1) - maxdens));
 
   return result ;
 }

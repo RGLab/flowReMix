@@ -545,7 +545,7 @@ flowReMix <- function(formula,
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
-    dat <- do.call("rbind", c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)), make.row.names = FALSE))
+    dat <- do.call("rbind",c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)), make.row.names = FALSE))
   } else {
     dataReplicates <- 1
   }
@@ -560,17 +560,17 @@ flowReMix <- function(formula,
   if(verbose) print("Initializing Regression Equations")
   dataByPopulation <- by(dat, dat$sub.population, function(x) x)
 
-  indices <- 1:length(dataByPopulation)
-  chunkSize=min(200,length(dataByPopulation));
-  chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
-  chunks = split(indices,chunkids)
+  #indices <- 1:length(dataByPopulation)
+  #chunkSize=min(200,length(dataByPopulation));
+  #chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
+  #chunks = split(indices,chunkids)
   initialization=list()
-  for(i in seq_along(chunks)){
-      initializationI <- foreach(j = 1:length(chunks[[i]])) %dorng%  {
-          initializeModel(dataByPopulation[[ chunks [[i]] [[j]] ]], initFormula, initMethod, mixed)
+  #for(i in seq_along(chunks)){
+      initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
+          initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
       }
-      initialization = c(initialization,initializationI)      
-  }
+  #    initialization = c(initialization,initializationI)      
+  #}
   names(initialization) <- names(dataByPopulation)
 
   isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
@@ -616,8 +616,9 @@ flowReMix <- function(formula,
         prop = y / N
         baseline = ifelse(is.factor(treatmentvar), levels(treatmentvar)[1], 0)
         - as.numeric(min(prop[treatmentvar == baseline]) < max(prop[treatmentvar !=
-                                                                     baseline]))
-      }) %>% arrange(id, as.character(subset))%>%as.data.frame
+                                                                     baseline]))  ## https://github.com/tidyverse/dplyr/issues/341
+      }) %>% complete(subset,fill=list(-1)) %>% arrange(id, as.character(subset))%>%as.data.frame # preAssignment of -1 means it's ignored.. now we will have complete preassignment data.. this could still crash elsewhere..
+        cat("\n")
       # preAssignment <- do.call("rbind", c(preAssignment,make.row.names=FALSE))
       # names(preAssignment) <- c("id", "subset", "assign")
     } else {
@@ -634,7 +635,7 @@ flowReMix <- function(formula,
     preAssignment <- data.frame(preAssignment)
     names(preAssignment) <-  c("id", "subset", "assign")
     if(dataReplicates > 1) {
-      preAssignment <- do.call("rbind", lapply(1:dataReplicates, function(x) replicateDataset(preAssignment, x)))
+      preAssignment <- do.call("rbind",lapply(1:dataReplicates, function(x) replicateDataset(preAssignment, x)))
     }
     if(nrow(preAssignment) != (nSubsets * nSubjects)) stop("preAssignment must have nSubjects X nSubsets rows.")
     if(any(!(preAssignment[, 1] %in% unique(dat$id)))) stop("The first column of Preassignment must correspond to the id variable.")
@@ -712,14 +713,14 @@ flowReMix <- function(formula,
     }
 
     # Refitting Model with current random effects/assignments
-    dataByPopulation <- data.frame(rbindlist(databyid))
+    dataByPopulation <- as.data.frame(rbindlist(databyid))
     dataByPopulation$iteration <- iter
     dataByPopulation$emWeights <- 1
     if(markovChainEM) {
       accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
       accumList[[max(1, iter - updateLag)]] <- dataByPopulation
-      accumDat <- data.frame(rbindlist(accumList))
+      accumDat <- as.data.frame(rbindlist(accumList))
       if(!markovChainEM & iter > updateLag + 1) {
         accumDat$emWeight <- weightMap[accumDat$iteration - updateLag]
         accumDat <- subset(accumDat, accumDat$iteration >= iter - keepLastIterations + 1)
@@ -904,7 +905,7 @@ flowReMix <- function(formula,
     }
     names(accumDat) <- popnames
 
-    databyid <- do.call("rbind", accumDat)
+    databyid <- as.data.frame(rbindlist(accumDat))
     databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
     databyid <- by(databyid, databyid$id, function(x) x)
 
@@ -1091,7 +1092,7 @@ flowReMix <- function(formula,
         exportAssignment <- assignmentList
       }
 
-      assignmentList <- do.call("rbind",assignmentList)
+      assignmentList <- as.data.frame(rbindlist(assignmentList))
       # assignmentList <- as.data.frame(assignmentList) #why?
       colnames(assignmentList) <- popnames
 
@@ -1163,7 +1164,7 @@ flowReMix <- function(formula,
       randomList <- randomOutput
     }
 
-    randomList <- do.call("rbind", randomList)
+    randomList <- as.data.frame(rbindlist(randomList))
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
@@ -1228,7 +1229,7 @@ flowReMix <- function(formula,
       realIDs <- gsub("\\%%%.*", "", uniqueIDs)
       post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
       postid <- names(post)
-      posteriors <- data.frame(do.call("rbind", post))
+      posteriors <- data.frame(rbindlist(post))
       names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)
