@@ -6,7 +6,7 @@
 Compute the PFS (polyfunctionality score) per subject and stimulation group}
 \usage{
 flowReMixPFS(x, M, stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
-  ...)
+  subsetVar = NULL, ...)
 }
 \arguments{
 \item{x}{\code{flowReMix} model object}

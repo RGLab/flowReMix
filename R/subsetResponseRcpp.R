@@ -313,6 +313,8 @@ initializeModel <- function(dat, formula, method, mixed) {
 #' @importFrom glmnet coef.cv.glmnet
 #' @importFrom glmnet predict.cv.glmnet
 #' @importFrom data.table is.data.table
+#' @importFrom tidyr complete
+#' @importFrom dplyr inner_join
 #' @import doRNG
 #' @import doParallel
 #' @import foreach
@@ -332,7 +334,7 @@ flowReMix <- function(formula,
                       iterations = 80, parallel = TRUE, verbose = FALSE,
                       control = NULL, keepSamples = FALSE,
                       newSampler = FALSE) {
-  if(class(data)!="data.frame"){
+   if(class(data)!="data.frame"){
     stop("data must be a data.frame",call. = FALSE)
   }
   # Getting control variables -------------------
@@ -1092,7 +1094,7 @@ flowReMix <- function(formula,
         exportAssignment <- assignmentList
       }
 
-      assignmentList <- as.data.frame(rbindlist(assignmentList))
+      assignmentList <- do.call("rbind",assignmentList)
       # assignmentList <- as.data.frame(assignmentList) #why?
       colnames(assignmentList) <- popnames
 
@@ -1164,7 +1166,7 @@ flowReMix <- function(formula,
       randomList <- randomOutput
     }
 
-    randomList <- as.data.frame(rbindlist(randomList))
+    randomList <- do.call("rbind",randomList)
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
