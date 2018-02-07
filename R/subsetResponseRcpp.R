@@ -547,7 +547,7 @@ flowReMix <- function(formula,
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
-    dat <- do.call("rbind",c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)), make.row.names = FALSE))
+    dat <- rbindlist(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)))
   } else {
     dataReplicates <- 1
   }
@@ -560,15 +560,25 @@ flowReMix <- function(formula,
 
   # Initializing covariates and random effects------------------
   if(verbose) print("Initializing Regression Equations")
-  dataByPopulation <- by(dat, dat$sub.population, function(x) x)
-
+   dataByPopulation <- split(dat,by="sub.population")
+### dim(dat)
+### 11,184,300
+### system.time(split(dat,by="sub.population")) 
+###   user  system elapsed 
+###  1.563   0.230   1.795
+###
+### system.time(by(dat, dat$sub.population, function(x) x))
+###   user  system elapsed 
+###  18.299  22.016  40.343 
+   
   #indices <- 1:length(dataByPopulation)
   #chunkSize=min(200,length(dataByPopulation));
   #chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
   #chunks = split(indices,chunkids)
   initialization=list()
   #for(i in seq_along(chunks)){
-      initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
+
+  initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
           initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
       }
   #    initialization = c(initialization,initializationI)      
@@ -644,11 +654,14 @@ flowReMix <- function(formula,
   }
 
   # preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
-  preAssignmentMat = preAssignment %>% arrange(id, subset)
-  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
-    x$id <- as.character(x$id)
-    return(x)
-  })
+   preAssignmentMat = preAssignment %>% arrange(id, subset)
+   data.table::setDT(preAssignmentMat)
+   preAssignmentMat[,id:=as.character(id)]
+   preAssignment = split(preAssignmentMat,by = "id")
+  ## preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
+  ##   x$id <- as.character(x$id)
+  ##   return(x)
+  ## })
 
   if(any(preAssignCoefs > 1) | any(preAssignCoefs < 0)) {
     warning("preAssignCoefs must be a numeric vector the coordinates of which must be between 0 and 1!")
@@ -656,7 +669,8 @@ flowReMix <- function(formula,
   }
 
   # More preparations ---------------------------
-  databyid <- by(dat, dat$id, function(x) x)
+   ## databyid <- by(dat, dat$id, function(x) x)
+   databyid <-  split(dat,by="id") #use data.table .. sooo much faster. 50s vs 1.3s on 11M rows.
   dat$subpopInd <- as.numeric(dat$sub.population)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
   clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
@@ -715,11 +729,13 @@ flowReMix <- function(formula,
     }
 
     # Refitting Model with current random effects/assignments
-    dataByPopulation <- as.data.frame(rbindlist(databyid))
+    dataByPopulation <- rbindlist(databyid)
+    data.table::setDT(dataByPopulation)
     dataByPopulation$iteration <- iter
     dataByPopulation$emWeights <- 1
     if(markovChainEM) {
-      accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
+        accumDat = split(dataByPopulation,by="sub.population")
+        ##accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
       accumList[[max(1, iter - updateLag)]] <- dataByPopulation
       accumDat <- as.data.frame(rbindlist(accumList))
@@ -907,9 +923,11 @@ flowReMix <- function(formula,
     }
     names(accumDat) <- popnames
 
-    databyid <- as.data.frame(rbindlist(accumDat))
-    databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
-    databyid <- by(databyid, databyid$id, function(x) x)
+    databyid <- rbindlist(accumDat)
+    databyid <- databyid[order(sub.population,id)]
+    #databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
+    databyid <- split(databyid, by = "id")
+    ## databyid <- by(databyid, databyid$id, function(x) x)
 
     # S-step ------------------------------
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
@@ -934,9 +952,12 @@ flowReMix <- function(formula,
       doNotSampleSubset <- levelProbs < subsetDiscardThreshold
     }
 
+    ##:ess-bp-start::browser@nil:##
+browser(expr=is.null(.ESSBP.[["@3@"]]));##:ess-bp-end:##
     listForMH = vector('list', nSubjects)
+    
     for(i in 1:length(listForMH)){
-      listForMH[[i]] = list(dat = databyid[[i]][, keepcols],
+      listForMH[[i]] = list(dat = databyid[[i]][, keepcols,with=FALSE],
            pre = preAssignment[[i]],
            rand = estimatedRandomEffects[i, ],
            assign = clusterAssignments[i, ],
