@@ -1,2 +1,2 @@
-#CXX_STD=-std=c++1z 
-PKG_CXXFLAGS=-std=c++1z -g -O3 -fopenmp -DDEBUG
+PKG_CXXFLAGS=-std=c++17 -g -O3 -DDEBUG
+PKG_CPPFLAGS=-I/usr/local/opt/llvm/include/c++/v1/
