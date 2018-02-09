@@ -576,18 +576,25 @@ flowReMix <- function(formula,
   #chunkSize=min(200,length(dataByPopulation));
   #chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
   #chunks = split(indices,chunkids)
-  initialization=list()
   #for(i in seq_along(chunks)){
+   registerDoRNG()
 
-  initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
+   initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
           initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
-      }
-  #    initialization = c(initialization,initializationI)      
-  #}
+   }
+  
   names(initialization) <- names(dataByPopulation)
-
-  isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
-
+   isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
+   if(class(isEmpty)%in%"list"){
+       initialization=list();
+        for(j in 1:length(dataByPopulation)) {
+          initialization[[j]]=initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
+        }
+        names(initialization) <- names(dataByPopulation)
+        isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
+   }
+   
+   
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
     newlevels <- levels(sub.population)[!(levels(sub.population) %in% empty)]
@@ -919,7 +926,7 @@ flowReMix <- function(formula,
 
     # Updating Prediction ---------------
     if(iter == 1) popnames <- names(accumDat)
-    accumDat <- foreach(popdata = accumDat) %dopar% {
+    accumDat <- foreach(popdata = accumDat) %dorng% {
       computeFlowEta(popdata, coefficientList, iter, initFormula, mixed)
     }
     names(accumDat) <- popnames

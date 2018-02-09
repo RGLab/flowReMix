@@ -207,9 +207,14 @@ void thread_me(int subject,
         double priorProb = 0.5;
         if (sample >= 0) {
           thisclusterassignment(subset, 0) = 1;
-          priorProb = expit(sum(isingCoefs.row(subset) *
-                                thisclusterassignment.col(0)) +
-                            isingOffset);
+
+          {
+            arma::vec corow(nsubsets);
+            arma::vec clust(nsubsets);
+            clust = thisclusterassignment.col(0);
+            corow = isingCoefs.row(subset).t();
+            priorProb = expit(sum(corow % clust) + isingOffset);
+          }
         } else {
           priorProb = 0.5;
         }
@@ -354,6 +359,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
     auto max_threads = std::thread::hardware_concurrency();
     auto subject = 0;
     while (subject < nsubjects) {
+      thread_vector.clear();
       for (int thread_id = 0; thread_id < max_threads; ++thread_id) {
         if (subject <  nsubjects) {
           thread_vector.emplace_back(std::thread(&thread_me,
