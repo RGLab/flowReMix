@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <functional>
 #include "./flowReMix.h"
 
 void printDims(arma::vec a, std::string c) {
@@ -467,8 +468,10 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
                                                std::ref(MHsuccessrates),
                                                std::ref(mut),
                                                std::ref(threadIsFinished));
-#ifdef DEBUG2
-              std::cout << "Launched new thread " << tid << " for subject " << subject << "/" << nsubjects << "\n";
+#ifdef DEBUG
+              std::cout << "Launched new thread " <<
+                  tid << " for subject " <<
+                  subject << "/" << nsubjects << "\n";
 #endif
               subject++;
             } else {
@@ -478,17 +481,30 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
       }  // end for loop over threads
     }  // end while loop over subjects
       // Join any dangling threads
-    for (tid = 0; tid < thread_vector.size(); tid++) {
-      if (thread_vector[tid].joinable()) {
-        try {
+    int alldone = 0;
+    int ndone = 0;
+    while (alldone != 2) {
+      for (tid = 0; tid < thread_vector.size(); tid++) {
+        if (thread_vector[tid].joinable()&threadIsFinished[tid]) {
           thread_vector[tid].join();
           prog.increment();
         }
-        catch(std::exception const &e) {
-          continue;
-        }
+      }  // end for loop
+      ndone = std::transform_reduce(threadIsFinished.begin(),
+                                    threadIsFinished.end(),
+                                    0,
+                                    std::plus<>(), [] (bool b) -> int {
+                                      if (b) {
+                                        return 1;
+                                      } else {
+                                        return 0;
+                                      }
+                                    });
+      if (ndone == thread_vector.size()) {
+        alldone++;  // loop through twice to ensure we
+                    // join all completed threads.
       }
-    }  // end for loop
+    }
     List retval = List::create(
         Named("assign") = wrap(assignmentMats),
         Named("rand") = wrap(randomeffectMats),
