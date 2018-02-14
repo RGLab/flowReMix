@@ -3,6 +3,7 @@
 #include <random>
 #include <omp.h>
 #include <thread>
+#include <mutex>
 #include <progress.hpp>
 #include <vector>
 #include <algorithm>

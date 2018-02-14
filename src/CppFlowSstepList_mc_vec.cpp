@@ -490,16 +490,19 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
           prog.increment();
         }
       }  // end for loop
-      ndone = std::transform_reduce(threadIsFinished.begin(),
-                                    threadIsFinished.end(),
-                                    0,
-                                    std::plus<>(), [] (bool b) -> int {
-                                      if (b) {
-                                        return 1;
-                                      } else {
-                                        return 0;
-                                      }
-                                    });
+      ndone = std::accumulate(threadIsFinished.begin(),
+                  threadIsFinished.end(),0);
+                     
+      // ndone = std::experimental::parallel::transform_reduce(threadIsFinished.begin(),
+                                    // threadIsFinished.end(),
+                                    // 0,
+                                    // std::plus<>(), [] (bool b) -> int {
+                                      // if (b) {
+                                        // return 1;
+                                      // } else {
+                                        // return 0;
+                                      // }
+                                    // });
       if (ndone == thread_vector.size()) {
         alldone++;  // loop through twice to ensure we
                     // join all completed threads.
