@@ -59,11 +59,10 @@ void thread_me(const int tid,
                arma::mat  &MHsuccessrates,
                std::mutex  &mut) {
   arma::vec this_success(nsubsets);
-  arma::mat this_clusterDensity(intSampSize,2);
-  
+  arma::mat this_clusterDensity(intSampSize, 2);
   mut.lock();
   arma::mat thisclusterassignment(nsubsets, 1);
-  std::copy(clusterassignments.begin_col(subject), //  copy the cluserassignments from the shared variable
+  std::copy(clusterassignments.begin_col(subject),  //  copy the cluserassignments from the shared variable
             clusterassignments.end_col(subject),   // to a local private variable.
             thisclusterassignment.begin_col(0));
 
@@ -71,7 +70,6 @@ void thread_me(const int tid,
   std::copy(assignmentMats.slice(subject).begin(),
             assignmentMats.slice(subject).end(),
             this_assignmentMats.begin());
-  
   arma::mat this_randomeffects(mat_size, nsubsets);
   std::copy(randomeffectMats.slice(subject).begin(),
             randomeffectMats.slice(subject).end(),
@@ -85,6 +83,7 @@ void thread_me(const int tid,
   arma::uvec subject_indicator(1);
   subject_indicator(0) = subject;
   int sample = 0, subset = 0;
+  arma::vec vsample(intSampSize);
   for (sample = 0; sample < nsamp_floor; sample++) {
     for (subset = 0; subset < nsubsets; subset++) {
       if (!abort) {
@@ -106,7 +105,6 @@ void thread_me(const int tid,
         } else {
           isingOffset = 0;
         }
-        // isingOffset = 0;
         arma::uvec subset_indicator = flowReMix::find(
             subpopInd.col(subject), subset + 1);
         if (subset_indicator.size() == 0) {
@@ -132,34 +130,21 @@ void thread_me(const int tid,
         mcoef = MHcoef.at(subset);
 
         mcoef = std::max(1.0, mcoef);
-        double muHat = 0;
-        arma::vec vsample;
+        flowReMix::myrnorm3(vsample,
+                            0,
+                            sigmaHat * mcoef,
+                            tid);
         double prevMuHat;
-        
         for (int cluster = 0; cluster < 2; cluster++) {
-          
           arma::mat eta;
           if (cluster == 0) {
             eta = subsetNullEta;
           } else {
             eta = subsetAltEta;
           }
-          // arma::vec etaResid = empEta - eta;
-          // the next conditions are totally pointless.
-          if (cluster == 0) {
-            // muHat = mean(etaResid);
-            // this is removed because we are just doing random walk.
-            muHat = 0;
-            // library(flowReMix);devtools::test("~/Dropbox/GoTeam/Projects/flowReMix")
-            vsample = flowReMix::myrnorm3(intSampSize,
-                                          muHat,
-                                          sigmaHat * mcoef,
-                                          tid);
-            // vsample is fixed across clusters.
-          }
           arma::vec importanceWeights;
           arma::vec sampNormDens = flowReMix::dnorm4(vsample,
-                                                     muHat,
+                                                     0,
                                                      sigmaHat * mcoef,
                                                      true);
           arma::vec normDens = flowReMix::dnorm4(vsample,
@@ -188,10 +173,13 @@ void thread_me(const int tid,
           for (i = 0; i < sampSize; i++) {
             density = 0;
             for (j = 0; j < subsetSize; j++) {
-
 #ifdef DEBUG
               mut.lock();
-              std::cout << "sample: " << sample << " subset: " << subset <<" cluster: " << cluster << " i: " << i << " j: " << j <<  "\n";
+              std::cout << "sample: "
+                        << sample << " subset: "
+                        << subset <<" cluster: "
+                        << cluster << " i: " << i
+                        << " j: " << j <<  "\n";
               mut.unlock();
 #endif
               prob = randomEta.at(i, j);
@@ -212,19 +200,17 @@ void thread_me(const int tid,
           std::cout << "update clusterdensity for cluster " << cluster << "\n";
           mut.unlock();
 #endif
-          
-          this_clusterDensity.col(cluster) = binomDensity +
+          this_clusterDensity.col(cluster) =
+              binomDensity +
               importanceWeights;
         }
 
         arma::vec integratedDensities;
-        
 #ifdef DEBUG
         mut.lock();
         std::cout << "integrating densities \n";
         mut.unlock();
 #endif
-        
         integratedDensities = computeIntegratedDensities_arma(
             this_clusterDensity);
 
@@ -283,12 +269,11 @@ void thread_me(const int tid,
         mut.unlock();
 #endif
         // if (unifVec.at(unifPosition++, subject) < pResponder) {
-        if(R::runif(0,1) < pResponder){
+        if (R::runif(0, 1) < pResponder) {
           thisclusterassignment.at(subset, 0) = 1;
         } else {
           thisclusterassignment.at(subset, 0) = 0;
         }
-
       }
     }
     if ((sample % keepEach) == 0) {
@@ -351,16 +336,21 @@ void thread_me(const int tid,
                                        M, betaDispersion,
                                        keepEach, mat_size);
   }
-  
   this_success = MHsuccess/MHattempts;
-  
   mut.lock();
-  std::copy(this_success.begin(),this_success.end(), MHsuccessrates.begin_col(subject));
-  std::copy(this_randomeffects.begin() ,this_randomeffects.end(),randomeffectMats.slice(subject).begin());
-  std::copy(this_assignmentMats.begin(), this_assignmentMats.end(), assignmentMats.slice(subject).begin());
-  std::copy(thisclusterassignment.begin_col(0), thisclusterassignment.end_col(0), clusterassignments.begin_col(subject));
+  std::copy(this_success.begin(),
+            this_success.end(),
+            MHsuccessrates.begin_col(subject));
+  std::copy(this_randomeffects.begin(),
+            this_randomeffects.end(),
+            randomeffectMats.slice(subject).begin());
+  std::copy(this_assignmentMats.begin(),
+            this_assignmentMats.end(),
+            assignmentMats.slice(subject).begin());
+  std::copy(thisclusterassignment.begin_col(0),
+            thisclusterassignment.end_col(0),
+            clusterassignments.begin_col(subject));
   mut.unlock();
-  //  Make shared variable updates.
   return;
 }
 

@@ -354,7 +354,8 @@ flowReMix <- function(formula,
   initMHcoef <- as.numeric(control$initMHcoef)
   keepEach <- as.integer(control$keepEach)
   initMethod <- control$initMethod
-  ncores <-  control$ncores
+   ncores <-  control$ncores
+   threads <- control$threads
   isingInit <- control$isingInit
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
@@ -995,7 +996,8 @@ flowReMix <- function(formula,
       #                  M, invcov, mixed, sampleRandom = TRUE,
       #                  doNotSample = doNotSampleSubset,
       #                  markovChainEM = markovChainEM)
-#      browser()
+                                        #      browser()
+      print("starting sampler with ", threads," threads");
       (MHresult <- CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                          N = mhList$TOT, subpopInd = mhList$subpopInd,
                                          clusterassignments = mhList$clusterassignments,
@@ -1011,7 +1013,7 @@ flowReMix <- function(formula,
                                          M = M, invcov = invcov, mixed = mixed,
                                          sampleRandom = TRUE,
                                          doNotSample = doNotSampleSubset,
-                                         markovChainEM = markovChainEM, cpus=ncores, seed = as.integer(control$seed)))
+                                         markovChainEM = markovChainEM, cpus = threads, seed = as.integer(control$seed)))
       # print("S-STEP TIME:")
       # print(time)
 
