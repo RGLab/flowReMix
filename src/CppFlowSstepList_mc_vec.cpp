@@ -57,7 +57,8 @@ void thread_me(const int tid,
                arma::cube  &assignmentMats,
                arma::cube  &randomeffectMats,
                arma::mat  &MHsuccessrates,
-               std::mutex  &mut) {
+               std::mutex  &mut,
+               std::vector<bool>& threadIsFinished) {
   arma::vec this_success(nsubsets);
   arma::mat this_clusterDensity(intSampSize, 2);
   mut.lock();
@@ -173,15 +174,6 @@ void thread_me(const int tid,
           for (i = 0; i < sampSize; i++) {
             density = 0;
             for (j = 0; j < subsetSize; j++) {
-#ifdef DEBUG
-              mut.lock();
-              std::cout << "sample: "
-                        << sample << " subset: "
-                        << subset <<" cluster: "
-                        << cluster << " i: " << i
-                        << " j: " << j <<  "\n";
-              mut.unlock();
-#endif
               prob = randomEta.at(i, j);
               prob = expit(prob);
               count = subsetCount.at(j);
@@ -195,30 +187,15 @@ void thread_me(const int tid,
             binomDensity.at(i) = density;
           }
 
-#ifdef DEBUG
-          mut.lock();
-          std::cout << "update clusterdensity for cluster " << cluster << "\n";
-          mut.unlock();
-#endif
           this_clusterDensity.col(cluster) =
               binomDensity +
               importanceWeights;
         }
 
         arma::vec integratedDensities;
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "integrating densities \n";
-        mut.unlock();
-#endif
         integratedDensities = computeIntegratedDensities_arma(
             this_clusterDensity);
 
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "success \n";
-        mut.unlock();
-#endif
 
         double priorProb = 0.5;
         if (sample >= 0) {
@@ -230,11 +207,6 @@ void thread_me(const int tid,
             clust = thisclusterassignment.col(0).t();
             corow = isingCoefs.row(subset);
 
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "compute expit \n";
-        mut.unlock();
-#endif
 
 
             priorProb = expit(sum(corow % clust) + isingOffset);
@@ -246,11 +218,6 @@ void thread_me(const int tid,
         double pResponder;
         double densityRatio;
 
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "density ratio \n";
-        mut.unlock();
-#endif
 
         densityRatio = integratedDensities.at(0) / integratedDensities.at(1) *
             (1.0 - priorProb) / priorProb;
@@ -263,11 +230,6 @@ void thread_me(const int tid,
           pResponder = pResponder * iterAssignCoef;
         }
 
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "MH acceptance \n";
-        mut.unlock();
-#endif
         // if (unifVec.at(unifPosition++, subject) < pResponder) {
         if (R::runif(0, 1) < pResponder) {
           thisclusterassignment.at(subset, 0) = 1;
@@ -286,20 +248,8 @@ void thread_me(const int tid,
   }
 
   // arma::vec unifVec2;
-
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "uniform sample \n";
-        mut.unlock();
-#endif
-
   // unifVec2 = flowReMix::myrunif(nsamp_floor * nsubsets, tid);
 
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "successful uniform sample \n";
-        mut.unlock();
-#endif
 
   arma::vec newEta(altEta.n_rows);
   newEta = nullEta.col(subject);   // should copy
@@ -314,11 +264,6 @@ void thread_me(const int tid,
   arma::vec MHattempts(nsubsets, arma::fill::zeros);
   arma::vec MHsuccess(nsubsets, arma::fill::zeros);
 
-#ifdef DEBUG
-        mut.lock();
-        std::cout << "sampleRandom " << sampleRandom << " \n";
-        mut.unlock();
-#endif
 
   if (sampleRandom) {
     double index_subject = index(subject);
@@ -349,6 +294,7 @@ void thread_me(const int tid,
   std::copy(thisclusterassignment.begin_col(0),
             thisclusterassignment.end_col(0),
             clusterassignments.begin_col(subject));
+  threadIsFinished[tid] = true;
   mut.unlock();
   return;
 }
@@ -419,64 +365,136 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
 
     auto subject = 0;
     int tid = 0;
-    if(cpus>nsubjects)
-      cpus=nsubjects;
+    if (cpus > nsubjects)
+      cpus = nsubjects;
     Progress prog(nsubjects, true);
+    std::vector<bool> threadIsFinished(cpus);
+    std::fill(threadIsFinished.begin(),
+              threadIsFinished.end(),
+              true);   // no threads have started any work yet.
 
+    // Start the initial set of workers.
+    for (int tid = 0; tid < cpus; tid++) {
+        thread_vector.push_back(std::thread(thread_me,
+                                            tid,
+                                            subject,
+                                            nsamp_floor,
+                                            std::ref(proportions),
+                                            std::ref(preassign),
+                                            std::ref(doNotSample),
+                                            nsubsets,
+                                            iterAssignCoef,
+                                            zeroPosteriorProbs,
+                                            prior,
+                                            intSampSize,
+                                            betaDispersion,
+                                            keepEach,
+                                            sampleRandom,
+                                            mat_size,
+                                            std::ref(subpopInd),
+                                            std::ref(covariance),
+                                            std::ref(MHcoef),
+                                            std::ref(M),
+                                            std::ref(nullEta),
+                                            std::ref(index),
+                                            std::ref(condvar),
+                                            std::ref(altEta),
+                                            std::ref(Y),
+                                            std::ref(N),
+                                            std::ref(isingCoefs),
+                                            std::ref(invcov),
+                                            std::ref(rand),
+                                            std::ref(clusterassignments),
+                                            std::ref(assignmentMats),
+                                            std::ref(randomeffectMats),
+                                            std::ref(MHsuccessrates),
+                                            std::ref(mut),
+                                            std::ref(threadIsFinished)));
+        subject++;
+#ifdef DEBUG
+        std::cout <<
+            "Initial launch of thread for subject "
+                  << subject << " of "
+                  << nsubjects << "\n";
+#endif
+    }
+
+    // monitor the threads for completion.
     while (subject < nsubjects) {
-      thread_vector.clear();
       for (int tid = 0; tid < cpus; tid++) {
-        if (subject <  nsubjects) {
-          thread_vector.push_back(std::thread(thread_me,
-                                              tid,
-                                              subject,
-                                              nsamp_floor,
-                                              std::ref(proportions),
-                                              std::ref(preassign),
-                                              std::ref(doNotSample),
-                                              nsubsets,
-                                              iterAssignCoef,
-                                              zeroPosteriorProbs,
-                                              prior,
-                                              intSampSize,
-                                              betaDispersion,
-                                              keepEach,
-                                              sampleRandom,
-                                              mat_size,
-                                              std::ref(subpopInd),
-                                              std::ref(covariance),
-                                              std::ref(MHcoef),
-                                              std::ref(M),
-                                              std::ref(nullEta),
-                                              std::ref(index),
-                                              std::ref(condvar),
-                                              std::ref(altEta),
-                                              std::ref(Y),
-                                              std::ref(N),
-                                              std::ref(isingCoefs),
-                                              std::ref(invcov),
-                                              std::ref(rand),
-                                              std::ref(clusterassignments),
-                                              std::ref(assignmentMats),
-                                              std::ref(randomeffectMats),
-                                              std::ref(MHsuccessrates),
-                                              std::ref(mut)));
-          subject++;
-        } else {
+        if (threadIsFinished[tid] & thread_vector[tid].joinable()) {
+            thread_vector[tid].join();
+            prog.increment();
+#ifdef DEBUG
+            std::cout << "joined thread " << tid <<"\n";
+#endif
+            if (subject <  nsubjects) {
+              mut.lock();
+              threadIsFinished[tid] = false;
+              mut.unlock();
+              thread_vector[tid] = std::thread(thread_me,
+                                               tid,
+                                               subject,
+                                               nsamp_floor,
+                                               std::ref(proportions),
+                                               std::ref(preassign),
+                                               std::ref(doNotSample),
+                                               nsubsets,
+                                               iterAssignCoef,
+                                               zeroPosteriorProbs,
+                                               prior,
+                                               intSampSize,
+                                               betaDispersion,
+                                               keepEach,
+                                               sampleRandom,
+                                               mat_size,
+                                               std::ref(subpopInd),
+                                               std::ref(covariance),
+                                               std::ref(MHcoef),
+                                               std::ref(M),
+                                               std::ref(nullEta),
+                                               std::ref(index),
+                                               std::ref(condvar),
+                                               std::ref(altEta),
+                                               std::ref(Y),
+                                               std::ref(N),
+                                               std::ref(isingCoefs),
+                                               std::ref(invcov),
+                                               std::ref(rand),
+                                               std::ref(clusterassignments),
+                                               std::ref(assignmentMats),
+                                               std::ref(randomeffectMats),
+                                               std::ref(MHsuccessrates),
+                                               std::ref(mut),
+                                               std::ref(threadIsFinished));
+#ifdef DEBUG2
+              std::cout << "Launched new thread " << tid << " for subject " << subject << "/" << nsubjects << "\n";
+#endif
+              subject++;
+            } else {
+              continue;
+            }
+        }  // end of if clause
+      }  // end for loop over threads
+    }  // end while loop over subjects
+      // Join any dangling threads
+    for (tid = 0; tid < thread_vector.size(); tid++) {
+      if (thread_vector[tid].joinable()) {
+        try {
+          thread_vector[tid].join();
+          prog.increment();
+        }
+        catch(std::exception const &e) {
           continue;
         }
       }
-      std::for_each(thread_vector.begin(),
-                  thread_vector.end(),
-                  std::mem_fn(&std::thread::join));
-      prog.increment(thread_vector.size());
-    }
+    }  // end for loop
     List retval = List::create(
         Named("assign") = wrap(assignmentMats),
         Named("rand") = wrap(randomeffectMats),
         Named("rate") = wrap(MHsuccessrates));
     return retval;
-  }
+  }  // end try block
   catch(std::exception const &ex) {
     forward_exception_to_r(ex);
   } catch(...) {

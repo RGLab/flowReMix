@@ -130,11 +130,9 @@ double computeConditionalMean_arma(int subset,
                                    arma::mat invcov,
                                    arma::vec randomEst);
 
-void  thread_me( const int tid,
-                 const int subject,
-                /* const arma::mat  &unifVec, */               
+void  thread_me(const int tid,
+                const int subject,
                 int nsamp_floor,
-                /* const arma::mat  &normVec, */
                 const arma::mat  &proportions,
                 const arma::mat  &preassign,
                 const arma::vec  &doNotSample,
@@ -165,7 +163,8 @@ void  thread_me( const int tid,
                 arma::cube  &assignmentMats,
                 arma::cube  &randomeffectMats,
                 arma::mat  &MHsuccessrates,
-                std::mutex  &mut);
+                std::mutex  &mut,
+                std::vector<bool> &threadIsFinished);
     List CppFlowSstepList_mc_vec(const int nsubjects,
                                  const arma::mat Y,
                                  const arma::mat N,
