@@ -1014,7 +1014,9 @@ flowReMix <- function(formula,
                                          M = M, invcov = invcov, mixed = mixed,
                                          sampleRandom = TRUE,
                                          doNotSample = doNotSampleSubset,
-                                         markovChainEM = markovChainEM, cpus = threads, seed = as.integer(control$seed)))
+                                         markovChainEM = markovChainEM,
+                                         cpus = threads,
+                                         seed = as.integer(control$seed)))
       # print("S-STEP TIME:")
       # print(time)
 
