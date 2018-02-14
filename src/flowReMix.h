@@ -85,7 +85,9 @@ arma::mat subsetAssignGibbs_mc(const arma::vec y,
                                arma::vec assignment,
                                const int msize);
 
-arma::mat simRandomEffectCoordinateMH_mc(const arma::vec y, const arma::vec N,
+void simRandomEffectCoordinateMH_mc(arma::mat& sampleMatrix,
+                                         const arma::vec y,
+                                         const arma::vec N,
                                          const int i, int nsamp,
                                          const int nSubsets,
                                          const arma::vec MHcoef,

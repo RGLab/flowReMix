@@ -1263,10 +1263,11 @@ flowReMix <- function(formula,
       posteriors <- cbind(id = uniqueIDs, 1 - posteriors)
       names(posteriors) <- c(as.character(call$subject_id), popnames)
     } else {
-      realIDs <- gsub("\\%%%.*", "", uniqueIDs)
-      post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
-      postid <- names(post)
-      posteriors <- data.frame(rbindlist(post))
+        realIDs <- gsub("\\%%%.*", "", uniqueIDs)
+        post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
+        postid <- names(post)
+        post = do.call(rbind,post)
+      posteriors <- data.frame(post)
       names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)

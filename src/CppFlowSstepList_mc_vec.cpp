@@ -323,18 +323,17 @@ void thread_me(const int tid,
   if (sampleRandom) {
     double index_subject = index(subject);
 
-    this_randomeffects =
-        simRandomEffectCoordinateMH_mc(Y.col(subject),
-                                       N.col(subject), index_subject,
-                                       nsamp_floor, nsubsets, MHcoef,
-                                       assignment.t(),
-                                       subpopInd.col(subject), newEta,
-                                       randomEst, condvar,
-                                       covariance, invcov,
-                                       MHattempts, MHsuccess,
-                                       // unifVec2,
-                                       M, betaDispersion,
-                                       keepEach, mat_size);
+    simRandomEffectCoordinateMH_mc(this_randomeffects,
+                                   Y.col(subject),
+                                   N.col(subject), index_subject,
+                                   nsamp_floor, nsubsets, MHcoef,
+                                   assignment.t(),
+                                   subpopInd.col(subject), newEta,
+                                   randomEst, condvar,
+                                   covariance, invcov,
+                                   MHattempts, MHsuccess,
+                                   M, betaDispersion,
+                                   keepEach, mat_size);
   }
   this_success = MHsuccess/MHattempts;
   mut.lock();
@@ -470,7 +469,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
       std::for_each(thread_vector.begin(),
                   thread_vector.end(),
                   std::mem_fn(&std::thread::join));
-      prog.increment();
+      prog.increment(thread_vector.size());
     }
     List retval = List::create(
         Named("assign") = wrap(assignmentMats),
