@@ -997,7 +997,8 @@ flowReMix <- function(formula,
       #                  doNotSample = doNotSampleSubset,
       #                  markovChainEM = markovChainEM)
                                         #      browser()
-      print("starting sampler with ", threads," threads");
+      if(verbose)
+          cat("starting sampler with ", threads," threads");
       (MHresult <- CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                          N = mhList$TOT, subpopInd = mhList$subpopInd,
                                          clusterassignments = mhList$clusterassignments,

@@ -220,10 +220,6 @@ namespace flowReMix {
   auto myrnorm3 = [](arma::vec& r, double mean, double sigma, int tid) {
     std::transform(r.begin(), r.end(), r.begin(),
                    [&mean, &sigma, tid] (auto a) {
-#ifdef DEBUG
-        std::cout<< "generatorlist.size(): " << ParallelNormalGenerator::generatorlist.size()
-             << " tid" << tid << "\n";
-#endif    
         return ParallelNormalGenerator::generate(mean, sigma, tid);
       });
     return;
