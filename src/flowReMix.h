@@ -2,6 +2,7 @@
 #include <RcppArmadillo.h>
 #include <random>
 #include <omp.h>
+#include <thread>
 #include <progress.hpp>
 #include <vector>
 #include <algorithm>
@@ -31,9 +32,9 @@ namespace ParallelNormalGenerator {
       generatorlist.push_back(g);
     }
   }
-  static double generate(double mean, double sigma) {
+  static double generate(double mean, double sigma, int tid) {
     std::normal_distribution<double> d(mean, sigma);
-    return d(generatorlist.at(omp_get_thread_num()));
+    return d(generatorlist.at(tid));
   }
 }
 
@@ -55,9 +56,9 @@ namespace ParallelUnifGenerator {
       generatorlist.push_back(g);
     }
   }
-  static double generate(double lower, double upper) {
+  static double generate(double lower, double upper, int tid) {
     std::uniform_real_distribution<double> d(lower, upper);
-    return d(generatorlist.at(omp_get_thread_num()));
+    return d(generatorlist.at(tid));
   }
 }
 
@@ -97,7 +98,7 @@ arma::mat simRandomEffectCoordinateMH_mc(const arma::vec y, const arma::vec N,
                                          const arma::mat invcov,
                                          arma::vec& MHattempts,
                                          arma::vec& MHsuccess,
-                                         const arma::vec unifVec,
+                                         /* const arma::vec unifVec, */
                                          const arma::vec dispersion,
                                          const bool betaDispersion,
                                          const int keepEach,
@@ -127,10 +128,11 @@ double computeConditionalMean_arma(int subset,
                                    arma::mat invcov,
                                    arma::vec randomEst);
 
-void  thread_me(int subject,
-                const arma::mat  &unifVec,
+void  thread_me( const int tid,
+                 const int subject,
+                /* const arma::mat  &unifVec, */               
                 int nsamp_floor,
-                const arma::mat  &normVec,
+                /* const arma::mat  &normVec, */
                 const arma::mat  &proportions,
                 const arma::mat  &preassign,
                 const arma::vec  &doNotSample,
@@ -143,7 +145,7 @@ void  thread_me(int subject,
                 int keepEach,
                 bool sampleRandom,
                 int mat_size,
-                Progress  &prog,
+                /* Progress  &prog, */
                 const arma::mat &subpopInd,
                 const arma::mat &covariance,
                 const arma::mat  &MHcoef,
@@ -203,10 +205,10 @@ namespace flowReMix {
                    [] (auto a) {return static_cast<double> (R::rnorm(0, 1)); });
     return(r);
   };
-  auto myrunif = [] (int s) {
+  auto myrunif = [] (int s, int tid) {
     arma::vec r(s);
-    std::transform(r.begin(), r.end(), r.begin(), [](auto a) {
-        return ParallelUnifGenerator::generate(0, 1);
+    std::transform(r.begin(), r.end(), r.begin(), [tid](auto a) {
+        return ParallelUnifGenerator::generate(0, 1, tid);
       });
     return(r);
   };
@@ -215,10 +217,15 @@ namespace flowReMix {
 
 
 
-  auto myrnorm3 = [](int s, double mean, double sigma) {
+  auto myrnorm3 = [](int s, double mean, double sigma, int tid) {
     arma::vec r(s);
-    std::transform(r.begin(), r.end(), r.begin(), [&mean, &sigma] (auto a) {
-        return ParallelNormalGenerator::generate(mean, sigma);
+    std::transform(r.begin(), r.end(), r.begin(),
+                   [&mean, &sigma, tid] (auto a) {
+#ifdef DEBUG
+        std::cout<< "generatorlist.size(): " << ParallelNormalGenerator::generatorlist.size()
+             << " tid" << tid << "\n";
+#endif    
+        return ParallelNormalGenerator::generate(mean, sigma, tid);
       });
     return(r);
   };

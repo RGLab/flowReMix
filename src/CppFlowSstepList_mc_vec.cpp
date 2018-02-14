@@ -24,10 +24,9 @@ void printDims(arma::mat a, std::string c) {
   Rcout << c << " " << a.n_rows << " x " << a.n_cols << "\n";
 };
 
-void thread_me(int subject,
-               const arma::mat  &unifVec,
+void thread_me(const int tid,
+               const int subject,               
                int nsamp_floor,
-               const arma::mat  &normVec,
                const arma::mat  &proportions,
                const arma::mat  &preassign,
                const arma::vec  &doNotSample,
@@ -40,7 +39,7 @@ void thread_me(int subject,
                int keepEach,
                bool sampleRandom,
                int mat_size,
-               Progress  &prog,
+               // Progress  &prog,
                const arma::mat &subpopInd,
                const arma::mat &covariance,
                const arma::mat  &MHcoef,
@@ -73,7 +72,7 @@ void thread_me(int subject,
             assignmentMats.slice(subject).end(),
             this_assignmentMats.begin());
   
-   arma::mat this_randomeffects(mat_size, nsubsets);
+  arma::mat this_randomeffects(mat_size, nsubsets);
   std::copy(randomeffectMats.slice(subject).begin(),
             randomeffectMats.slice(subject).end(),
             this_randomeffects.begin());
@@ -89,20 +88,20 @@ void thread_me(int subject,
   for (sample = 0; sample < nsamp_floor; sample++) {
     for (subset = 0; subset < nsubsets; subset++) {
       if (!abort) {
-        if (doNotSample(subset) == 1.0 ||
-            (preassign(subset, subject) != -1 &
+        if (doNotSample.at(subset) == 1.0 ||
+            (preassign.at(subset, subject) != -1 &
              iterAssignCoef < 10e-4 &
              !zeroPosteriorProbs)) {
-          thisclusterassignment(subset, 0) = 0;
+          thisclusterassignment.at(subset, 0) = 0;
           continue;
-        } else if (preassign(subset, subject) != -1 &
+        } else if (preassign.at(subset, subject) != -1 &
                    iterAssignCoef < 10e-4 &
                    !zeroPosteriorProbs) {
-          thisclusterassignment(subset, 0) = preassign(subset, subject);
+          thisclusterassignment.at(subset, 0) = preassign.at(subset, subject);
           continue;
-        } else if (preassign(subset, subject) == 0) {
+        } else if (preassign.at(subset, subject) == 0) {
           isingOffset = -prior;
-        } else if (preassign(subset, subject) == 1) {
+        } else if (preassign.at(subset, subject) == 1) {
           isingOffset = prior;
         } else {
           isingOffset = 0;
@@ -122,7 +121,7 @@ void thread_me(int subject,
         subsetCount = Y(subset_indicator, subject_indicator);
 
         // Some cell populations for a specific subject may be missing
-        double sigmaHat = sqrt(covariance(subset, subset));
+        double sigmaHat = sqrt(covariance.at(subset, subset));
         arma::vec empEta = logit_arma(
             flowReMix::pmax(subsetProp, 1.0 / subsetN));
 
@@ -130,13 +129,15 @@ void thread_me(int subject,
 
         double mcoef;
 
-        mcoef = MHcoef(subset);
+        mcoef = MHcoef.at(subset);
 
         mcoef = std::max(1.0, mcoef);
         double muHat = 0;
         arma::vec vsample;
         double prevMuHat;
+        
         for (int cluster = 0; cluster < 2; cluster++) {
+          
           arma::mat eta;
           if (cluster == 0) {
             eta = subsetNullEta;
@@ -149,9 +150,11 @@ void thread_me(int subject,
             // muHat = mean(etaResid);
             // this is removed because we are just doing random walk.
             muHat = 0;
+            // library(flowReMix);devtools::test("~/Dropbox/GoTeam/Projects/flowReMix")
             vsample = flowReMix::myrnorm3(intSampSize,
                                           muHat,
-                                          sigmaHat * mcoef);
+                                          sigmaHat * mcoef,
+                                          tid);
             // vsample is fixed across clusters.
           }
           arma::vec importanceWeights;
@@ -169,7 +172,7 @@ void thread_me(int subject,
           arma::mat randomEta;
           randomEta = computeRandomEta_arma(eta, vsample);
           double disp;
-          disp = M(subset);
+          disp = M.at(subset);
 
           // arma::vec binomDensity =
           // computeBinomDensity_arma(subsetCount, subsetN,
@@ -185,34 +188,69 @@ void thread_me(int subject,
           for (i = 0; i < sampSize; i++) {
             density = 0;
             for (j = 0; j < subsetSize; j++) {
-              prob = randomEta(i, j);
+
+#ifdef DEBUG
+              mut.lock();
+              std::cout << "sample: " << sample << " subset: " << subset <<" cluster: " << cluster << " i: " << i << " j: " << j <<  "\n";
+              mut.unlock();
+#endif
+              prob = randomEta.at(i, j);
               prob = expit(prob);
-              count = subsetCount(j);
-              n = subsetN(j);
+              count = subsetCount.at(j);
+              n = subsetN.at(j);
               if (betaDispersion & (disp < 150000)) {
                 density += betaBinomDens(count, n , prob, disp);
               } else {
                 density += R::dbinom(count, n, prob, 1) / subsetSize;
               }
             }
-            binomDensity(i) = density;
+            binomDensity.at(i) = density;
           }
+
+#ifdef DEBUG
+          mut.lock();
+          std::cout << "update clusterdensity for cluster " << cluster << "\n";
+          mut.unlock();
+#endif
+          
           this_clusterDensity.col(cluster) = binomDensity +
               importanceWeights;
         }
 
         arma::vec integratedDensities;
+        
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "integrating densities \n";
+        mut.unlock();
+#endif
+        
         integratedDensities = computeIntegratedDensities_arma(
             this_clusterDensity);
+
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "success \n";
+        mut.unlock();
+#endif
+
         double priorProb = 0.5;
         if (sample >= 0) {
-          thisclusterassignment(subset, 0) = 1;
+          thisclusterassignment.at(subset, 0) = 1;
 
           {
-            arma::vec corow(nsubsets);
-            arma::vec clust(nsubsets);
-            clust = thisclusterassignment.col(0);
-            corow = isingCoefs.row(subset).t();
+            arma::rowvec corow(nsubsets);
+            arma::rowvec clust(nsubsets);
+            clust = thisclusterassignment.col(0).t();
+            corow = isingCoefs.row(subset);
+
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "compute expit \n";
+        mut.unlock();
+#endif
+
+
             priorProb = expit(sum(corow % clust) + isingOffset);
           }
         } else {
@@ -221,37 +259,63 @@ void thread_me(int subject,
 
         double pResponder;
         double densityRatio;
-        densityRatio = integratedDensities(0) / integratedDensities(1) *
+
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "density ratio \n";
+        mut.unlock();
+#endif
+
+        densityRatio = integratedDensities.at(0) / integratedDensities.at(1) *
             (1.0 - priorProb) / priorProb;
         pResponder = 1.0 / (1.0 + densityRatio);
 
 
-        if (preassign(subset, subject) == 1) {
+        if (preassign.at(subset, subject) == 1) {
           pResponder = 1 - (1 - pResponder) * iterAssignCoef;
-        } else if (preassign(subset, subject) == 0) {
+        } else if (preassign.at(subset, subject) == 0) {
           pResponder = pResponder * iterAssignCoef;
         }
 
-        if (unifVec(unifPosition++, subject) < pResponder) {
-          thisclusterassignment(subset, 0) = 1;
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "MH acceptance \n";
+        mut.unlock();
+#endif
+        // if (unifVec.at(unifPosition++, subject) < pResponder) {
+        if(R::runif(0,1) < pResponder){
+          thisclusterassignment.at(subset, 0) = 1;
         } else {
-          thisclusterassignment(subset, 0) = 0;
+          thisclusterassignment.at(subset, 0) = 0;
         }
 
-        if (Progress::check_abort()) { abort = 1; }
       }
     }
     if ((sample % keepEach) == 0) {
       for (int i = 0; i < thisclusterassignment.col(0).n_elem; i ++) {
-        this_assignmentMats(assignNum, i) =
-            thisclusterassignment(i, 0);
+        this_assignmentMats.at(assignNum, i) =
+            thisclusterassignment.at(i, 0);
       }
       assignNum++;
     }
   }
 
-  arma::vec unifVec2;
-  unifVec2 = flowReMix::myrunif(nsamp_floor * nsubsets);
+  // arma::vec unifVec2;
+
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "uniform sample \n";
+        mut.unlock();
+#endif
+
+  // unifVec2 = flowReMix::myrunif(nsamp_floor * nsubsets, tid);
+
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "successful uniform sample \n";
+        mut.unlock();
+#endif
+
   arma::vec newEta(altEta.n_rows);
   newEta = nullEta.col(subject);   // should copy
   arma::rowvec assignment;
@@ -265,6 +329,12 @@ void thread_me(int subject,
   arma::vec MHattempts(nsubsets, arma::fill::zeros);
   arma::vec MHsuccess(nsubsets, arma::fill::zeros);
 
+#ifdef DEBUG
+        mut.lock();
+        std::cout << "sampleRandom " << sampleRandom << " \n";
+        mut.unlock();
+#endif
+
   if (sampleRandom) {
     double index_subject = index(subject);
 
@@ -276,7 +346,8 @@ void thread_me(int subject,
                                        subpopInd.col(subject), newEta,
                                        randomEst, condvar,
                                        covariance, invcov,
-                                       MHattempts, MHsuccess, unifVec2,
+                                       MHattempts, MHsuccess,
+                                       // unifVec2,
                                        M, betaDispersion,
                                        keepEach, mat_size);
   }
@@ -287,10 +358,10 @@ void thread_me(int subject,
   std::copy(this_success.begin(),this_success.end(), MHsuccessrates.begin_col(subject));
   std::copy(this_randomeffects.begin() ,this_randomeffects.end(),randomeffectMats.slice(subject).begin());
   std::copy(this_assignmentMats.begin(), this_assignmentMats.end(), assignmentMats.slice(subject).begin());
-  std::copy(thisclusterassignment.begin_col(0), thisclusterassignment.end_col(0), clusterassignments.begin_col(0));
-  prog.increment();
+  std::copy(thisclusterassignment.begin_col(0), thisclusterassignment.end_col(0), clusterassignments.begin_col(subject));
   mut.unlock();
   //  Make shared variable updates.
+  return;
 }
 
 // [[Rcpp::export]]
@@ -316,7 +387,6 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
                              const bool markovChainEM, int cpus, int seed) {
   int nsamp_floor = floor(nsamp / keepEach) * keepEach;
   int mat_size = static_cast<int> (nsamp_floor/keepEach);
-  Progress prog(nsubjects, true);
   try {
     if (nsubjects != Y.n_cols) {
       throw std::domain_error("nsubjects and dimensions of Y don't match!");
@@ -335,8 +405,8 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
     arma::vec condvar = (1.0)/(invcov.diag());
 
     // preallocate and precompute random samples
-    arma::mat unifVec = flowReMix::myrunif2(nsamp_floor * nsubsets, nsubjects);
-    arma::mat normVec = flowReMix::myrnorm2(intSampSize, nsubjects);
+    // arma::mat unifVec = flowReMix::myrunif2(nsamp_floor * nsubsets, nsubjects);
+    // arma::mat normVec = flowReMix::myrnorm2(intSampSize, nsubjects);
 
     // some conditional operations
     if (mixed) {
@@ -346,27 +416,32 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
     // Gibbs for each subject
     // arma::cube clusterDensities(intSampSize, 2, nsubjects);
     arma::mat iterPosteriors(nsubsets, nsubjects);
+
+    auto max_threads = std::thread::hardware_concurrency();
+
     if (!ParallelNormalGenerator::isinit()) {
       ParallelNormalGenerator::initialize(cpus, seed);
     }
     if (!ParallelUnifGenerator::isinit()) {
       ParallelUnifGenerator::initialize(cpus, seed);
     }
-
     std::vector<std::thread> thread_vector;
     std::mutex mut;
 
-    auto max_threads = std::thread::hardware_concurrency();
     auto subject = 0;
+    int tid = 0;
+    if(cpus>nsubjects)
+      cpus=nsubjects;
+    Progress prog(nsubjects, true);
+
     while (subject < nsubjects) {
       thread_vector.clear();
-      for (int thread_id = 0; thread_id < max_threads; ++thread_id) {
+      for (int tid = 0; tid < cpus; tid++) {
         if (subject <  nsubjects) {
-          thread_vector.emplace_back(std::thread(&thread_me,
+          thread_vector.push_back(std::thread(thread_me,
+                                              tid,
                                               subject,
-                                              std::ref(unifVec),
                                               nsamp_floor,
-                                              std::ref(normVec),
                                               std::ref(proportions),
                                               std::ref(preassign),
                                               std::ref(doNotSample),
@@ -379,7 +454,6 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
                                               keepEach,
                                               sampleRandom,
                                               mat_size,
-                                              std::ref(prog),
                                               std::ref(subpopInd),
                                               std::ref(covariance),
                                               std::ref(MHcoef),
@@ -404,14 +478,14 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
         }
       }
       std::for_each(thread_vector.begin(),
-                    thread_vector.end(),
-                    std::mem_fn(&std::thread::join));
+                  thread_vector.end(),
+                  std::mem_fn(&std::thread::join));
+      prog.increment();
     }
     List retval = List::create(
         Named("assign") = wrap(assignmentMats),
         Named("rand") = wrap(randomeffectMats),
         Named("rate") = wrap(MHsuccessrates));
-    std::cout << "\n";
     return retval;
   }
   catch(std::exception const &ex) {

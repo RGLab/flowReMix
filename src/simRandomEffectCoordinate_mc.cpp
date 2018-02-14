@@ -50,7 +50,7 @@ arma::mat simRandomEffectCoordinateMH_mc(const arma::vec y,const arma::vec N,
                                          const arma::mat covariance,
                                          const arma::mat invcov,
                                          arma::vec& MHattempts, arma::vec& MHsuccess,
-                                         const arma::vec unifVec,
+                                         // const arma::vec unifVec,
                                          const arma::vec dispersion, const bool betaDispersion,
                                          const int keepEach, const int msize) {
 
@@ -96,7 +96,8 @@ arma::mat simRandomEffectCoordinateMH_mc(const arma::vec y,const arma::vec N,
       newdens = newdens + R::dnorm4(proposal, condmean, sqrt(condvar(j)), true) ;
       olddens = olddens + R::dnorm4(current, condmean, sqrt(condvar(j)), true) ;
 
-      if(unifVec(unifIndex++) < std::exp(newdens - olddens))  {
+      // if(unifVec(unifIndex++) < std::exp(newdens - olddens))  {
+      if(R::runif(0,1) < std::exp(newdens - olddens)){
         randomEst(j) = proposal ;
         MHsuccess(j) += 1 ;
       }

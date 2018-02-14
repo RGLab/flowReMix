@@ -900,7 +900,7 @@ flowReMix <- function(formula,
                                 SIMPLIFY = FALSE)
 
       if(iter == min(updateLag, iterations)) {
-        coefficientsOut <- coefficientList
+          coefficientsOut <- coefficientList
       } else if(iter > updateLag) {
         if(markovChainEM) {
           coefficientsOut <- mapply(updateCoefs, coefficientList, glmFits,
@@ -995,6 +995,7 @@ flowReMix <- function(formula,
       #                  M, invcov, mixed, sampleRandom = TRUE,
       #                  doNotSample = doNotSampleSubset,
       #                  markovChainEM = markovChainEM)
+#      browser()
       (MHresult <- CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                          N = mhList$TOT, subpopInd = mhList$subpopInd,
                                          clusterassignments = mhList$clusterassignments,
@@ -1034,6 +1035,7 @@ flowReMix <- function(formula,
     # print(mem_used()) #### MEMORY CHECK
 
     # assignmentList <- lapply(MHresult, function(x) x$assign)
+    
     assignmentList = (plyr::alply(MHresult$assign, 3, function(x) x))
     # MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
     MHrates = colMeans(MHresult$rate)
@@ -1315,7 +1317,7 @@ flowReMix <- function(formula,
 
   if(control$isingStabilityReps > 0) {
     if(verbose) print("Performing stability selection for ising model!")
-    # browser()
+    # browser)
     result$isingStability <- try(stabilityGraph(result, type = "ising",
                                             reps = control$isingStabilityReps,
                                             seed = control$seed,
