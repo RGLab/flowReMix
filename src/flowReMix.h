@@ -17,8 +17,8 @@ using namespace Rcpp;
 
 namespace ParallelNormalGenerator {
   static std::vector<std::mt19937> generatorlist;
-  static bool isinit(void) {
-    if (generatorlist.size() > 0) {
+  static bool isinit(int cpus) {
+    if (generatorlist.size() == cpus) {
       return true;
     } else {
       return false;
@@ -41,8 +41,8 @@ namespace ParallelNormalGenerator {
 
 namespace ParallelUnifGenerator {
   static std::vector<std::mt19937> generatorlist;
-  static bool isinit(void) {
-    if (generatorlist.size() > 0) {
+  static bool isinit(int cpus) {
+    if (generatorlist.size() == cpus) {
       return true;
     } else {
       return false;

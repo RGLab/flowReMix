@@ -355,10 +355,11 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
 
     auto max_threads = std::thread::hardware_concurrency();
 
-    if (!ParallelNormalGenerator::isinit()) {
+    //reinitialize only if the requested number of cpus is greater or less than the size of the generator vector
+    if (!ParallelNormalGenerator::isinit(cpus)) {
       ParallelNormalGenerator::initialize(cpus, seed);
     }
-    if (!ParallelUnifGenerator::isinit()) {
+    if (!ParallelUnifGenerator::isinit(cpus)) {
       ParallelUnifGenerator::initialize(cpus, seed);
     }
     std::vector<std::thread> thread_vector;

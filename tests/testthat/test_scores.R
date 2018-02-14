@@ -44,7 +44,7 @@ test_that("RV144 polyfunctionality scores are reproducible",{
   data("fitcontrol")
   control$updateLag=4
   control$ncores=4
-  control$threads=128
+  control$threads=10
   fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                    subject_id = ptid,
                    cell_type = subset,
