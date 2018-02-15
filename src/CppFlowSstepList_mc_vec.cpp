@@ -269,7 +269,7 @@ void thread_me(const int tid,
   // number of loop iterations is nsubsets * nsubsets: inner and //
   // outer loop, times integral size times posterior samples,    //
   // times 2 for the two cluster components. This is really      //
-  // horribly inefficient. There must be something we can do     //
+  // inefficient. There must be something we can do              //
   // to improve this.                                            //
   /////////////////////////////////////////////////////////////////
   timings.push_back(static_cast<double>(nsamp_floor *
@@ -366,15 +366,9 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
     arma::cube assignmentMats(mat_size, nsubsets, nsubjects);
     arma::cube randomEffectMats(mat_size, nsubsets, nsubjects);
     arma::mat MHsuccessrates(nsubsets, nsubjects);
-    arma::mat proportions = Y/N;   // should be a double since Y,
-    //////////////////////////////////////
-    // N, and proportions are type mat  //
-    // which is Mat<double>             //
-    // compute the conditional variance //
-    //////////////////////////////////////
+    arma::mat proportions = Y/N;
     arma::vec condvar = (1.0)/(invcov.diag());
 
-    // some conditional operations
     if (mixed) {
       std::fill(assignmentMats.begin(), assignmentMats.end(), 1.0);
     }
