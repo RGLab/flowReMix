@@ -12,8 +12,15 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <ctime>
+#include <cstdio>
 #include "./flowReMix.h"
 
+#ifdef PROFILE
+std::vector<double> timings(1);
+#endif
+
+/* some convenience functions for debugging */
 void printDims(arma::vec a, std::string c) {
   Rcout << c << " " << a.n_rows << " x " << a.n_cols << "\n";
 };
@@ -25,8 +32,10 @@ void printDims(arma::mat a, std::string c) {
   Rcout << c << " " << a.n_rows << " x " << a.n_cols << "\n";
 };
 
+/* Function that does the stochastic EM per sample.
+   Meant to be run by a single thread.             */
 void thread_me(const int tid,
-               const int subject,               
+               const int subject,
                int nsamp_floor,
                const arma::mat  &proportions,
                const arma::mat  &preassign,
@@ -56,26 +65,31 @@ void thread_me(const int tid,
                const arma::mat &rand,
                arma::mat  &clusterassignments,
                arma::cube  &assignmentMats,
-               arma::cube  &randomeffectMats,
+               arma::cube  &randomEffectMats,
                arma::mat  &MHsuccessrates,
                std::mutex  &mut,
                std::vector<bool>& threadIsFinished) {
+#ifdef PROFILE
+  std::clock_t start;
+  double duration;
+#endif
   arma::vec this_success(nsubsets);
   arma::mat this_clusterDensity(intSampSize, 2);
   mut.lock();
+  // copy shared data to local variables
   arma::mat thisclusterassignment(nsubsets, 1);
-  std::copy(clusterassignments.begin_col(subject),  //  copy the cluserassignments from the shared variable
-            clusterassignments.end_col(subject),   // to a local private variable.
+  std::copy(clusterassignments.begin_col(subject),
+            clusterassignments.end_col(subject),
             thisclusterassignment.begin_col(0));
 
   arma::mat this_assignmentMats(mat_size, nsubsets);
   std::copy(assignmentMats.slice(subject).begin(),
             assignmentMats.slice(subject).end(),
             this_assignmentMats.begin());
-  arma::mat this_randomeffects(mat_size, nsubsets);
-  std::copy(randomeffectMats.slice(subject).begin(),
-            randomeffectMats.slice(subject).end(),
-            this_randomeffects.begin());
+  arma::mat this_randomEffects(mat_size, nsubsets);
+  std::copy(randomEffectMats.slice(subject).begin(),
+            randomEffectMats.slice(subject).end(),
+            this_randomEffects.begin());
   mut.unlock();
 
   int abort = 0;
@@ -86,6 +100,9 @@ void thread_me(const int tid,
   subject_indicator(0) = subject;
   int sample = 0, subset = 0;
   arma::vec vsample(intSampSize);
+#ifdef PROFILE
+  start = std::clock();
+#endif
   for (sample = 0; sample < nsamp_floor; sample++) {
     for (subset = 0; subset < nsubsets; subset++) {
       if (!abort) {
@@ -161,11 +178,8 @@ void thread_me(const int tid,
           double disp;
           disp = M.at(subset);
 
-          // arma::vec binomDensity =
-          // computeBinomDensity_arma(subsetCount, subsetN,
-          // randomEta, disp, betaDispersion);
 
-          int sampSize = randomEta.n_rows;
+          int sampSize = randomEta.n_cols;
           int subsetSize = subsetCount.size();
           int count, n;
           double density, prob;
@@ -175,10 +189,10 @@ void thread_me(const int tid,
           for (i = 0; i < sampSize; i++) {
             density = 0;
             for (j = 0; j < subsetSize; j++) {
-              prob = randomEta.at(i, j);
+              prob = randomEta.at(j, i);
               prob = expit(prob);
-              count = subsetCount.at(j);
-              n = subsetN.at(j);
+              count = subsetCount[j];
+              n = subsetN[j];
               if (betaDispersion & (disp < 150000)) {
                 density += betaBinomDens(count, n , prob, disp);
               } else {
@@ -248,6 +262,23 @@ void thread_me(const int tid,
     }
   }
 
+#ifdef PROFILE
+    duration = (std::clock() - start) / static_cast<double>(CLOCKS_PER_SEC);
+  mut.lock();
+  /////////////////////////////////////////////////////////////////
+  // number of loop iterations is nsubsets * nsubsets: inner and //
+  // outer loop, times integral size times posterior samples,    //
+  // times 2 for the two cluster components. This is really      //
+  // horribly inefficient. There must be something we can do     //
+  // to improve this.                                            //
+  /////////////////////////////////////////////////////////////////
+  timings.push_back(static_cast<double>(nsamp_floor *
+                                        nsubsets *
+                                        nsubsets * 2 *
+                                        intSampSize) /
+                    duration);
+  mut.unlock();
+#endif
   // arma::vec unifVec2;
   // unifVec2 = flowReMix::myrunif(nsamp_floor * nsubsets, tid);
 
@@ -269,7 +300,7 @@ void thread_me(const int tid,
   if (sampleRandom) {
     double index_subject = index(subject);
 
-    simRandomEffectCoordinateMH_mc(this_randomeffects,
+    simRandomEffectCoordinateMH_mc(this_randomEffects,
                                    Y.col(subject),
                                    N.col(subject), index_subject,
                                    nsamp_floor, nsubsets, MHcoef,
@@ -286,9 +317,9 @@ void thread_me(const int tid,
   std::copy(this_success.begin(),
             this_success.end(),
             MHsuccessrates.begin_col(subject));
-  std::copy(this_randomeffects.begin(),
-            this_randomeffects.end(),
-            randomeffectMats.slice(subject).begin());
+  std::copy(this_randomEffects.begin(),
+            this_randomEffects.end(),
+            randomEffectMats.slice(subject).begin());
   std::copy(this_assignmentMats.begin(),
             this_assignmentMats.end(),
             assignmentMats.slice(subject).begin());
@@ -330,19 +361,18 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
     if (nsubsets != rand.n_rows) {
       throw std::domain_error("nSubsets and dimensions of rand don't match!");
     }
-    // allocate objects for return values;
+
+    // allocate objects for return values; //
     arma::cube assignmentMats(mat_size, nsubsets, nsubjects);
-    arma::cube randomeffectMats(mat_size, nsubsets, nsubjects);
+    arma::cube randomEffectMats(mat_size, nsubsets, nsubjects);
     arma::mat MHsuccessrates(nsubsets, nsubjects);
     arma::mat proportions = Y/N;   // should be a double since Y,
-    // N, and proportions are mat
-    // which is Mat<double>
-    // compute the conditional variance
+    //////////////////////////////////////
+    // N, and proportions are type mat  //
+    // which is Mat<double>             //
+    // compute the conditional variance //
+    //////////////////////////////////////
     arma::vec condvar = (1.0)/(invcov.diag());
-
-    // preallocate and precompute random samples
-    // arma::mat unifVec = flowReMix::myrunif2(nsamp_floor * nsubsets, nsubjects);
-    // arma::mat normVec = flowReMix::myrnorm2(intSampSize, nsubjects);
 
     // some conditional operations
     if (mixed) {
@@ -355,7 +385,12 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
 
     auto max_threads = std::thread::hardware_concurrency();
 
-    //reinitialize only if the requested number of cpus is greater or less than the size of the generator vector
+     ////////////////////////////////////////////
+     // reinitialize the parallel generator    //
+     // only if the requested number           //
+     //  of cpus is greater or less than       //
+     // the size of the generator vector       //
+     ////////////////////////////////////////////
     if (!ParallelNormalGenerator::isinit(cpus)) {
       ParallelNormalGenerator::initialize(cpus, seed);
     }
@@ -408,7 +443,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
                                             std::ref(rand),
                                             std::ref(clusterassignments),
                                             std::ref(assignmentMats),
-                                            std::ref(randomeffectMats),
+                                            std::ref(randomEffectMats),
                                             std::ref(MHsuccessrates),
                                             std::ref(mut),
                                             std::ref(threadIsFinished)));
@@ -465,7 +500,7 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
                                                std::ref(rand),
                                                std::ref(clusterassignments),
                                                std::ref(assignmentMats),
-                                               std::ref(randomeffectMats),
+                                               std::ref(randomEffectMats),
                                                std::ref(MHsuccessrates),
                                                std::ref(mut),
                                                std::ref(threadIsFinished));
@@ -492,26 +527,28 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
         }
       }  // end for loop
       ndone = std::accumulate(threadIsFinished.begin(),
-                  threadIsFinished.end(),0);
-                     
-      // ndone = std::experimental::parallel::transform_reduce(threadIsFinished.begin(),
-                                    // threadIsFinished.end(),
-                                    // 0,
-                                    // std::plus<>(), [] (bool b) -> int {
-                                      // if (b) {
-                                        // return 1;
-                                      // } else {
-                                        // return 0;
-                                      // }
-                                    // });
+                  threadIsFinished.end(), 0);
       if (ndone == thread_vector.size()) {
         alldone++;  // loop through twice to ensure we
                     // join all completed threads.
       }
     }
+#ifdef PROFILE
+    double sum = 0;
+    double size =  timings.size();
+    std::transform(timings.begin(), timings.end(),
+                   timings.begin(),
+                   [size] (double d) {
+                     return d / size;
+                   });
+    sum = std::accumulate(timings.begin(), timings.end(), 0.0);
+    std::cout << sum  <<
+        " loop iterations per second per thread (avg) \n";
+      timings.clear();
+#endif
     List retval = List::create(
         Named("assign") = wrap(assignmentMats),
-        Named("rand") = wrap(randomeffectMats),
+        Named("rand") = wrap(randomEffectMats),
         Named("rate") = wrap(MHsuccessrates));
     return retval;
   }  // end try block

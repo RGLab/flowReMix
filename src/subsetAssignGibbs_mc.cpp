@@ -20,22 +20,22 @@ arma::vec computeIntegratedDensities_arma(arma::mat logdens) {
 arma::mat computeRandomEta_arma(arma::vec eta, arma::vec vsample) {
   int m = vsample.size() ;
 
-  arma::mat result(m, eta.size()) ;
+  arma::mat result(eta.size(),m) ;
   for(int i = 0 ; i < m ; i++) {
-    result.row(i) = eta.t();
-    result.row(i) = result.row(i)+vsample[i];
+    result.col(i) = eta;
+    result.col(i) = result.col(i)+vsample[i];
   }
   return result ;
 }
 
 
-//eta should be K x 1.
+//eta should be K x 1
 arma::mat computeRandomEta_arma(arma::mat eta, arma::vec vsample) {
   int m = vsample.size() ;
-  arma::mat result(m, eta.size()) ;
+  arma::mat result(eta.size(), m) ;
   for(int i = 0 ; i < m ; i++) {
-    result.row(i) = eta.t();
-    result.row(i) = result.row(i)+vsample(i);
+    result.col(i) = eta;
+    result.col(i) = result.col(i)+vsample(i);
   }
   return result ;
 }
