@@ -1,2 +1,2 @@
-PKG_CXXFLAGS=-std=c++14 -g -O3 -DARMA_NO_DEBUG 
+PKG_CXXFLAGS=-std=c++14 -g -O0 -DARMA_NO_DEBUG 
 PKG_CPPFLAGS=-I/usr/local/opt/llvm/include/c++/v1/
