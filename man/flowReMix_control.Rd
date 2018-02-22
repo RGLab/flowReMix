@@ -12,7 +12,8 @@ flowReMix_control(updateLag = 10, randomAssignProb = 1e-08, nsamp = 50,
   markovChainEM = TRUE, seed = 100, prior = 0, isingWprior = TRUE,
   zeroPosteriorProbs = FALSE, clusterType = c("AUTO", "FORK", "SOCK"),
   isingStabilityReps = 200, randStabilityReps = 0, learningRate = 0.6,
-  keepWeightPercent = 0.9, sampleNew = FALSE, subsetDiscardThreshold = 0)
+  keepWeightPercent = 0.9, sampleNew = FALSE, subsetDiscardThreshold = 0,
+  threads = 1)
 }
 \arguments{
 \item{updateLag}{number of iterations before the algorithm is assumed to

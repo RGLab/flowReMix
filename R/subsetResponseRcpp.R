@@ -565,14 +565,14 @@ flowReMix <- function(formula,
    dataByPopulation <- split(dat,by="sub.population")
 ### dim(dat)
 ### 11,184,300
-### system.time(split(dat,by="sub.population")) 
-###   user  system elapsed 
+### system.time(split(dat,by="sub.population"))
+###   user  system elapsed
 ###  1.563   0.230   1.795
 ###
 ### system.time(by(dat, dat$sub.population, function(x) x))
-###   user  system elapsed 
-###  18.299  22.016  40.343 
-   
+###   user  system elapsed
+###  18.299  22.016  40.343
+
   #indices <- 1:length(dataByPopulation)
   #chunkSize=min(200,length(dataByPopulation));
   #chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
@@ -583,7 +583,7 @@ flowReMix <- function(formula,
    initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
           initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
    }
-  
+
   names(initialization) <- names(dataByPopulation)
    isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
    if(class(isEmpty)%in%"list"){
@@ -594,8 +594,8 @@ flowReMix <- function(formula,
         names(initialization) <- names(dataByPopulation)
         isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
    }
-   
-   
+
+
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
     newlevels <- levels(sub.population)[!(levels(sub.population) %in% empty)]
@@ -775,7 +775,7 @@ flowReMix <- function(formula,
 
           # separation <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
           #                   family = "binomial", method = "detect_separation")$separation
-          if(popDat[[2]] | firth) {
+          if(popDat[[2]]) {
             fit <- NULL
             try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
                        family = "binomial", method = brglmFit))
@@ -786,6 +786,13 @@ flowReMix <- function(formula,
                                              weights = weights * emWeights,
                                              family = "binomial")), silent=TRUE)
           }
+
+          ## FIRTH IF INTERCEPT IS TOO SMALL
+          if(coef(fit)[1] < -20) {
+            try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
+                           family = "binomial", method = brglmFit))
+          }
+          ######################################
 
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popDat[[1]],
@@ -962,7 +969,7 @@ flowReMix <- function(formula,
     }
 
     listForMH = vector('list', nSubjects)
-    
+
     for(i in 1:length(listForMH)){
       listForMH[[i]] = list(dat = databyid[[i]][, keepcols,with=FALSE],
            pre = preAssignment[[i]],
@@ -1040,7 +1047,7 @@ flowReMix <- function(formula,
     # print(mem_used()) #### MEMORY CHECK
 
     # assignmentList <- lapply(MHresult, function(x) x$assign)
-    
+
     assignmentList = (plyr::alply(MHresult$assign, 3, function(x) x))
     # MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
     MHrates = colMeans(MHresult$rate)
