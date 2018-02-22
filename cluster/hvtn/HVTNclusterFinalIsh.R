@@ -47,7 +47,8 @@ marginals <- subset(hvtn, population %in% marginals)
 marginals <- subset(marginals, stim %in% c("negctrl", "VRC ENV A",
                                            "VRC ENV B", "VRC ENV C",
                                            "VRC GAG B", "VRC NEF B",
-                                           "VRC POL 1 B", "VRC POL 2 B"))
+                                           "VRC POL 1 B", "VRC POL 2 B",
+                                           "Empty Ad5 (VRC)"))
 marginals <- subset(marginals, !(population %in% c("4+", "8+")))
 marginals <- subset(marginals, !(population %in% c("8+/107a-154-IFNg-IL2-TNFa-", "4+/107a-154-IFNg-IL2-TNFa-")))
 marginals$stim <- factor(as.character(marginals$stim))
@@ -85,7 +86,8 @@ subsetDat <- stimulationModel(marginals,
                               stim_groups = list(gag = "VRC GAG B",
                                                  pol = c("VRC POL 1 B", "VRC POL 2 B"),
                                                  env = c("VRC ENV C", "VRC ENV B", "VRC ENV A"),
-                                                 nef = "VRC NEF B"),
+                                                 nef = "VRC NEF B",
+                                                 Ad5 = "Empty Ad5 (VRC)"),
                               controls = c("negctrl"))
 subsetDat$subset <- subsetDat$stimCellType
 subsetDat$stimCellType <- NULL
@@ -109,8 +111,8 @@ marginals$population <- factor(as.character(marginals$population))
 
 configurations <- expand.grid(method = c("MC"),
                               seed = 1:30,
-                              maxdisp = c(10, 50),
-                              niter = c(60),
+                              maxdisp = c(, 50),
+                              niter = c(20),
                               includeBatch = FALSE)
 config <- configurations[setting, ]
 print(config)
@@ -138,6 +140,7 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50,
                              prior = prior, isingWprior = FALSE,
                              markovChainEM = mcEM,
                              initMethod = "robust",
+                             threads = cpus * 2,
                              learningRate = 0.6, keepWeightPercent = 0.9)
 
 subsetDat$batch <- factor(subsetDat$batch..)
@@ -154,12 +157,12 @@ subsetDat$batch <- factor(as.character(subsetDat$batch), levels = unique(as.char
 
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  subject_id = ptid,
-                 cell_type = population,
+                 cell_type = subset,
                  cluster_variable = stim,
-                 data = marginals,
+                 data = subsetDat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "robust",
+                 regression_method = "firth",
                  iterations = niter,
                  parallel = TRUE, keepSamples = TRUE,
                  cluster_assignment = TRUE,

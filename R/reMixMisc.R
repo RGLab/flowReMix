@@ -158,7 +158,7 @@ flowReMix_control <- function(updateLag = 10, randomAssignProb = 1e-8, nsamp = 5
                               clusterType = c("AUTO","FORK","SOCK"),
                               isingStabilityReps = 200, randStabilityReps = 0,
                               learningRate = 0.6, keepWeightPercent = 0.9, sampleNew = FALSE,
-                              subsetDiscardThreshold = 0, threads = 1) {
+                              subsetDiscardThreshold = 0, threads = NULL) {
   object <- list(updateLag = updateLag,
                  randomAssignProb = randomAssignProb,
                  nsamp = nsamp,

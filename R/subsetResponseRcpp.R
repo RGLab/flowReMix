@@ -434,7 +434,11 @@ flowReMix <- function(formula,
     }
   }
 
+
   # ncores <- getDoParWorkers()
+  if(is.null(threads)) {
+    threads <- ncores * 2
+  }
   if(ncores == 1) {
     message("Estimating model via sequential computation")
   } else {
@@ -1005,7 +1009,7 @@ flowReMix <- function(formula,
       #                  markovChainEM = markovChainEM)
                                         #      browser()
       if(verbose)
-          cat("starting sampler with ", threads," threads");
+          cat("starting sampler with ", threads," threads \n");
       (MHresult <- CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                          N = mhList$TOT, subpopInd = mhList$subpopInd,
                                          clusterassignments = mhList$clusterassignments,
