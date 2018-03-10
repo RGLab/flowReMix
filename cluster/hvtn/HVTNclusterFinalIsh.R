@@ -47,8 +47,8 @@ marginals <- subset(hvtn, population %in% marginals)
 marginals <- subset(marginals, stim %in% c("negctrl", "VRC ENV A",
                                            "VRC ENV B", "VRC ENV C",
                                            "VRC GAG B", "VRC NEF B",
-                                           "VRC POL 1 B", "VRC POL 2 B",
-                                           "Empty Ad5 (VRC)"))
+                                           "VRC POL 1 B", "VRC POL 2 B"))
+                                           # "Empty Ad5 (VRC)"))
 marginals <- subset(marginals, !(population %in% c("4+", "8+")))
 marginals <- subset(marginals, !(population %in% c("8+/107a-154-IFNg-IL2-TNFa-", "4+/107a-154-IFNg-IL2-TNFa-")))
 marginals$stim <- factor(as.character(marginals$stim))
@@ -86,8 +86,8 @@ subsetDat <- stimulationModel(marginals,
                               stim_groups = list(gag = "VRC GAG B",
                                                  pol = c("VRC POL 1 B", "VRC POL 2 B"),
                                                  env = c("VRC ENV C", "VRC ENV B", "VRC ENV A"),
-                                                 nef = "VRC NEF B",
-                                                 Ad5 = "Empty Ad5 (VRC)"),
+                                                 nef = "VRC NEF B"),
+                                                 # Ad5 = "Empty Ad5 (VRC)"),
                               controls = c("negctrl"))
 subsetDat$subset <- subsetDat$stimCellType
 subsetDat$stimCellType <- NULL
@@ -111,7 +111,7 @@ marginals$population <- factor(as.character(marginals$population))
 
 configurations <- expand.grid(method = c("MC"),
                               seed = 1:30,
-                              maxdisp = c(, 50),
+                              maxdisp = c(50),
                               niter = c(20),
                               includeBatch = FALSE)
 config <- configurations[setting, ]
@@ -162,7 +162,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  data = subsetDat,
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "firth",
+                 regression_method = "robust",
                  iterations = niter,
                  parallel = TRUE, keepSamples = TRUE,
                  cluster_assignment = TRUE,

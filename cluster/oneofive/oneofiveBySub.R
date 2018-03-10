@@ -2,7 +2,13 @@ library(flowReMix)
 library(magrittr)
 library(reshape2)
 library(dplyr)
-filtered_data = readRDS(file="data/hvtn105_filtered_data.rds")
+
+args <- commandArgs(TRUE)
+eval(parse(text=args[[1]]))
+setting <- as.numeric(setting)
+ncpus <- 4
+
+filtered_data <- readRDS(file="data/hvtn105_filtered_data.rds")
 
 # Defining (time X stim X cell) subsets
 names(filtered_data) <- tolower(names(filtered_data))
@@ -46,9 +52,21 @@ levels(stimdat$visitStimCell)
 stimdat <- data.frame(stimdat)
 
 # Analysis Settings ---------
-iterations <- 21
-ncpus <- 2
-fseed <- 1
+configurations <- expand.grid(pargroup = 1:13,
+                              iterations = 40,
+                              fseed = 1:4)
+config <- configurations[setting, ]
+iterations <- config[["iterations"]]
+fseed <- config[["fseed"]]
+pargroup <- config[["pargroup"]]
+
+stimdat$par <- as.character(stimdat$visitStimCell) %>% strsplit("/") %>%
+  sapply(function(x) x[[3]])
+parentGroups <- unique(stimdat$par)
+stimdat <- subset(stimdat, par == parentGroups[pargroup])
+stimdat$visitStimCell <- factor(stimdat$visitStimCell)
+stimdat$stim <- factor(stimdat$stim)
+
 nPosteriors <- ceiling(length(levels(stimdat$visitStimCell)) / length(unique(stimdat$ptid))) + 1
 
 control = flowReMix_control(updateLag = round(iterations / 3),
@@ -59,13 +77,8 @@ control = flowReMix_control(updateLag = round(iterations / 3),
                             ncores = ncpus,
                             seed = fseed,
                             isingWprior = FALSE,
-                            isingStabilityReps = 0)
-
-stimdat$par <- as.character(stimdat$visitStimCell) %>% strsplit("/") %>%
-  sapply(function(x) x[[3]])
-parentGroups <- unique(stimdat$par)
-stimdat <- subset(stimdat, stimdat)
-
+                            isingStabilityReps = 100,
+                            threads = ncpus * 2)
 
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                 subject_id = ptid,
@@ -76,7 +89,14 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                 ising_model = "sparse",
                 regression_method = "robust",
                 cluster_assignment = TRUE,
-                iterations = 20,
-                parallel = FALSE,
+                iterations = iterations,
+                parallel = TRUE,
                 verbose = TRUE,
                 control = control)
+
+filename <- paste("results/HVTN105_A_parent_", parentGroups[pargroup],
+                  "_iterations", iterations,
+                  "nPost", nPosteriors,
+                  "seed", fseed,
+                  ".rds", sep = "")
+saveRDS(fit, file = filename)

@@ -3,7 +3,7 @@ library(flowReMix)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-ncores <- 8
+ncores <- 4
 
 assign <- function(x) {
   x$prop <- x$count / x$parentcount
@@ -68,9 +68,9 @@ stimDat$subset <- factor(stimDat$subset)
 
 # Analysis Setting -------------
 configurations <- expand.grid(mcEM = c(TRUE),
-                              seed = 1:30,
-                              maxdisp = c(10, 50),
-                              npost = c(20),
+                              seed = 1:50,
+                              maxdisp = c(10, 50, 100),
+                              npost = c(10),
                               niter = c(60))
 
 mcEM <- configurations[["mcEM"]][setting]

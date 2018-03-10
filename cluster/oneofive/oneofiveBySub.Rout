@@ -1,0 +1,2162 @@
+
+R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(flowReMix)
+> library(magrittr)
+> library(reshape2)
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> 
+> args <- commandArgs(TRUE)
+> eval(parse(text=args[[1]]))
+> setting <- as.numeric(setting)
+> 
+> filtered_data <- readRDS(file="data/hvtn105_filtered_data.rds")
+> ncpus <- 4
+> 
+> # Defining (time X stim X cell) subsets
+> names(filtered_data) <- tolower(names(filtered_data))
+> unique(filtered_data$stim)
+[1] negctrl     92TH023-ENV Gag-ZM96    Env-1-ZM96  Env-2-ZM96 
+Levels: negctrl 92TH023-ENV Env-1-ZM96 Env-2-ZM96 Gag-ZM96
+> filtered_data <- filtered_data[, -14]
+> filtered_data$subset <- gsub(".", "", filtered_data$subset, fixed = "TRUE")
+> stimdat <- stimulationModel(filtered_data,
++                             cell_type = subset,
++                             stim_var = stim,
++                             controls = "negctrl",
++                             stim_groups = list(gag = "Gag-ZM96",
++                                                vacenv = "92TH023-ENV",
++                                                env = c("Env-1-ZM96", "Env-2-ZM96")))
+To fit the stimulation response model, run flowReMix with `cell_type = stimCellType'.
+> unique(stimdat$stimCellType)
+  [1] gag/3+4+/TNF+                                    
+  [2] gag/3+4+/IL21+                                   
+  [3] gag/3+4+/IL4+                                    
+  [4] gag/3+4+/IL2+                                    
+  [5] gag/3+4+/IL2+TNF+                                
+  [6] gag/3+4+/IFNg+                                   
+  [7] gag/3+4+/IFNg+TNF+                               
+  [8] gag/3+4+/IFNg+IL2+TNF+                           
+  [9] gag/3+4+/GzB+                                    
+ [10] gag/3+4+/GzB+TNF+                                
+ [11] gag/3+4+/GzB+IL21+                               
+ [12] gag/3+4+/GzB+IFNg+TNF+                           
+ [13] gag/3+4+/CD154+                                  
+ [14] gag/3+4+/CD154+TNF+                              
+ [15] gag/3+4+/CD154+IL2+                              
+ [16] gag/3+4+/CD154+IL2+TNF+                          
+ [17] gag/3+4+/CD154+IFNg+                             
+ [18] gag/3+4+/CD154+IFNg+TNF+                         
+ [19] gag/3+4+/CD154+IFNg+IL21+                        
+ [20] gag/3+4+/CD154+IFNg+IL2+                         
+ [21] gag/3+4+/CD154+IFNg+IL2+TNF+                     
+ [22] gag/3+4+/CD154+GzB+                              
+ [23] gag/3+4+/CD154+GzB+IFNg+TNF+                     
+ [24] gag/3+4+/CD154+GzB+IFNg+IL2+TNF+                 
+ [25] gag/4+CM/TNF+                                    
+ [26] gag/4+CM/IL21+                                   
+ [27] gag/4+CM/IL4+                                    
+ [28] gag/4+CM/IL2+                                    
+ [29] gag/4+CM/IL2+TNF+                                
+ [30] gag/4+CM/IFNg+                                   
+ [31] gag/4+CM/GzB+                                    
+ [32] gag/4+CM/CD154+                                  
+ [33] gag/4+CM/CD154+TNF+                              
+ [34] gag/4+CM/CD154+IL2+                              
+ [35] gag/4+CM/CD154+IL2+TNF+                          
+ [36] gag/4+CM/CD154+IFNg+TNF+                         
+ [37] gag/4+CM/CD154+IFNg+IL2+TNF+                     
+ [38] gag/4+CM/CD154+GzB+                              
+ [39] gag/CXCR5+PD1+/IL21+                             
+ [40] gag/CXCR5+PD1+/IFNg+                             
+ [41] gag/CXCR5+PD1+/GzB+                              
+ [42] gag/CXCR5+PD1+/CD154+                            
+ [43] gag/CXCR5+PD1+/CD154+IFNg+                       
+ [44] gag/CXCR5+PD1+/CD154+GzB+                        
+ [45] gag/CXCR5+CD45RA-PD1+CCR7-/GzB+                  
+ [46] gag/4+EM/TNF+                                    
+ [47] gag/4+EM/IL2+                                    
+ [48] gag/4+EM/IL2+TNF+                                
+ [49] gag/4+EM/IFNg+                                   
+ [50] gag/4+EM/IFNg+TNF+                               
+ [51] gag/4+EM/IFNg+IL2+TNF+                           
+ [52] gag/4+EM/GzB+                                    
+ [53] gag/4+EM/GzB+TNF+                                
+ [54] gag/4+EM/GzB+IFNg+TNF+                           
+ [55] gag/4+EM/CD154+                                  
+ [56] gag/4+EM/CD154+TNF+                              
+ [57] gag/4+EM/CD154+IL2+                              
+ [58] gag/4+EM/CD154+IL2+TNF+                          
+ [59] gag/4+EM/CD154+IFNg+                             
+ [60] gag/4+EM/CD154+IFNg+TNF+                         
+ [61] gag/4+EM/CD154+IFNg+IL2+                         
+ [62] gag/4+EM/CD154+IFNg+IL2+TNF+                     
+ [63] gag/4+EM/CD154+GzB+                              
+ [64] gag/4+EM/CD154+GzB+IFNg+TNF+                     
+ [65] gag/4+EM/CD154+GzB+IFNg+IL2+TNF+                 
+ [66] gag/4+Naive/TNF+                                 
+ [67] gag/4+Naive/IL21+                                
+ [68] gag/4+Naive/IL4+                                 
+ [69] gag/4+Naive/IL2+                                 
+ [70] gag/4+Naive/IFNg+                                
+ [71] gag/4+Naive/GzB+                                 
+ [72] gag/4+Naive/CD154+                               
+ [73] gag/4+Naive/CD154+TNF+                           
+ [74] gag/4+Naive/CD154+IFNg+                          
+ [75] gag/4+Naive/CD154+IFNg+IL21+                     
+ [76] gag/4+Naive/CD154+GzB+                           
+ [77] gag/4+TD/TNF+                                    
+ [78] gag/4+TD/GzB+                                    
+ [79] gag/4+TD/CD154+                                  
+ [80] gag/4+TD/CD154+GzB+                              
+ [81] gag/3+8+/TNF+                                    
+ [82] gag/3+8+/IL21+                                   
+ [83] gag/3+8+/IL4+                                    
+ [84] gag/3+8+/IL2+                                    
+ [85] gag/3+8+/IL2+TNF+                                
+ [86] gag/3+8+/IFNg+                                   
+ [87] gag/3+8+/IFNg+TNF+                               
+ [88] gag/3+8+/IFNg+IL4+                               
+ [89] gag/3+8+/IFNg+IL2+TNF+                           
+ [90] gag/3+8+/GzB+                                    
+ [91] gag/3+8+/GzB+TNF+                                
+ [92] gag/3+8+/GzB+IL21+                               
+ [93] gag/3+8+/GzB+IL2+                                
+ [94] gag/3+8+/GzB+IFNg+                               
+ [95] gag/3+8+/GzB+IFNg+TNF+                           
+ [96] gag/3+8+/CD154+                                  
+ [97] gag/3+8+/CD154+IFNg+                             
+ [98] gag/3+8+/CD154+GzB+                              
+ [99] gag/8+CM/IFNg+IL4+                               
+[100] gag/8+CM/GzB+                                    
+[101] gag/8+CM/CD154+                                  
+[102] gag/8+EM/TNF+                                    
+[103] gag/8+EM/IFNg+                                   
+[104] gag/8+EM/IFNg+TNF+                               
+[105] gag/8+EM/IFNg+IL2+TNF+                           
+[106] gag/8+EM/GzB+                                    
+[107] gag/8+EM/GzB+TNF+                                
+[108] gag/8+EM/GzB+IL21+                               
+[109] gag/8+EM/GzB+IL2+                                
+[110] gag/8+EM/GzB+IFNg+                               
+[111] gag/8+EM/GzB+IFNg+TNF+                           
+[112] gag/8+EM/CD154+                                  
+[113] gag/8+EM/CD154+GzB+                              
+[114] gag/8+Naive/IL21+                                
+[115] gag/8+Naive/IL4+                                 
+[116] gag/8+Naive/IFNg+                                
+[117] gag/8+Naive/GzB+                                 
+[118] gag/8+Naive/GzB+IL21+                            
+[119] gag/8+Naive/GzB+IFNg+TNF+                        
+[120] gag/8+Naive/CD154+                               
+[121] gag/8+Naive/CD154+IFNg+                          
+[122] gag/8+Naive/CD154+GzB+                           
+[123] gag/8+TD/TNF+                                    
+[124] gag/8+TD/IFNg+                                   
+[125] gag/8+TD/IFNg+TNF+                               
+[126] gag/8+TD/GzB+                                    
+[127] gag/8+TD/GzB+TNF+                                
+[128] gag/8+TD/GzB+IL21+                               
+[129] gag/8+TD/GzB+IFNg+                               
+[130] gag/8+TD/GzB+IFNg+TNF+                           
+[131] gag/8+TD/CD154+                                  
+[132] gag/8+TD/CD154+GzB+                              
+[133] gag/3+CD4-CD8-/IL4+                              
+[134] gag/3+CD4-CD8-/IFNg+                             
+[135] gag/3+CD4-CD8-/GzB+                              
+[136] gag/3+CD4-CD8-/GzB+TNF+                          
+[137] gag/3+CD4-CD8-/CD154+                            
+[138] gag/3+CD4-CD8-/CD154+GzB+                        
+[139] gag/3+NKT cells/TNF+                             
+[140] gag/3+NKT cells/IL21+                            
+[141] gag/3+NKT cells/IL4+                             
+[142] gag/3+NKT cells/IFNg+                            
+[143] gag/3+NKT cells/IFNg+IL4+                        
+[144] gag/3+NKT cells/GzB+                             
+[145] gag/3+NKT cells/GzB+TNF+                         
+[146] gag/3+NKT cells/GzB+IL21+                        
+[147] gag/3+NKT cells/GzB+IFNg+                        
+[148] gag/3+NKT cells/GzB+IFNg+TNF+                    
+[149] gag/3+NKT cells/CD154+                           
+[150] gag/3+NKT cells/CD154+IFNg+                      
+[151] gag/3+NKT cells/CD154+IFNg+IL21+                 
+[152] gag/3+NKT cells/CD154+GzB+                       
+[153] gag/3+NKT cells/CD154+GzB+IFNg+                  
+[154] gag/3+4+/IL2+IL21+TNF+                           
+[155] gag/3+4+/CD154+IL2+IL4+TNF+                      
+[156] gag/3+4+/CD154+IFNg+IL2+IL21+TNF+                
+[157] gag/4+CM/IFNg+TNF+                               
+[158] gag/4+CM/CD154+IFNg+                             
+[159] gag/4+CM/CD154+IFNg+IL2+                         
+[160] gag/CXCR5+PD1+/CD154+IFNg+IL2+TNF+               
+[161] gag/CXCR5+CD45RA-PD1+CCR7-/CD154+                
+[162] gag/4+EM/CD154+IFNg+IL2+IL21+TNF+                
+[163] gag/4+Naive/IL2+TNF+                             
+[164] gag/4+Naive/GzB+IL21+                            
+[165] gag/4+TD/IL4+                                    
+[166] gag/4+TD/CD154+IFNg+IL2+TNF+                     
+[167] gag/3+8+/GzB+IFNg+IL2+TNF+                       
+[168] gag/3+8+/CD154+IFNg+TNF+                         
+[169] gag/3+8+/CD154+GzB+IL4+                          
+[170] gag/3+8+/CD154+GzB+IFNg+                         
+[171] gag/3+8+/CD154+GzB+IFNg+TNF+                     
+[172] gag/3+8+/CD154+GzB+IFNg+IL2+TNF+                 
+[173] gag/8+CM/CD154+GzB+                              
+[174] gag/8+EM/GzB+IFNg+IL2+TNF+                       
+[175] gag/8+EM/CD154+IFNg+TNF+                         
+[176] gag/8+EM/CD154+GzB+IFNg+                         
+[177] gag/8+EM/CD154+GzB+IFNg+TNF+                     
+[178] gag/8+EM/CD154+GzB+IFNg+IL2+TNF+                 
+[179] gag/8+TD/IFNg+IL2+TNF+                           
+[180] gag/8+TD/GzB+IFNg+IL2+TNF+                       
+[181] gag/8+TD/CD154+IFNg+TNF+                         
+[182] gag/8+TD/CD154+GzB+IL4+                          
+[183] gag/8+TD/CD154+GzB+IFNg+TNF+                     
+[184] gag/3+CD4-CD8-/TNF+                              
+[185] gag/3+CD4-CD8-/IFNg+TNF+                         
+[186] gag/3+CD4-CD8-/IFNg+IL2+TNF+                     
+[187] gag/3+CD4-CD8-/GzB+IFNg+                         
+[188] gag/3+CD4-CD8-/GzB+IFNg+TNF+                     
+[189] gag/3+CD4-CD8-/GzB+IFNg+IL2+TNF+                 
+[190] gag/3+CD4-CD8-/CD154+IFNg+                       
+[191] gag/3+CD4-CD8-/CD154+IFNg+TNF+                   
+[192] gag/3+CD4-CD8-/CD154+IFNg+IL2+TNF+               
+[193] gag/3+CD4-CD8-/CD154+GzB+IFNg+                   
+[194] gag/3+CD4-CD8-/CD154+GzB+IFNg+TNF+               
+[195] gag/3+CD4-CD8-/CD154+GzB+IFNg+IL2+TNF+           
+[196] gag/3+NKT cells/IFNg+TNF+                        
+[197] gag/3+NKT cells/CD154+IFNg+TNF+                  
+[198] gag/3+NKT cells/CD154+GzB+IL4+                   
+[199] gag/3+NKT cells/CD154+GzB+IFNg+TNF+              
+[200] gag/3+4+/GzB+IL4+                                
+[201] gag/3+4+/CD154+IL2+IL21+TNF+                     
+[202] gag/3+4+/CD154+IFNg+IL21+TNF+                    
+[203] gag/4+CM/IFNg+IL2+TNF+                           
+[204] gag/4+CM/CD154+IL2+IL21+TNF+                     
+[205] gag/CXCR5+PD1+/TNF+                              
+[206] gag/CXCR5+CD45RA-PD1+CCR7-/TNF+                  
+[207] gag/CXCR5+CD45RA-PD1+CCR7-/CD154+IFNg+IL2+TNF+   
+[208] gag/4+EM/IL21+                                   
+[209] gag/4+EM/CD154+IL2+IL21+TNF+                     
+[210] gag/4+EM/CD154+IFNg+IL21+TNF+                    
+[211] gag/4+Naive/GzB+IL4+                             
+[212] gag/4+TD/IL2+TNF+                                
+[213] gag/3+8+/GzB+IL4+                                
+[214] gag/8+CM/TNF+                                    
+[215] gag/8+CM/IFNg+                                   
+[216] gag/8+CM/IFNg+TNF+                               
+[217] vacenv/3+4+/TNF+                                 
+[218] vacenv/3+4+/IL21+                                
+[219] vacenv/3+4+/IL4+                                 
+[220] vacenv/3+4+/IL2+                                 
+[221] vacenv/3+4+/IL2+TNF+                             
+[222] vacenv/3+4+/IFNg+                                
+[223] vacenv/3+4+/IFNg+TNF+                            
+[224] vacenv/3+4+/IFNg+IL2+TNF+                        
+[225] vacenv/3+4+/GzB+                                 
+[226] vacenv/3+4+/GzB+TNF+                             
+[227] vacenv/3+4+/GzB+IL21+                            
+[228] vacenv/3+4+/GzB+IFNg+TNF+                        
+[229] vacenv/3+4+/CD154+                               
+[230] vacenv/3+4+/CD154+TNF+                           
+[231] vacenv/3+4+/CD154+IL2+                           
+[232] vacenv/3+4+/CD154+IL2+TNF+                       
+[233] vacenv/3+4+/CD154+IFNg+                          
+[234] vacenv/3+4+/CD154+IFNg+TNF+                      
+[235] vacenv/3+4+/CD154+IFNg+IL21+                     
+[236] vacenv/3+4+/CD154+IFNg+IL2+                      
+[237] vacenv/3+4+/CD154+IFNg+IL2+TNF+                  
+[238] vacenv/3+4+/CD154+GzB+                           
+[239] vacenv/3+4+/CD154+GzB+IFNg+TNF+                  
+[240] vacenv/3+4+/CD154+GzB+IFNg+IL2+TNF+              
+[241] vacenv/4+CM/TNF+                                 
+[242] vacenv/4+CM/IL21+                                
+[243] vacenv/4+CM/IL4+                                 
+[244] vacenv/4+CM/IL2+                                 
+[245] vacenv/4+CM/IL2+TNF+                             
+[246] vacenv/4+CM/IFNg+                                
+[247] vacenv/4+CM/GzB+                                 
+[248] vacenv/4+CM/CD154+                               
+[249] vacenv/4+CM/CD154+TNF+                           
+[250] vacenv/4+CM/CD154+IL2+                           
+[251] vacenv/4+CM/CD154+IL2+TNF+                       
+[252] vacenv/4+CM/CD154+IFNg+TNF+                      
+[253] vacenv/4+CM/CD154+IFNg+IL2+TNF+                  
+[254] vacenv/4+CM/CD154+GzB+                           
+[255] vacenv/CXCR5+PD1+/IL21+                          
+[256] vacenv/CXCR5+PD1+/IFNg+                          
+[257] vacenv/CXCR5+PD1+/GzB+                           
+[258] vacenv/CXCR5+PD1+/CD154+                         
+[259] vacenv/CXCR5+PD1+/CD154+IFNg+                    
+[260] vacenv/CXCR5+PD1+/CD154+GzB+                     
+[261] vacenv/CXCR5+CD45RA-PD1+CCR7-/GzB+               
+[262] vacenv/4+EM/TNF+                                 
+[263] vacenv/4+EM/IL2+                                 
+[264] vacenv/4+EM/IL2+TNF+                             
+[265] vacenv/4+EM/IFNg+                                
+[266] vacenv/4+EM/IFNg+TNF+                            
+[267] vacenv/4+EM/IFNg+IL2+TNF+                        
+[268] vacenv/4+EM/GzB+                                 
+[269] vacenv/4+EM/GzB+TNF+                             
+[270] vacenv/4+EM/GzB+IFNg+TNF+                        
+[271] vacenv/4+EM/CD154+                               
+[272] vacenv/4+EM/CD154+TNF+                           
+[273] vacenv/4+EM/CD154+IL2+                           
+[274] vacenv/4+EM/CD154+IL2+TNF+                       
+[275] vacenv/4+EM/CD154+IFNg+                          
+[276] vacenv/4+EM/CD154+IFNg+TNF+                      
+[277] vacenv/4+EM/CD154+IFNg+IL2+                      
+[278] vacenv/4+EM/CD154+IFNg+IL2+TNF+                  
+[279] vacenv/4+EM/CD154+GzB+                           
+[280] vacenv/4+EM/CD154+GzB+IFNg+TNF+                  
+[281] vacenv/4+EM/CD154+GzB+IFNg+IL2+TNF+              
+[282] vacenv/4+Naive/TNF+                              
+[283] vacenv/4+Naive/IL21+                             
+[284] vacenv/4+Naive/IL4+                              
+[285] vacenv/4+Naive/IL2+                              
+[286] vacenv/4+Naive/IFNg+                             
+[287] vacenv/4+Naive/GzB+                              
+[288] vacenv/4+Naive/CD154+                            
+[289] vacenv/4+Naive/CD154+TNF+                        
+[290] vacenv/4+Naive/CD154+IFNg+                       
+[291] vacenv/4+Naive/CD154+IFNg+IL21+                  
+[292] vacenv/4+Naive/CD154+GzB+                        
+[293] vacenv/4+TD/TNF+                                 
+[294] vacenv/4+TD/GzB+                                 
+[295] vacenv/4+TD/CD154+                               
+[296] vacenv/4+TD/CD154+GzB+                           
+[297] vacenv/3+8+/TNF+                                 
+[298] vacenv/3+8+/IL21+                                
+[299] vacenv/3+8+/IL4+                                 
+[300] vacenv/3+8+/IL2+                                 
+[301] vacenv/3+8+/IL2+TNF+                             
+[302] vacenv/3+8+/IFNg+                                
+[303] vacenv/3+8+/IFNg+TNF+                            
+[304] vacenv/3+8+/IFNg+IL4+                            
+[305] vacenv/3+8+/IFNg+IL2+TNF+                        
+[306] vacenv/3+8+/GzB+                                 
+[307] vacenv/3+8+/GzB+TNF+                             
+[308] vacenv/3+8+/GzB+IL21+                            
+[309] vacenv/3+8+/GzB+IL2+                             
+[310] vacenv/3+8+/GzB+IFNg+                            
+[311] vacenv/3+8+/GzB+IFNg+TNF+                        
+[312] vacenv/3+8+/CD154+                               
+[313] vacenv/3+8+/CD154+IFNg+                          
+[314] vacenv/3+8+/CD154+GzB+                           
+[315] vacenv/8+CM/IFNg+IL4+                            
+[316] vacenv/8+CM/GzB+                                 
+[317] vacenv/8+CM/CD154+                               
+[318] vacenv/8+EM/TNF+                                 
+[319] vacenv/8+EM/IFNg+                                
+[320] vacenv/8+EM/IFNg+TNF+                            
+[321] vacenv/8+EM/IFNg+IL2+TNF+                        
+[322] vacenv/8+EM/GzB+                                 
+[323] vacenv/8+EM/GzB+TNF+                             
+[324] vacenv/8+EM/GzB+IL21+                            
+[325] vacenv/8+EM/GzB+IL2+                             
+[326] vacenv/8+EM/GzB+IFNg+                            
+[327] vacenv/8+EM/GzB+IFNg+TNF+                        
+[328] vacenv/8+EM/CD154+                               
+[329] vacenv/8+EM/CD154+GzB+                           
+[330] vacenv/8+Naive/IL21+                             
+[331] vacenv/8+Naive/IL4+                              
+[332] vacenv/8+Naive/IFNg+                             
+[333] vacenv/8+Naive/GzB+                              
+[334] vacenv/8+Naive/GzB+IL21+                         
+[335] vacenv/8+Naive/GzB+IFNg+TNF+                     
+[336] vacenv/8+Naive/CD154+                            
+[337] vacenv/8+Naive/CD154+IFNg+                       
+[338] vacenv/8+Naive/CD154+GzB+                        
+[339] vacenv/8+TD/TNF+                                 
+[340] vacenv/8+TD/IFNg+                                
+[341] vacenv/8+TD/IFNg+TNF+                            
+[342] vacenv/8+TD/GzB+                                 
+[343] vacenv/8+TD/GzB+TNF+                             
+[344] vacenv/8+TD/GzB+IL21+                            
+[345] vacenv/8+TD/GzB+IFNg+                            
+[346] vacenv/8+TD/GzB+IFNg+TNF+                        
+[347] vacenv/8+TD/CD154+                               
+[348] vacenv/8+TD/CD154+GzB+                           
+[349] vacenv/3+CD4-CD8-/IL4+                           
+[350] vacenv/3+CD4-CD8-/IFNg+                          
+[351] vacenv/3+CD4-CD8-/GzB+                           
+[352] vacenv/3+CD4-CD8-/GzB+TNF+                       
+[353] vacenv/3+CD4-CD8-/CD154+                         
+[354] vacenv/3+CD4-CD8-/CD154+GzB+                     
+[355] vacenv/3+NKT cells/TNF+                          
+[356] vacenv/3+NKT cells/IL21+                         
+[357] vacenv/3+NKT cells/IL4+                          
+[358] vacenv/3+NKT cells/IFNg+                         
+[359] vacenv/3+NKT cells/IFNg+IL4+                     
+[360] vacenv/3+NKT cells/GzB+                          
+[361] vacenv/3+NKT cells/GzB+TNF+                      
+[362] vacenv/3+NKT cells/GzB+IL21+                     
+[363] vacenv/3+NKT cells/GzB+IFNg+                     
+[364] vacenv/3+NKT cells/GzB+IFNg+TNF+                 
+[365] vacenv/3+NKT cells/CD154+                        
+[366] vacenv/3+NKT cells/CD154+IFNg+                   
+[367] vacenv/3+NKT cells/CD154+IFNg+IL21+              
+[368] vacenv/3+NKT cells/CD154+GzB+                    
+[369] vacenv/3+NKT cells/CD154+GzB+IFNg+               
+[370] vacenv/3+4+/IL2+IL21+TNF+                        
+[371] vacenv/3+4+/CD154+IL2+IL4+TNF+                   
+[372] vacenv/3+4+/CD154+IFNg+IL2+IL21+TNF+             
+[373] vacenv/4+CM/IFNg+TNF+                            
+[374] vacenv/4+CM/CD154+IFNg+                          
+[375] vacenv/4+CM/CD154+IFNg+IL2+                      
+[376] vacenv/CXCR5+PD1+/CD154+IFNg+IL2+TNF+            
+[377] vacenv/CXCR5+CD45RA-PD1+CCR7-/CD154+             
+[378] vacenv/4+EM/CD154+IFNg+IL2+IL21+TNF+             
+[379] vacenv/4+Naive/IL2+TNF+                          
+[380] vacenv/4+Naive/GzB+IL21+                         
+[381] vacenv/4+TD/IL4+                                 
+[382] vacenv/4+TD/CD154+IFNg+IL2+TNF+                  
+[383] vacenv/3+8+/GzB+IFNg+IL2+TNF+                    
+[384] vacenv/3+8+/CD154+IFNg+TNF+                      
+[385] vacenv/3+8+/CD154+GzB+IL4+                       
+[386] vacenv/3+8+/CD154+GzB+IFNg+                      
+[387] vacenv/3+8+/CD154+GzB+IFNg+TNF+                  
+[388] vacenv/3+8+/CD154+GzB+IFNg+IL2+TNF+              
+[389] vacenv/8+CM/CD154+GzB+                           
+[390] vacenv/8+EM/GzB+IFNg+IL2+TNF+                    
+[391] vacenv/8+EM/CD154+IFNg+TNF+                      
+[392] vacenv/8+EM/CD154+GzB+IFNg+                      
+[393] vacenv/8+EM/CD154+GzB+IFNg+TNF+                  
+[394] vacenv/8+EM/CD154+GzB+IFNg+IL2+TNF+              
+[395] vacenv/8+TD/IFNg+IL2+TNF+                        
+[396] vacenv/8+TD/GzB+IFNg+IL2+TNF+                    
+[397] vacenv/8+TD/CD154+IFNg+TNF+                      
+[398] vacenv/8+TD/CD154+GzB+IL4+                       
+[399] vacenv/8+TD/CD154+GzB+IFNg+TNF+                  
+[400] vacenv/3+CD4-CD8-/TNF+                           
+[401] vacenv/3+CD4-CD8-/IFNg+TNF+                      
+[402] vacenv/3+CD4-CD8-/IFNg+IL2+TNF+                  
+[403] vacenv/3+CD4-CD8-/GzB+IFNg+                      
+[404] vacenv/3+CD4-CD8-/GzB+IFNg+TNF+                  
+[405] vacenv/3+CD4-CD8-/GzB+IFNg+IL2+TNF+              
+[406] vacenv/3+CD4-CD8-/CD154+IFNg+                    
+[407] vacenv/3+CD4-CD8-/CD154+IFNg+TNF+                
+[408] vacenv/3+CD4-CD8-/CD154+IFNg+IL2+TNF+            
+[409] vacenv/3+CD4-CD8-/CD154+GzB+IFNg+                
+[410] vacenv/3+CD4-CD8-/CD154+GzB+IFNg+TNF+            
+[411] vacenv/3+CD4-CD8-/CD154+GzB+IFNg+IL2+TNF+        
+[412] vacenv/3+NKT cells/IFNg+TNF+                     
+[413] vacenv/3+NKT cells/CD154+IFNg+TNF+               
+[414] vacenv/3+NKT cells/CD154+GzB+IL4+                
+[415] vacenv/3+NKT cells/CD154+GzB+IFNg+TNF+           
+[416] vacenv/3+4+/GzB+IL4+                             
+[417] vacenv/3+4+/CD154+IL2+IL21+TNF+                  
+[418] vacenv/3+4+/CD154+IFNg+IL21+TNF+                 
+[419] vacenv/4+CM/IFNg+IL2+TNF+                        
+[420] vacenv/4+CM/CD154+IL2+IL21+TNF+                  
+[421] vacenv/CXCR5+PD1+/TNF+                           
+[422] vacenv/CXCR5+CD45RA-PD1+CCR7-/TNF+               
+[423] vacenv/CXCR5+CD45RA-PD1+CCR7-/CD154+IFNg+IL2+TNF+
+[424] vacenv/4+EM/IL21+                                
+[425] vacenv/4+EM/CD154+IL2+IL21+TNF+                  
+[426] vacenv/4+EM/CD154+IFNg+IL21+TNF+                 
+[427] vacenv/4+Naive/GzB+IL4+                          
+[428] vacenv/4+TD/IL2+TNF+                             
+[429] vacenv/3+8+/GzB+IL4+                             
+[430] vacenv/8+CM/TNF+                                 
+[431] vacenv/8+CM/IFNg+                                
+[432] vacenv/8+CM/IFNg+TNF+                            
+[433] env/3+4+/TNF+                                    
+[434] env/3+4+/IL21+                                   
+[435] env/3+4+/IL4+                                    
+[436] env/3+4+/IL2+                                    
+[437] env/3+4+/IL2+TNF+                                
+[438] env/3+4+/IFNg+                                   
+[439] env/3+4+/IFNg+TNF+                               
+[440] env/3+4+/IFNg+IL2+TNF+                           
+[441] env/3+4+/GzB+                                    
+[442] env/3+4+/GzB+TNF+                                
+[443] env/3+4+/GzB+IL21+                               
+[444] env/3+4+/GzB+IFNg+TNF+                           
+[445] env/3+4+/CD154+                                  
+[446] env/3+4+/CD154+TNF+                              
+[447] env/3+4+/CD154+IL2+                              
+[448] env/3+4+/CD154+IL2+TNF+                          
+[449] env/3+4+/CD154+IFNg+                             
+[450] env/3+4+/CD154+IFNg+TNF+                         
+[451] env/3+4+/CD154+IFNg+IL21+                        
+[452] env/3+4+/CD154+IFNg+IL2+                         
+[453] env/3+4+/CD154+IFNg+IL2+TNF+                     
+[454] env/3+4+/CD154+GzB+                              
+[455] env/3+4+/CD154+GzB+IFNg+TNF+                     
+[456] env/3+4+/CD154+GzB+IFNg+IL2+TNF+                 
+[457] env/4+CM/TNF+                                    
+[458] env/4+CM/IL21+                                   
+[459] env/4+CM/IL4+                                    
+[460] env/4+CM/IL2+                                    
+[461] env/4+CM/IL2+TNF+                                
+[462] env/4+CM/IFNg+                                   
+[463] env/4+CM/GzB+                                    
+[464] env/4+CM/CD154+                                  
+[465] env/4+CM/CD154+TNF+                              
+[466] env/4+CM/CD154+IL2+                              
+[467] env/4+CM/CD154+IL2+TNF+                          
+[468] env/4+CM/CD154+IFNg+TNF+                         
+[469] env/4+CM/CD154+IFNg+IL2+TNF+                     
+[470] env/4+CM/CD154+GzB+                              
+[471] env/CXCR5+PD1+/IL21+                             
+[472] env/CXCR5+PD1+/IFNg+                             
+[473] env/CXCR5+PD1+/GzB+                              
+[474] env/CXCR5+PD1+/CD154+                            
+[475] env/CXCR5+PD1+/CD154+IFNg+                       
+[476] env/CXCR5+PD1+/CD154+GzB+                        
+[477] env/CXCR5+CD45RA-PD1+CCR7-/GzB+                  
+[478] env/4+EM/TNF+                                    
+[479] env/4+EM/IL2+                                    
+[480] env/4+EM/IL2+TNF+                                
+[481] env/4+EM/IFNg+                                   
+[482] env/4+EM/IFNg+TNF+                               
+[483] env/4+EM/IFNg+IL2+TNF+                           
+[484] env/4+EM/GzB+                                    
+[485] env/4+EM/GzB+TNF+                                
+[486] env/4+EM/GzB+IFNg+TNF+                           
+[487] env/4+EM/CD154+                                  
+[488] env/4+EM/CD154+TNF+                              
+[489] env/4+EM/CD154+IL2+                              
+[490] env/4+EM/CD154+IL2+TNF+                          
+[491] env/4+EM/CD154+IFNg+                             
+[492] env/4+EM/CD154+IFNg+TNF+                         
+[493] env/4+EM/CD154+IFNg+IL2+                         
+[494] env/4+EM/CD154+IFNg+IL2+TNF+                     
+[495] env/4+EM/CD154+GzB+                              
+[496] env/4+EM/CD154+GzB+IFNg+TNF+                     
+[497] env/4+EM/CD154+GzB+IFNg+IL2+TNF+                 
+[498] env/4+Naive/TNF+                                 
+[499] env/4+Naive/IL21+                                
+[500] env/4+Naive/IL4+                                 
+[501] env/4+Naive/IL2+                                 
+[502] env/4+Naive/IFNg+                                
+[503] env/4+Naive/GzB+                                 
+[504] env/4+Naive/CD154+                               
+[505] env/4+Naive/CD154+TNF+                           
+[506] env/4+Naive/CD154+IFNg+                          
+[507] env/4+Naive/CD154+IFNg+IL21+                     
+[508] env/4+Naive/CD154+GzB+                           
+[509] env/4+TD/TNF+                                    
+[510] env/4+TD/GzB+                                    
+[511] env/4+TD/CD154+                                  
+[512] env/4+TD/CD154+GzB+                              
+[513] env/3+8+/TNF+                                    
+[514] env/3+8+/IL21+                                   
+[515] env/3+8+/IL4+                                    
+[516] env/3+8+/IL2+                                    
+[517] env/3+8+/IL2+TNF+                                
+[518] env/3+8+/IFNg+                                   
+[519] env/3+8+/IFNg+TNF+                               
+[520] env/3+8+/IFNg+IL4+                               
+[521] env/3+8+/IFNg+IL2+TNF+                           
+[522] env/3+8+/GzB+                                    
+[523] env/3+8+/GzB+TNF+                                
+[524] env/3+8+/GzB+IL21+                               
+[525] env/3+8+/GzB+IL2+                                
+[526] env/3+8+/GzB+IFNg+                               
+[527] env/3+8+/GzB+IFNg+TNF+                           
+[528] env/3+8+/CD154+                                  
+[529] env/3+8+/CD154+IFNg+                             
+[530] env/3+8+/CD154+GzB+                              
+[531] env/8+CM/IFNg+IL4+                               
+[532] env/8+CM/GzB+                                    
+[533] env/8+CM/CD154+                                  
+[534] env/8+EM/TNF+                                    
+[535] env/8+EM/IFNg+                                   
+[536] env/8+EM/IFNg+TNF+                               
+[537] env/8+EM/IFNg+IL2+TNF+                           
+[538] env/8+EM/GzB+                                    
+[539] env/8+EM/GzB+TNF+                                
+[540] env/8+EM/GzB+IL21+                               
+[541] env/8+EM/GzB+IL2+                                
+[542] env/8+EM/GzB+IFNg+                               
+[543] env/8+EM/GzB+IFNg+TNF+                           
+[544] env/8+EM/CD154+                                  
+[545] env/8+EM/CD154+GzB+                              
+[546] env/8+Naive/IL21+                                
+[547] env/8+Naive/IL4+                                 
+[548] env/8+Naive/IFNg+                                
+[549] env/8+Naive/GzB+                                 
+[550] env/8+Naive/GzB+IL21+                            
+[551] env/8+Naive/GzB+IFNg+TNF+                        
+[552] env/8+Naive/CD154+                               
+[553] env/8+Naive/CD154+IFNg+                          
+[554] env/8+Naive/CD154+GzB+                           
+[555] env/8+TD/TNF+                                    
+[556] env/8+TD/IFNg+                                   
+[557] env/8+TD/IFNg+TNF+                               
+[558] env/8+TD/GzB+                                    
+[559] env/8+TD/GzB+TNF+                                
+[560] env/8+TD/GzB+IL21+                               
+[561] env/8+TD/GzB+IFNg+                               
+[562] env/8+TD/GzB+IFNg+TNF+                           
+[563] env/8+TD/CD154+                                  
+[564] env/8+TD/CD154+GzB+                              
+[565] env/3+CD4-CD8-/IL4+                              
+[566] env/3+CD4-CD8-/IFNg+                             
+[567] env/3+CD4-CD8-/GzB+                              
+[568] env/3+CD4-CD8-/GzB+TNF+                          
+[569] env/3+CD4-CD8-/CD154+                            
+[570] env/3+CD4-CD8-/CD154+GzB+                        
+[571] env/3+NKT cells/TNF+                             
+[572] env/3+NKT cells/IL21+                            
+[573] env/3+NKT cells/IL4+                             
+[574] env/3+NKT cells/IFNg+                            
+[575] env/3+NKT cells/IFNg+IL4+                        
+[576] env/3+NKT cells/GzB+                             
+[577] env/3+NKT cells/GzB+TNF+                         
+[578] env/3+NKT cells/GzB+IL21+                        
+[579] env/3+NKT cells/GzB+IFNg+                        
+[580] env/3+NKT cells/GzB+IFNg+TNF+                    
+[581] env/3+NKT cells/CD154+                           
+[582] env/3+NKT cells/CD154+IFNg+                      
+[583] env/3+NKT cells/CD154+IFNg+IL21+                 
+[584] env/3+NKT cells/CD154+GzB+                       
+[585] env/3+NKT cells/CD154+GzB+IFNg+                  
+[586] env/3+4+/IL2+IL21+TNF+                           
+[587] env/3+4+/CD154+IL2+IL4+TNF+                      
+[588] env/3+4+/CD154+IFNg+IL2+IL21+TNF+                
+[589] env/4+CM/IFNg+TNF+                               
+[590] env/4+CM/CD154+IFNg+                             
+[591] env/4+CM/CD154+IFNg+IL2+                         
+[592] env/CXCR5+PD1+/CD154+IFNg+IL2+TNF+               
+[593] env/CXCR5+CD45RA-PD1+CCR7-/CD154+                
+[594] env/4+EM/CD154+IFNg+IL2+IL21+TNF+                
+[595] env/4+Naive/IL2+TNF+                             
+[596] env/4+Naive/GzB+IL21+                            
+[597] env/4+TD/IL4+                                    
+[598] env/4+TD/CD154+IFNg+IL2+TNF+                     
+[599] env/3+8+/GzB+IFNg+IL2+TNF+                       
+[600] env/3+8+/CD154+IFNg+TNF+                         
+[601] env/3+8+/CD154+GzB+IL4+                          
+[602] env/3+8+/CD154+GzB+IFNg+                         
+[603] env/3+8+/CD154+GzB+IFNg+TNF+                     
+[604] env/3+8+/CD154+GzB+IFNg+IL2+TNF+                 
+[605] env/8+CM/CD154+GzB+                              
+[606] env/8+EM/GzB+IFNg+IL2+TNF+                       
+[607] env/8+EM/CD154+IFNg+TNF+                         
+[608] env/8+EM/CD154+GzB+IFNg+                         
+[609] env/8+EM/CD154+GzB+IFNg+TNF+                     
+[610] env/8+EM/CD154+GzB+IFNg+IL2+TNF+                 
+[611] env/8+TD/IFNg+IL2+TNF+                           
+[612] env/8+TD/GzB+IFNg+IL2+TNF+                       
+[613] env/8+TD/CD154+IFNg+TNF+                         
+[614] env/8+TD/CD154+GzB+IL4+                          
+[615] env/8+TD/CD154+GzB+IFNg+TNF+                     
+[616] env/3+CD4-CD8-/TNF+                              
+[617] env/3+CD4-CD8-/IFNg+TNF+                         
+[618] env/3+CD4-CD8-/IFNg+IL2+TNF+                     
+[619] env/3+CD4-CD8-/GzB+IFNg+                         
+[620] env/3+CD4-CD8-/GzB+IFNg+TNF+                     
+[621] env/3+CD4-CD8-/GzB+IFNg+IL2+TNF+                 
+[622] env/3+CD4-CD8-/CD154+IFNg+                       
+[623] env/3+CD4-CD8-/CD154+IFNg+TNF+                   
+[624] env/3+CD4-CD8-/CD154+IFNg+IL2+TNF+               
+[625] env/3+CD4-CD8-/CD154+GzB+IFNg+                   
+[626] env/3+CD4-CD8-/CD154+GzB+IFNg+TNF+               
+[627] env/3+CD4-CD8-/CD154+GzB+IFNg+IL2+TNF+           
+[628] env/3+NKT cells/IFNg+TNF+                        
+[629] env/3+NKT cells/CD154+IFNg+TNF+                  
+[630] env/3+NKT cells/CD154+GzB+IL4+                   
+[631] env/3+NKT cells/CD154+GzB+IFNg+TNF+              
+[632] env/3+4+/GzB+IL4+                                
+[633] env/3+4+/CD154+IL2+IL21+TNF+                     
+[634] env/3+4+/CD154+IFNg+IL21+TNF+                    
+[635] env/4+CM/IFNg+IL2+TNF+                           
+[636] env/4+CM/CD154+IL2+IL21+TNF+                     
+[637] env/CXCR5+PD1+/TNF+                              
+[638] env/CXCR5+CD45RA-PD1+CCR7-/TNF+                  
+[639] env/CXCR5+CD45RA-PD1+CCR7-/CD154+IFNg+IL2+TNF+   
+[640] env/4+EM/IL21+                                   
+[641] env/4+EM/CD154+IL2+IL21+TNF+                     
+[642] env/4+EM/CD154+IFNg+IL21+TNF+                    
+[643] env/4+Naive/GzB+IL4+                             
+[644] env/4+TD/IL2+TNF+                                
+[645] env/3+8+/GzB+IL4+                                
+[646] env/8+CM/TNF+                                    
+[647] env/8+CM/IFNg+                                   
+[648] env/8+CM/IFNg+TNF+                               
+648 Levels: env/3+4+/CD154+ gag/3+4+/CD154+ ... vacenv/CXCR5+PD1+/TNF+
+> stimdat$visitStimCell <- interaction(stimdat$visitno, stimdat$stimCellType, sep = "/", drop = TRUE)
+> 
+> # Screening samples with very few cells ----
+> stimdat$totalCells <- stimdat$name %>% strsplit(split = "_") %>%
++   sapply(function(x) x[2]) %>% as.numeric()
+> stimdat <- subset(stimdat, totalCells > 10^5)
+> 
+> # Screening samples with very small parent count ----
+> stimdat <- subset(stimdat, parentcount >= 100)
+> 
+> # Screening samples that are not paired ------
+> paired <- group_by(stimdat, visitStimCell, ptid) %>%
++   summarize(pairedInd = sum(stim == "ctrl") > 0 & sum(stim != "ctrl") > 0)
+> stimdat <- merge(stimdat, paired, all.x = TRUE)
+> stimdat <- subset(stimdat, pairedInd)
+> 
+> countSummary <- group_by(stimdat, stimCellType, visitno, ptid) %>%
++   summarize(nonzero = any(count > 0)) %>%
++   group_by(stimCellType, visitno) %>% summarize(nonzero = sum(nonzero)) %>%
++   group_by(stimCellType) %>% summarize(nonzero = mean(nonzero >= 10)) %>%
++   data.frame() %>% subset(nonzero == 1)
+> 
+> stimdat <- subset(stimdat, stimCellType %in% countSummary$stimCellType)
+> stimdat$visitStimCell <- factor(as.character(stimdat$visitStimCell))
+> stimdat$stimCellType <- factor(stimdat$stimCellType)
+> levels(stimdat$visitStimCell)
+   [1] "5/env/3+4+/CD154+"                               
+   [2] "5/env/3+4+/CD154+GzB+"                           
+   [3] "5/env/3+4+/CD154+GzB+IFNg+IL2+TNF+"              
+   [4] "5/env/3+4+/CD154+GzB+IFNg+TNF+"                  
+   [5] "5/env/3+4+/CD154+IFNg+"                          
+   [6] "5/env/3+4+/CD154+IFNg+IL2+"                      
+   [7] "5/env/3+4+/CD154+IFNg+IL2+TNF+"                  
+   [8] "5/env/3+4+/CD154+IFNg+IL21+"                     
+   [9] "5/env/3+4+/CD154+IFNg+TNF+"                      
+  [10] "5/env/3+4+/CD154+IL2+"                           
+  [11] "5/env/3+4+/CD154+IL2+TNF+"                       
+  [12] "5/env/3+4+/CD154+TNF+"                           
+  [13] "5/env/3+4+/GzB+"                                 
+  [14] "5/env/3+4+/GzB+IFNg+TNF+"                        
+  [15] "5/env/3+4+/GzB+IL21+"                            
+  [16] "5/env/3+4+/GzB+TNF+"                             
+  [17] "5/env/3+4+/IFNg+"                                
+  [18] "5/env/3+4+/IFNg+IL2+TNF+"                        
+  [19] "5/env/3+4+/IFNg+TNF+"                            
+  [20] "5/env/3+4+/IL2+"                                 
+  [21] "5/env/3+4+/IL2+TNF+"                             
+  [22] "5/env/3+4+/IL21+"                                
+  [23] "5/env/3+4+/IL4+"                                 
+  [24] "5/env/3+4+/TNF+"                                 
+  [25] "5/env/3+8+/CD154+"                               
+  [26] "5/env/3+8+/CD154+GzB+"                           
+  [27] "5/env/3+8+/CD154+IFNg+"                          
+  [28] "5/env/3+8+/GzB+"                                 
+  [29] "5/env/3+8+/GzB+IFNg+"                            
+  [30] "5/env/3+8+/GzB+IFNg+TNF+"                        
+  [31] "5/env/3+8+/GzB+IL2+"                             
+  [32] "5/env/3+8+/GzB+IL21+"                            
+  [33] "5/env/3+8+/GzB+TNF+"                             
+  [34] "5/env/3+8+/IFNg+"                                
+  [35] "5/env/3+8+/IFNg+IL2+TNF+"                        
+  [36] "5/env/3+8+/IFNg+IL4+"                            
+  [37] "5/env/3+8+/IFNg+TNF+"                            
+  [38] "5/env/3+8+/IL2+"                                 
+  [39] "5/env/3+8+/IL2+TNF+"                             
+  [40] "5/env/3+8+/IL21+"                                
+  [41] "5/env/3+8+/IL4+"                                 
+  [42] "5/env/3+8+/TNF+"                                 
+  [43] "5/env/3+CD4-CD8-/CD154+"                         
+  [44] "5/env/3+CD4-CD8-/CD154+GzB+"                     
+  [45] "5/env/3+CD4-CD8-/GzB+"                           
+  [46] "5/env/3+CD4-CD8-/GzB+TNF+"                       
+  [47] "5/env/3+CD4-CD8-/IFNg+"                          
+  [48] "5/env/3+CD4-CD8-/IL4+"                           
+  [49] "5/env/3+NKT cells/CD154+"                        
+  [50] "5/env/3+NKT cells/CD154+GzB+"                    
+  [51] "5/env/3+NKT cells/CD154+GzB+IFNg+"               
+  [52] "5/env/3+NKT cells/CD154+IFNg+"                   
+  [53] "5/env/3+NKT cells/CD154+IFNg+IL21+"              
+  [54] "5/env/3+NKT cells/GzB+"                          
+  [55] "5/env/3+NKT cells/GzB+IFNg+"                     
+  [56] "5/env/3+NKT cells/GzB+IFNg+TNF+"                 
+  [57] "5/env/3+NKT cells/GzB+IL21+"                     
+  [58] "5/env/3+NKT cells/GzB+TNF+"                      
+  [59] "5/env/3+NKT cells/IFNg+"                         
+  [60] "5/env/3+NKT cells/IFNg+IL4+"                     
+  [61] "5/env/3+NKT cells/IL21+"                         
+  [62] "5/env/3+NKT cells/IL4+"                          
+  [63] "5/env/3+NKT cells/TNF+"                          
+  [64] "5/env/4+CM/CD154+"                               
+  [65] "5/env/4+CM/CD154+IFNg+IL2+TNF+"                  
+  [66] "5/env/4+CM/CD154+IFNg+TNF+"                      
+  [67] "5/env/4+CM/CD154+IL2+"                           
+  [68] "5/env/4+CM/CD154+IL2+TNF+"                       
+  [69] "5/env/4+CM/CD154+TNF+"                           
+  [70] "5/env/4+CM/GzB+"                                 
+  [71] "5/env/4+CM/IFNg+"                                
+  [72] "5/env/4+CM/IL2+"                                 
+  [73] "5/env/4+CM/IL2+TNF+"                             
+  [74] "5/env/4+CM/IL21+"                                
+  [75] "5/env/4+CM/IL4+"                                 
+  [76] "5/env/4+CM/TNF+"                                 
+  [77] "5/env/4+EM/CD154+"                               
+  [78] "5/env/4+EM/CD154+GzB+"                           
+  [79] "5/env/4+EM/CD154+GzB+IFNg+IL2+TNF+"              
+  [80] "5/env/4+EM/CD154+IFNg+"                          
+  [81] "5/env/4+EM/CD154+IFNg+IL2+"                      
+  [82] "5/env/4+EM/CD154+IFNg+IL2+TNF+"                  
+  [83] "5/env/4+EM/CD154+IFNg+TNF+"                      
+  [84] "5/env/4+EM/CD154+IL2+"                           
+  [85] "5/env/4+EM/CD154+IL2+TNF+"                       
+  [86] "5/env/4+EM/CD154+TNF+"                           
+  [87] "5/env/4+EM/GzB+"                                 
+  [88] "5/env/4+EM/GzB+TNF+"                             
+  [89] "5/env/4+EM/IFNg+"                                
+  [90] "5/env/4+EM/IFNg+IL2+TNF+"                        
+  [91] "5/env/4+EM/IFNg+TNF+"                            
+  [92] "5/env/4+EM/IL2+"                                 
+  [93] "5/env/4+EM/IL2+TNF+"                             
+  [94] "5/env/4+EM/TNF+"                                 
+  [95] "5/env/4+Naive/CD154+"                            
+  [96] "5/env/4+Naive/CD154+GzB+"                        
+  [97] "5/env/4+Naive/CD154+IFNg+"                       
+  [98] "5/env/4+Naive/CD154+IFNg+IL21+"                  
+  [99] "5/env/4+Naive/CD154+TNF+"                        
+ [100] "5/env/4+Naive/GzB+"                              
+ [101] "5/env/4+Naive/IFNg+"                             
+ [102] "5/env/4+Naive/IL2+"                              
+ [103] "5/env/4+Naive/IL21+"                             
+ [104] "5/env/4+Naive/IL4+"                              
+ [105] "5/env/4+Naive/TNF+"                              
+ [106] "5/env/4+TD/CD154+"                               
+ [107] "5/env/4+TD/GzB+"                                 
+ [108] "5/env/4+TD/TNF+"                                 
+ [109] "5/env/8+CM/CD154+"                               
+ [110] "5/env/8+CM/GzB+"                                 
+ [111] "5/env/8+CM/IFNg+IL4+"                            
+ [112] "5/env/8+EM/CD154+"                               
+ [113] "5/env/8+EM/CD154+GzB+"                           
+ [114] "5/env/8+EM/GzB+"                                 
+ [115] "5/env/8+EM/GzB+IFNg+"                            
+ [116] "5/env/8+EM/GzB+IFNg+TNF+"                        
+ [117] "5/env/8+EM/GzB+IL2+"                             
+ [118] "5/env/8+EM/GzB+IL21+"                            
+ [119] "5/env/8+EM/GzB+TNF+"                             
+ [120] "5/env/8+EM/IFNg+"                                
+ [121] "5/env/8+EM/IFNg+IL2+TNF+"                        
+ [122] "5/env/8+EM/IFNg+TNF+"                            
+ [123] "5/env/8+EM/TNF+"                                 
+ [124] "5/env/8+Naive/CD154+"                            
+ [125] "5/env/8+Naive/CD154+GzB+"                        
+ [126] "5/env/8+Naive/CD154+IFNg+"                       
+ [127] "5/env/8+Naive/GzB+"                              
+ [128] "5/env/8+Naive/GzB+IL21+"                         
+ [129] "5/env/8+Naive/IFNg+"                             
+ [130] "5/env/8+Naive/IL21+"                             
+ [131] "5/env/8+Naive/IL4+"                              
+ [132] "5/env/8+TD/CD154+"                               
+ [133] "5/env/8+TD/CD154+GzB+"                           
+ [134] "5/env/8+TD/GzB+"                                 
+ [135] "5/env/8+TD/GzB+IFNg+"                            
+ [136] "5/env/8+TD/GzB+IFNg+TNF+"                        
+ [137] "5/env/8+TD/GzB+IL21+"                            
+ [138] "5/env/8+TD/GzB+TNF+"                             
+ [139] "5/env/8+TD/IFNg+"                                
+ [140] "5/env/8+TD/IFNg+TNF+"                            
+ [141] "5/env/8+TD/TNF+"                                 
+ [142] "5/env/CXCR5+CD45RA-PD1+CCR7-/GzB+"               
+ [143] "5/env/CXCR5+PD1+/CD154+"                         
+ [144] "5/env/CXCR5+PD1+/CD154+IFNg+"                    
+ [145] "5/env/CXCR5+PD1+/GzB+"                           
+ [146] "5/env/CXCR5+PD1+/IFNg+"                          
+ [147] "5/env/CXCR5+PD1+/IL21+"                          
+ [148] "5/gag/3+4+/CD154+"                               
+ [149] "5/gag/3+4+/CD154+GzB+"                           
+ [150] "5/gag/3+4+/CD154+GzB+IFNg+IL2+TNF+"              
+ [151] "5/gag/3+4+/CD154+GzB+IFNg+TNF+"                  
+ [152] "5/gag/3+4+/CD154+IFNg+"                          
+ [153] "5/gag/3+4+/CD154+IFNg+IL2+"                      
+ [154] "5/gag/3+4+/CD154+IFNg+IL2+TNF+"                  
+ [155] "5/gag/3+4+/CD154+IFNg+TNF+"                      
+ [156] "5/gag/3+4+/CD154+IL2+"                           
+ [157] "5/gag/3+4+/CD154+IL2+TNF+"                       
+ [158] "5/gag/3+4+/CD154+TNF+"                           
+ [159] "5/gag/3+4+/GzB+"                                 
+ [160] "5/gag/3+4+/GzB+IFNg+TNF+"                        
+ [161] "5/gag/3+4+/GzB+IL21+"                            
+ [162] "5/gag/3+4+/GzB+TNF+"                             
+ [163] "5/gag/3+4+/IFNg+"                                
+ [164] "5/gag/3+4+/IFNg+IL2+TNF+"                        
+ [165] "5/gag/3+4+/IFNg+TNF+"                            
+ [166] "5/gag/3+4+/IL2+"                                 
+ [167] "5/gag/3+4+/IL2+TNF+"                             
+ [168] "5/gag/3+4+/IL21+"                                
+ [169] "5/gag/3+4+/IL4+"                                 
+ [170] "5/gag/3+4+/TNF+"                                 
+ [171] "5/gag/3+8+/CD154+"                               
+ [172] "5/gag/3+8+/CD154+GzB+"                           
+ [173] "5/gag/3+8+/CD154+IFNg+"                          
+ [174] "5/gag/3+8+/GzB+"                                 
+ [175] "5/gag/3+8+/GzB+IFNg+"                            
+ [176] "5/gag/3+8+/GzB+IFNg+TNF+"                        
+ [177] "5/gag/3+8+/GzB+IL2+"                             
+ [178] "5/gag/3+8+/GzB+IL21+"                            
+ [179] "5/gag/3+8+/GzB+TNF+"                             
+ [180] "5/gag/3+8+/IFNg+"                                
+ [181] "5/gag/3+8+/IFNg+IL2+TNF+"                        
+ [182] "5/gag/3+8+/IFNg+IL4+"                            
+ [183] "5/gag/3+8+/IFNg+TNF+"                            
+ [184] "5/gag/3+8+/IL2+"                                 
+ [185] "5/gag/3+8+/IL2+TNF+"                             
+ [186] "5/gag/3+8+/IL21+"                                
+ [187] "5/gag/3+8+/IL4+"                                 
+ [188] "5/gag/3+8+/TNF+"                                 
+ [189] "5/gag/3+CD4-CD8-/CD154+"                         
+ [190] "5/gag/3+CD4-CD8-/CD154+GzB+"                     
+ [191] "5/gag/3+CD4-CD8-/GzB+"                           
+ [192] "5/gag/3+CD4-CD8-/GzB+TNF+"                       
+ [193] "5/gag/3+CD4-CD8-/IFNg+"                          
+ [194] "5/gag/3+CD4-CD8-/IL4+"                           
+ [195] "5/gag/3+NKT cells/CD154+"                        
+ [196] "5/gag/3+NKT cells/CD154+GzB+"                    
+ [197] "5/gag/3+NKT cells/CD154+GzB+IFNg+"               
+ [198] "5/gag/3+NKT cells/CD154+IFNg+"                   
+ [199] "5/gag/3+NKT cells/CD154+IFNg+IL21+"              
+ [200] "5/gag/3+NKT cells/GzB+"                          
+ [201] "5/gag/3+NKT cells/GzB+IFNg+"                     
+ [202] "5/gag/3+NKT cells/GzB+IFNg+TNF+"                 
+ [203] "5/gag/3+NKT cells/GzB+IL21+"                     
+ [204] "5/gag/3+NKT cells/GzB+TNF+"                      
+ [205] "5/gag/3+NKT cells/IFNg+"                         
+ [206] "5/gag/3+NKT cells/IFNg+IL4+"                     
+ [207] "5/gag/3+NKT cells/IL21+"                         
+ [208] "5/gag/3+NKT cells/IL4+"                          
+ [209] "5/gag/3+NKT cells/TNF+"                          
+ [210] "5/gag/4+CM/CD154+"                               
+ [211] "5/gag/4+CM/CD154+IFNg+IL2+TNF+"                  
+ [212] "5/gag/4+CM/CD154+IFNg+TNF+"                      
+ [213] "5/gag/4+CM/CD154+IL2+"                           
+ [214] "5/gag/4+CM/CD154+IL2+TNF+"                       
+ [215] "5/gag/4+CM/CD154+TNF+"                           
+ [216] "5/gag/4+CM/GzB+"                                 
+ [217] "5/gag/4+CM/IFNg+"                                
+ [218] "5/gag/4+CM/IL2+"                                 
+ [219] "5/gag/4+CM/IL2+TNF+"                             
+ [220] "5/gag/4+CM/IL21+"                                
+ [221] "5/gag/4+CM/IL4+"                                 
+ [222] "5/gag/4+CM/TNF+"                                 
+ [223] "5/gag/4+EM/CD154+"                               
+ [224] "5/gag/4+EM/CD154+GzB+IFNg+IL2+TNF+"              
+ [225] "5/gag/4+EM/CD154+IFNg+"                          
+ [226] "5/gag/4+EM/CD154+IFNg+IL2+"                      
+ [227] "5/gag/4+EM/CD154+IFNg+IL2+TNF+"                  
+ [228] "5/gag/4+EM/CD154+IFNg+TNF+"                      
+ [229] "5/gag/4+EM/CD154+IL2+"                           
+ [230] "5/gag/4+EM/CD154+IL2+TNF+"                       
+ [231] "5/gag/4+EM/CD154+TNF+"                           
+ [232] "5/gag/4+EM/GzB+"                                 
+ [233] "5/gag/4+EM/GzB+TNF+"                             
+ [234] "5/gag/4+EM/IFNg+"                                
+ [235] "5/gag/4+EM/IFNg+IL2+TNF+"                        
+ [236] "5/gag/4+EM/IFNg+TNF+"                            
+ [237] "5/gag/4+EM/IL2+"                                 
+ [238] "5/gag/4+EM/IL2+TNF+"                             
+ [239] "5/gag/4+EM/TNF+"                                 
+ [240] "5/gag/4+Naive/CD154+"                            
+ [241] "5/gag/4+Naive/CD154+GzB+"                        
+ [242] "5/gag/4+Naive/CD154+IFNg+"                       
+ [243] "5/gag/4+Naive/CD154+TNF+"                        
+ [244] "5/gag/4+Naive/GzB+"                              
+ [245] "5/gag/4+Naive/IFNg+"                             
+ [246] "5/gag/4+Naive/IL2+"                              
+ [247] "5/gag/4+Naive/IL21+"                             
+ [248] "5/gag/4+Naive/IL4+"                              
+ [249] "5/gag/4+Naive/TNF+"                              
+ [250] "5/gag/4+TD/CD154+"                               
+ [251] "5/gag/4+TD/GzB+"                                 
+ [252] "5/gag/4+TD/TNF+"                                 
+ [253] "5/gag/8+CM/CD154+"                               
+ [254] "5/gag/8+CM/GzB+"                                 
+ [255] "5/gag/8+CM/IFNg+IL4+"                            
+ [256] "5/gag/8+EM/CD154+"                               
+ [257] "5/gag/8+EM/CD154+GzB+"                           
+ [258] "5/gag/8+EM/GzB+"                                 
+ [259] "5/gag/8+EM/GzB+IFNg+"                            
+ [260] "5/gag/8+EM/GzB+IFNg+TNF+"                        
+ [261] "5/gag/8+EM/GzB+IL2+"                             
+ [262] "5/gag/8+EM/GzB+IL21+"                            
+ [263] "5/gag/8+EM/GzB+TNF+"                             
+ [264] "5/gag/8+EM/IFNg+"                                
+ [265] "5/gag/8+EM/IFNg+TNF+"                            
+ [266] "5/gag/8+EM/TNF+"                                 
+ [267] "5/gag/8+Naive/CD154+"                            
+ [268] "5/gag/8+Naive/CD154+GzB+"                        
+ [269] "5/gag/8+Naive/CD154+IFNg+"                       
+ [270] "5/gag/8+Naive/GzB+"                              
+ [271] "5/gag/8+Naive/GzB+IL21+"                         
+ [272] "5/gag/8+Naive/IFNg+"                             
+ [273] "5/gag/8+Naive/IL21+"                             
+ [274] "5/gag/8+Naive/IL4+"                              
+ [275] "5/gag/8+TD/CD154+"                               
+ [276] "5/gag/8+TD/CD154+GzB+"                           
+ [277] "5/gag/8+TD/GzB+"                                 
+ [278] "5/gag/8+TD/GzB+IFNg+"                            
+ [279] "5/gag/8+TD/GzB+IFNg+TNF+"                        
+ [280] "5/gag/8+TD/GzB+IL21+"                            
+ [281] "5/gag/8+TD/GzB+TNF+"                             
+ [282] "5/gag/8+TD/TNF+"                                 
+ [283] "5/gag/CXCR5+CD45RA-PD1+CCR7-/GzB+"               
+ [284] "5/gag/CXCR5+PD1+/CD154+"                         
+ [285] "5/gag/CXCR5+PD1+/CD154+IFNg+"                    
+ [286] "5/gag/CXCR5+PD1+/GzB+"                           
+ [287] "5/gag/CXCR5+PD1+/IFNg+"                          
+ [288] "5/gag/CXCR5+PD1+/IL21+"                          
+ [289] "5/vacenv/3+4+/CD154+"                            
+ [290] "5/vacenv/3+4+/CD154+GzB+"                        
+ [291] "5/vacenv/3+4+/CD154+GzB+IFNg+IL2+TNF+"           
+ [292] "5/vacenv/3+4+/CD154+GzB+IFNg+TNF+"               
+ [293] "5/vacenv/3+4+/CD154+IFNg+"                       
+ [294] "5/vacenv/3+4+/CD154+IFNg+IL2+"                   
+ [295] "5/vacenv/3+4+/CD154+IFNg+IL2+TNF+"               
+ [296] "5/vacenv/3+4+/CD154+IFNg+TNF+"                   
+ [297] "5/vacenv/3+4+/CD154+IL2+"                        
+ [298] "5/vacenv/3+4+/CD154+IL2+TNF+"                    
+ [299] "5/vacenv/3+4+/CD154+TNF+"                        
+ [300] "5/vacenv/3+4+/GzB+"                              
+ [301] "5/vacenv/3+4+/GzB+IFNg+TNF+"                     
+ [302] "5/vacenv/3+4+/GzB+IL21+"                         
+ [303] "5/vacenv/3+4+/GzB+TNF+"                          
+ [304] "5/vacenv/3+4+/IFNg+"                             
+ [305] "5/vacenv/3+4+/IFNg+IL2+TNF+"                     
+ [306] "5/vacenv/3+4+/IFNg+TNF+"                         
+ [307] "5/vacenv/3+4+/IL2+"                              
+ [308] "5/vacenv/3+4+/IL2+TNF+"                          
+ [309] "5/vacenv/3+4+/IL21+"                             
+ [310] "5/vacenv/3+4+/IL4+"                              
+ [311] "5/vacenv/3+4+/TNF+"                              
+ [312] "5/vacenv/3+8+/CD154+"                            
+ [313] "5/vacenv/3+8+/CD154+GzB+"                        
+ [314] "5/vacenv/3+8+/CD154+IFNg+"                       
+ [315] "5/vacenv/3+8+/GzB+"                              
+ [316] "5/vacenv/3+8+/GzB+IFNg+"                         
+ [317] "5/vacenv/3+8+/GzB+IFNg+TNF+"                     
+ [318] "5/vacenv/3+8+/GzB+IL2+"                          
+ [319] "5/vacenv/3+8+/GzB+IL21+"                         
+ [320] "5/vacenv/3+8+/GzB+TNF+"                          
+ [321] "5/vacenv/3+8+/IFNg+"                             
+ [322] "5/vacenv/3+8+/IFNg+IL2+TNF+"                     
+ [323] "5/vacenv/3+8+/IFNg+IL4+"                         
+ [324] "5/vacenv/3+8+/IFNg+TNF+"                         
+ [325] "5/vacenv/3+8+/IL2+"                              
+ [326] "5/vacenv/3+8+/IL2+TNF+"                          
+ [327] "5/vacenv/3+8+/IL21+"                             
+ [328] "5/vacenv/3+8+/IL4+"                              
+ [329] "5/vacenv/3+8+/TNF+"                              
+ [330] "5/vacenv/3+CD4-CD8-/CD154+"                      
+ [331] "5/vacenv/3+CD4-CD8-/CD154+GzB+"                  
+ [332] "5/vacenv/3+CD4-CD8-/GzB+"                        
+ [333] "5/vacenv/3+CD4-CD8-/GzB+TNF+"                    
+ [334] "5/vacenv/3+CD4-CD8-/IFNg+"                       
+ [335] "5/vacenv/3+CD4-CD8-/IL4+"                        
+ [336] "5/vacenv/3+NKT cells/CD154+"                     
+ [337] "5/vacenv/3+NKT cells/CD154+GzB+"                 
+ [338] "5/vacenv/3+NKT cells/CD154+GzB+IFNg+"            
+ [339] "5/vacenv/3+NKT cells/CD154+IFNg+"                
+ [340] "5/vacenv/3+NKT cells/CD154+IFNg+IL21+"           
+ [341] "5/vacenv/3+NKT cells/GzB+"                       
+ [342] "5/vacenv/3+NKT cells/GzB+IFNg+"                  
+ [343] "5/vacenv/3+NKT cells/GzB+IFNg+TNF+"              
+ [344] "5/vacenv/3+NKT cells/GzB+IL21+"                  
+ [345] "5/vacenv/3+NKT cells/GzB+TNF+"                   
+ [346] "5/vacenv/3+NKT cells/IFNg+"                      
+ [347] "5/vacenv/3+NKT cells/IFNg+IL4+"                  
+ [348] "5/vacenv/3+NKT cells/IL21+"                      
+ [349] "5/vacenv/3+NKT cells/IL4+"                       
+ [350] "5/vacenv/3+NKT cells/TNF+"                       
+ [351] "5/vacenv/4+CM/CD154+"                            
+ [352] "5/vacenv/4+CM/CD154+GzB+"                        
+ [353] "5/vacenv/4+CM/CD154+IFNg+IL2+TNF+"               
+ [354] "5/vacenv/4+CM/CD154+IFNg+TNF+"                   
+ [355] "5/vacenv/4+CM/CD154+IL2+"                        
+ [356] "5/vacenv/4+CM/CD154+IL2+TNF+"                    
+ [357] "5/vacenv/4+CM/CD154+TNF+"                        
+ [358] "5/vacenv/4+CM/GzB+"                              
+ [359] "5/vacenv/4+CM/IFNg+"                             
+ [360] "5/vacenv/4+CM/IL2+"                              
+ [361] "5/vacenv/4+CM/IL2+TNF+"                          
+ [362] "5/vacenv/4+CM/IL21+"                             
+ [363] "5/vacenv/4+CM/IL4+"                              
+ [364] "5/vacenv/4+CM/TNF+"                              
+ [365] "5/vacenv/4+EM/CD154+"                            
+ [366] "5/vacenv/4+EM/CD154+GzB+"                        
+ [367] "5/vacenv/4+EM/CD154+GzB+IFNg+IL2+TNF+"           
+ [368] "5/vacenv/4+EM/CD154+IFNg+"                       
+ [369] "5/vacenv/4+EM/CD154+IFNg+IL2+"                   
+ [370] "5/vacenv/4+EM/CD154+IFNg+IL2+TNF+"               
+ [371] "5/vacenv/4+EM/CD154+IFNg+TNF+"                   
+ [372] "5/vacenv/4+EM/CD154+IL2+"                        
+ [373] "5/vacenv/4+EM/CD154+IL2+TNF+"                    
+ [374] "5/vacenv/4+EM/CD154+TNF+"                        
+ [375] "5/vacenv/4+EM/GzB+"                              
+ [376] "5/vacenv/4+EM/GzB+TNF+"                          
+ [377] "5/vacenv/4+EM/IFNg+"                             
+ [378] "5/vacenv/4+EM/IFNg+IL2+TNF+"                     
+ [379] "5/vacenv/4+EM/IFNg+TNF+"                         
+ [380] "5/vacenv/4+EM/IL2+"                              
+ [381] "5/vacenv/4+EM/IL2+TNF+"                          
+ [382] "5/vacenv/4+EM/TNF+"                              
+ [383] "5/vacenv/4+Naive/CD154+"                         
+ [384] "5/vacenv/4+Naive/CD154+GzB+"                     
+ [385] "5/vacenv/4+Naive/CD154+IFNg+"                    
+ [386] "5/vacenv/4+Naive/CD154+TNF+"                     
+ [387] "5/vacenv/4+Naive/GzB+"                           
+ [388] "5/vacenv/4+Naive/IFNg+"                          
+ [389] "5/vacenv/4+Naive/IL2+"                           
+ [390] "5/vacenv/4+Naive/IL21+"                          
+ [391] "5/vacenv/4+Naive/IL4+"                           
+ [392] "5/vacenv/4+Naive/TNF+"                           
+ [393] "5/vacenv/4+TD/CD154+"                            
+ [394] "5/vacenv/4+TD/GzB+"                              
+ [395] "5/vacenv/4+TD/TNF+"                              
+ [396] "5/vacenv/8+CM/CD154+"                            
+ [397] "5/vacenv/8+CM/GzB+"                              
+ [398] "5/vacenv/8+CM/IFNg+IL4+"                         
+ [399] "5/vacenv/8+EM/CD154+"                            
+ [400] "5/vacenv/8+EM/CD154+GzB+"                        
+ [401] "5/vacenv/8+EM/GzB+"                              
+ [402] "5/vacenv/8+EM/GzB+IFNg+"                         
+ [403] "5/vacenv/8+EM/GzB+IFNg+TNF+"                     
+ [404] "5/vacenv/8+EM/GzB+IL2+"                          
+ [405] "5/vacenv/8+EM/GzB+IL21+"                         
+ [406] "5/vacenv/8+EM/GzB+TNF+"                          
+ [407] "5/vacenv/8+EM/IFNg+"                             
+ [408] "5/vacenv/8+EM/IFNg+TNF+"                         
+ [409] "5/vacenv/8+EM/TNF+"                              
+ [410] "5/vacenv/8+Naive/CD154+"                         
+ [411] "5/vacenv/8+Naive/CD154+GzB+"                     
+ [412] "5/vacenv/8+Naive/CD154+IFNg+"                    
+ [413] "5/vacenv/8+Naive/GzB+"                           
+ [414] "5/vacenv/8+Naive/GzB+IL21+"                      
+ [415] "5/vacenv/8+Naive/IFNg+"                          
+ [416] "5/vacenv/8+Naive/IL21+"                          
+ [417] "5/vacenv/8+Naive/IL4+"                           
+ [418] "5/vacenv/8+TD/CD154+"                            
+ [419] "5/vacenv/8+TD/CD154+GzB+"                        
+ [420] "5/vacenv/8+TD/GzB+"                              
+ [421] "5/vacenv/8+TD/GzB+IFNg+"                         
+ [422] "5/vacenv/8+TD/GzB+IFNg+TNF+"                     
+ [423] "5/vacenv/8+TD/GzB+IL21+"                         
+ [424] "5/vacenv/8+TD/GzB+TNF+"                          
+ [425] "5/vacenv/8+TD/IFNg+TNF+"                         
+ [426] "5/vacenv/8+TD/TNF+"                              
+ [427] "5/vacenv/CXCR5+CD45RA-PD1+CCR7-/GzB+"            
+ [428] "5/vacenv/CXCR5+PD1+/CD154+"                      
+ [429] "5/vacenv/CXCR5+PD1+/CD154+IFNg+"                 
+ [430] "5/vacenv/CXCR5+PD1+/GzB+"                        
+ [431] "5/vacenv/CXCR5+PD1+/IFNg+"                       
+ [432] "5/vacenv/CXCR5+PD1+/IL21+"                       
+ [433] "7/env/3+4+/CD154+"                               
+ [434] "7/env/3+4+/CD154+GzB+"                           
+ [435] "7/env/3+4+/CD154+GzB+IFNg+IL2+TNF+"              
+ [436] "7/env/3+4+/CD154+GzB+IFNg+TNF+"                  
+ [437] "7/env/3+4+/CD154+IFNg+"                          
+ [438] "7/env/3+4+/CD154+IFNg+IL2+"                      
+ [439] "7/env/3+4+/CD154+IFNg+IL2+IL21+TNF+"             
+ [440] "7/env/3+4+/CD154+IFNg+IL2+TNF+"                  
+ [441] "7/env/3+4+/CD154+IFNg+TNF+"                      
+ [442] "7/env/3+4+/CD154+IL2+"                           
+ [443] "7/env/3+4+/CD154+IL2+IL4+TNF+"                   
+ [444] "7/env/3+4+/CD154+IL2+TNF+"                       
+ [445] "7/env/3+4+/CD154+TNF+"                           
+ [446] "7/env/3+4+/GzB+"                                 
+ [447] "7/env/3+4+/GzB+IL21+"                            
+ [448] "7/env/3+4+/GzB+TNF+"                             
+ [449] "7/env/3+4+/IFNg+"                                
+ [450] "7/env/3+4+/IFNg+IL2+TNF+"                        
+ [451] "7/env/3+4+/IFNg+TNF+"                            
+ [452] "7/env/3+4+/IL2+"                                 
+ [453] "7/env/3+4+/IL2+IL21+TNF+"                        
+ [454] "7/env/3+4+/IL2+TNF+"                             
+ [455] "7/env/3+4+/IL21+"                                
+ [456] "7/env/3+4+/IL4+"                                 
+ [457] "7/env/3+4+/TNF+"                                 
+ [458] "7/env/3+8+/CD154+"                               
+ [459] "7/env/3+8+/CD154+GzB+"                           
+ [460] "7/env/3+8+/CD154+GzB+IFNg+"                      
+ [461] "7/env/3+8+/CD154+GzB+IFNg+TNF+"                  
+ [462] "7/env/3+8+/CD154+GzB+IL4+"                       
+ [463] "7/env/3+8+/CD154+IFNg+"                          
+ [464] "7/env/3+8+/CD154+IFNg+TNF+"                      
+ [465] "7/env/3+8+/GzB+"                                 
+ [466] "7/env/3+8+/GzB+IFNg+"                            
+ [467] "7/env/3+8+/GzB+IFNg+IL2+TNF+"                    
+ [468] "7/env/3+8+/GzB+IFNg+TNF+"                        
+ [469] "7/env/3+8+/GzB+IL2+"                             
+ [470] "7/env/3+8+/GzB+IL21+"                            
+ [471] "7/env/3+8+/GzB+TNF+"                             
+ [472] "7/env/3+8+/IFNg+"                                
+ [473] "7/env/3+8+/IFNg+IL2+TNF+"                        
+ [474] "7/env/3+8+/IFNg+TNF+"                            
+ [475] "7/env/3+8+/IL2+"                                 
+ [476] "7/env/3+8+/IL21+"                                
+ [477] "7/env/3+8+/IL4+"                                 
+ [478] "7/env/3+8+/TNF+"                                 
+ [479] "7/env/3+CD4-CD8-/CD154+"                         
+ [480] "7/env/3+CD4-CD8-/CD154+GzB+"                     
+ [481] "7/env/3+CD4-CD8-/GzB+"                           
+ [482] "7/env/3+CD4-CD8-/GzB+IFNg+"                      
+ [483] "7/env/3+CD4-CD8-/GzB+IFNg+TNF+"                  
+ [484] "7/env/3+CD4-CD8-/GzB+TNF+"                       
+ [485] "7/env/3+CD4-CD8-/IFNg+"                          
+ [486] "7/env/3+CD4-CD8-/IFNg+TNF+"                      
+ [487] "7/env/3+CD4-CD8-/IL4+"                           
+ [488] "7/env/3+CD4-CD8-/TNF+"                           
+ [489] "7/env/3+NKT cells/CD154+"                        
+ [490] "7/env/3+NKT cells/CD154+GzB+"                    
+ [491] "7/env/3+NKT cells/CD154+GzB+IFNg+"               
+ [492] "7/env/3+NKT cells/CD154+IFNg+"                   
+ [493] "7/env/3+NKT cells/GzB+"                          
+ [494] "7/env/3+NKT cells/GzB+IFNg+"                     
+ [495] "7/env/3+NKT cells/GzB+IFNg+TNF+"                 
+ [496] "7/env/3+NKT cells/GzB+IL21+"                     
+ [497] "7/env/3+NKT cells/GzB+TNF+"                      
+ [498] "7/env/3+NKT cells/IFNg+"                         
+ [499] "7/env/3+NKT cells/IFNg+TNF+"                     
+ [500] "7/env/3+NKT cells/IL21+"                         
+ [501] "7/env/3+NKT cells/IL4+"                          
+ [502] "7/env/3+NKT cells/TNF+"                          
+ [503] "7/env/4+CM/CD154+"                               
+ [504] "7/env/4+CM/CD154+IFNg+"                          
+ [505] "7/env/4+CM/CD154+IFNg+IL2+"                      
+ [506] "7/env/4+CM/CD154+IFNg+IL2+TNF+"                  
+ [507] "7/env/4+CM/CD154+IFNg+TNF+"                      
+ [508] "7/env/4+CM/CD154+IL2+"                           
+ [509] "7/env/4+CM/CD154+IL2+TNF+"                       
+ [510] "7/env/4+CM/CD154+TNF+"                           
+ [511] "7/env/4+CM/GzB+"                                 
+ [512] "7/env/4+CM/IFNg+"                                
+ [513] "7/env/4+CM/IFNg+TNF+"                            
+ [514] "7/env/4+CM/IL2+"                                 
+ [515] "7/env/4+CM/IL2+TNF+"                             
+ [516] "7/env/4+CM/IL21+"                                
+ [517] "7/env/4+CM/IL4+"                                 
+ [518] "7/env/4+CM/TNF+"                                 
+ [519] "7/env/4+EM/CD154+"                               
+ [520] "7/env/4+EM/CD154+GzB+"                           
+ [521] "7/env/4+EM/CD154+GzB+IFNg+IL2+TNF+"              
+ [522] "7/env/4+EM/CD154+IFNg+"                          
+ [523] "7/env/4+EM/CD154+IFNg+IL2+"                      
+ [524] "7/env/4+EM/CD154+IFNg+IL2+IL21+TNF+"             
+ [525] "7/env/4+EM/CD154+IFNg+IL2+TNF+"                  
+ [526] "7/env/4+EM/CD154+IFNg+TNF+"                      
+ [527] "7/env/4+EM/CD154+IL2+"                           
+ [528] "7/env/4+EM/CD154+IL2+TNF+"                       
+ [529] "7/env/4+EM/CD154+TNF+"                           
+ [530] "7/env/4+EM/GzB+"                                 
+ [531] "7/env/4+EM/GzB+TNF+"                             
+ [532] "7/env/4+EM/IFNg+"                                
+ [533] "7/env/4+EM/IFNg+IL2+TNF+"                        
+ [534] "7/env/4+EM/IFNg+TNF+"                            
+ [535] "7/env/4+EM/IL2+"                                 
+ [536] "7/env/4+EM/IL2+TNF+"                             
+ [537] "7/env/4+EM/TNF+"                                 
+ [538] "7/env/4+Naive/CD154+"                            
+ [539] "7/env/4+Naive/CD154+GzB+"                        
+ [540] "7/env/4+Naive/CD154+IFNg+"                       
+ [541] "7/env/4+Naive/CD154+TNF+"                        
+ [542] "7/env/4+Naive/GzB+"                              
+ [543] "7/env/4+Naive/GzB+IL21+"                         
+ [544] "7/env/4+Naive/IFNg+"                             
+ [545] "7/env/4+Naive/IL2+"                              
+ [546] "7/env/4+Naive/IL2+TNF+"                          
+ [547] "7/env/4+Naive/IL21+"                             
+ [548] "7/env/4+Naive/IL4+"                              
+ [549] "7/env/4+Naive/TNF+"                              
+ [550] "7/env/4+TD/CD154+"                               
+ [551] "7/env/4+TD/CD154+IFNg+IL2+TNF+"                  
+ [552] "7/env/4+TD/GzB+"                                 
+ [553] "7/env/4+TD/IL4+"                                 
+ [554] "7/env/4+TD/TNF+"                                 
+ [555] "7/env/8+CM/CD154+"                               
+ [556] "7/env/8+CM/CD154+GzB+"                           
+ [557] "7/env/8+CM/GzB+"                                 
+ [558] "7/env/8+EM/CD154+"                               
+ [559] "7/env/8+EM/CD154+GzB+"                           
+ [560] "7/env/8+EM/GzB+"                                 
+ [561] "7/env/8+EM/GzB+IFNg+"                            
+ [562] "7/env/8+EM/GzB+IFNg+TNF+"                        
+ [563] "7/env/8+EM/GzB+IL2+"                             
+ [564] "7/env/8+EM/GzB+TNF+"                             
+ [565] "7/env/8+EM/IFNg+"                                
+ [566] "7/env/8+EM/IFNg+IL2+TNF+"                        
+ [567] "7/env/8+EM/IFNg+TNF+"                            
+ [568] "7/env/8+EM/TNF+"                                 
+ [569] "7/env/8+Naive/CD154+"                            
+ [570] "7/env/8+Naive/CD154+GzB+"                        
+ [571] "7/env/8+Naive/CD154+IFNg+"                       
+ [572] "7/env/8+Naive/GzB+"                              
+ [573] "7/env/8+Naive/IFNg+"                             
+ [574] "7/env/8+Naive/IL21+"                             
+ [575] "7/env/8+TD/CD154+"                               
+ [576] "7/env/8+TD/CD154+GzB+"                           
+ [577] "7/env/8+TD/GzB+"                                 
+ [578] "7/env/8+TD/GzB+IFNg+"                            
+ [579] "7/env/8+TD/GzB+IFNg+TNF+"                        
+ [580] "7/env/8+TD/GzB+IL21+"                            
+ [581] "7/env/8+TD/GzB+TNF+"                             
+ [582] "7/env/8+TD/IFNg+"                                
+ [583] "7/env/8+TD/IFNg+TNF+"                            
+ [584] "7/env/8+TD/TNF+"                                 
+ [585] "7/env/CXCR5+CD45RA-PD1+CCR7-/CD154+"             
+ [586] "7/env/CXCR5+CD45RA-PD1+CCR7-/GzB+"               
+ [587] "7/env/CXCR5+PD1+/CD154+"                         
+ [588] "7/env/CXCR5+PD1+/CD154+IFNg+"                    
+ [589] "7/env/CXCR5+PD1+/CD154+IFNg+IL2+TNF+"            
+ [590] "7/env/CXCR5+PD1+/GzB+"                           
+ [591] "7/env/CXCR5+PD1+/IFNg+"                          
+ [592] "7/env/CXCR5+PD1+/IL21+"                          
+ [593] "7/gag/3+4+/CD154+"                               
+ [594] "7/gag/3+4+/CD154+GzB+"                           
+ [595] "7/gag/3+4+/CD154+GzB+IFNg+IL2+TNF+"              
+ [596] "7/gag/3+4+/CD154+GzB+IFNg+TNF+"                  
+ [597] "7/gag/3+4+/CD154+IFNg+"                          
+ [598] "7/gag/3+4+/CD154+IFNg+IL2+"                      
+ [599] "7/gag/3+4+/CD154+IFNg+IL2+IL21+TNF+"             
+ [600] "7/gag/3+4+/CD154+IFNg+IL2+TNF+"                  
+ [601] "7/gag/3+4+/CD154+IFNg+TNF+"                      
+ [602] "7/gag/3+4+/CD154+IL2+"                           
+ [603] "7/gag/3+4+/CD154+IL2+TNF+"                       
+ [604] "7/gag/3+4+/CD154+TNF+"                           
+ [605] "7/gag/3+4+/GzB+"                                 
+ [606] "7/gag/3+4+/GzB+IL21+"                            
+ [607] "7/gag/3+4+/GzB+TNF+"                             
+ [608] "7/gag/3+4+/IFNg+"                                
+ [609] "7/gag/3+4+/IFNg+IL2+TNF+"                        
+ [610] "7/gag/3+4+/IFNg+TNF+"                            
+ [611] "7/gag/3+4+/IL2+"                                 
+ [612] "7/gag/3+4+/IL2+TNF+"                             
+ [613] "7/gag/3+4+/IL21+"                                
+ [614] "7/gag/3+4+/IL4+"                                 
+ [615] "7/gag/3+4+/TNF+"                                 
+ [616] "7/gag/3+8+/CD154+"                               
+ [617] "7/gag/3+8+/CD154+GzB+"                           
+ [618] "7/gag/3+8+/CD154+GzB+IFNg+"                      
+ [619] "7/gag/3+8+/CD154+GzB+IL4+"                       
+ [620] "7/gag/3+8+/CD154+IFNg+"                          
+ [621] "7/gag/3+8+/GzB+"                                 
+ [622] "7/gag/3+8+/GzB+IFNg+"                            
+ [623] "7/gag/3+8+/GzB+IFNg+IL2+TNF+"                    
+ [624] "7/gag/3+8+/GzB+IFNg+TNF+"                        
+ [625] "7/gag/3+8+/GzB+IL2+"                             
+ [626] "7/gag/3+8+/GzB+IL21+"                            
+ [627] "7/gag/3+8+/GzB+TNF+"                             
+ [628] "7/gag/3+8+/IFNg+"                                
+ [629] "7/gag/3+8+/IFNg+IL2+TNF+"                        
+ [630] "7/gag/3+8+/IFNg+TNF+"                            
+ [631] "7/gag/3+8+/IL2+"                                 
+ [632] "7/gag/3+8+/IL21+"                                
+ [633] "7/gag/3+8+/IL4+"                                 
+ [634] "7/gag/3+8+/TNF+"                                 
+ [635] "7/gag/3+CD4-CD8-/CD154+"                         
+ [636] "7/gag/3+CD4-CD8-/CD154+GzB+"                     
+ [637] "7/gag/3+CD4-CD8-/GzB+"                           
+ [638] "7/gag/3+CD4-CD8-/GzB+IFNg+"                      
+ [639] "7/gag/3+CD4-CD8-/GzB+IFNg+TNF+"                  
+ [640] "7/gag/3+CD4-CD8-/GzB+TNF+"                       
+ [641] "7/gag/3+CD4-CD8-/IFNg+"                          
+ [642] "7/gag/3+CD4-CD8-/IFNg+TNF+"                      
+ [643] "7/gag/3+CD4-CD8-/IL4+"                           
+ [644] "7/gag/3+CD4-CD8-/TNF+"                           
+ [645] "7/gag/3+NKT cells/CD154+"                        
+ [646] "7/gag/3+NKT cells/CD154+GzB+"                    
+ [647] "7/gag/3+NKT cells/CD154+GzB+IFNg+"               
+ [648] "7/gag/3+NKT cells/CD154+IFNg+"                   
+ [649] "7/gag/3+NKT cells/GzB+"                          
+ [650] "7/gag/3+NKT cells/GzB+IFNg+"                     
+ [651] "7/gag/3+NKT cells/GzB+IFNg+TNF+"                 
+ [652] "7/gag/3+NKT cells/GzB+IL21+"                     
+ [653] "7/gag/3+NKT cells/GzB+TNF+"                      
+ [654] "7/gag/3+NKT cells/IFNg+"                         
+ [655] "7/gag/3+NKT cells/IFNg+TNF+"                     
+ [656] "7/gag/3+NKT cells/IL21+"                         
+ [657] "7/gag/3+NKT cells/IL4+"                          
+ [658] "7/gag/3+NKT cells/TNF+"                          
+ [659] "7/gag/4+CM/CD154+"                               
+ [660] "7/gag/4+CM/CD154+IFNg+"                          
+ [661] "7/gag/4+CM/CD154+IFNg+IL2+"                      
+ [662] "7/gag/4+CM/CD154+IFNg+IL2+TNF+"                  
+ [663] "7/gag/4+CM/CD154+IFNg+TNF+"                      
+ [664] "7/gag/4+CM/CD154+IL2+"                           
+ [665] "7/gag/4+CM/CD154+IL2+TNF+"                       
+ [666] "7/gag/4+CM/CD154+TNF+"                           
+ [667] "7/gag/4+CM/GzB+"                                 
+ [668] "7/gag/4+CM/IFNg+"                                
+ [669] "7/gag/4+CM/IFNg+TNF+"                            
+ [670] "7/gag/4+CM/IL2+"                                 
+ [671] "7/gag/4+CM/IL2+TNF+"                             
+ [672] "7/gag/4+CM/IL21+"                                
+ [673] "7/gag/4+CM/IL4+"                                 
+ [674] "7/gag/4+CM/TNF+"                                 
+ [675] "7/gag/4+EM/CD154+"                               
+ [676] "7/gag/4+EM/CD154+GzB+IFNg+IL2+TNF+"              
+ [677] "7/gag/4+EM/CD154+IFNg+"                          
+ [678] "7/gag/4+EM/CD154+IFNg+IL2+"                      
+ [679] "7/gag/4+EM/CD154+IFNg+IL2+IL21+TNF+"             
+ [680] "7/gag/4+EM/CD154+IFNg+IL2+TNF+"                  
+ [681] "7/gag/4+EM/CD154+IFNg+TNF+"                      
+ [682] "7/gag/4+EM/CD154+IL2+"                           
+ [683] "7/gag/4+EM/CD154+IL2+TNF+"                       
+ [684] "7/gag/4+EM/CD154+TNF+"                           
+ [685] "7/gag/4+EM/GzB+"                                 
+ [686] "7/gag/4+EM/GzB+TNF+"                             
+ [687] "7/gag/4+EM/IFNg+"                                
+ [688] "7/gag/4+EM/IFNg+IL2+TNF+"                        
+ [689] "7/gag/4+EM/IFNg+TNF+"                            
+ [690] "7/gag/4+EM/IL2+"                                 
+ [691] "7/gag/4+EM/IL2+TNF+"                             
+ [692] "7/gag/4+EM/TNF+"                                 
+ [693] "7/gag/4+Naive/CD154+"                            
+ [694] "7/gag/4+Naive/CD154+GzB+"                        
+ [695] "7/gag/4+Naive/CD154+IFNg+"                       
+ [696] "7/gag/4+Naive/CD154+TNF+"                        
+ [697] "7/gag/4+Naive/GzB+"                              
+ [698] "7/gag/4+Naive/GzB+IL21+"                         
+ [699] "7/gag/4+Naive/IFNg+"                             
+ [700] "7/gag/4+Naive/IL2+"                              
+ [701] "7/gag/4+Naive/IL2+TNF+"                          
+ [702] "7/gag/4+Naive/IL21+"                             
+ [703] "7/gag/4+Naive/IL4+"                              
+ [704] "7/gag/4+Naive/TNF+"                              
+ [705] "7/gag/4+TD/CD154+"                               
+ [706] "7/gag/4+TD/GzB+"                                 
+ [707] "7/gag/4+TD/IL4+"                                 
+ [708] "7/gag/4+TD/TNF+"                                 
+ [709] "7/gag/8+CM/CD154+"                               
+ [710] "7/gag/8+CM/CD154+GzB+"                           
+ [711] "7/gag/8+CM/GzB+"                                 
+ [712] "7/gag/8+EM/CD154+"                               
+ [713] "7/gag/8+EM/CD154+GzB+"                           
+ [714] "7/gag/8+EM/GzB+"                                 
+ [715] "7/gag/8+EM/GzB+IFNg+"                            
+ [716] "7/gag/8+EM/GzB+IFNg+TNF+"                        
+ [717] "7/gag/8+EM/GzB+IL2+"                             
+ [718] "7/gag/8+EM/GzB+TNF+"                             
+ [719] "7/gag/8+EM/IFNg+"                                
+ [720] "7/gag/8+EM/IFNg+TNF+"                            
+ [721] "7/gag/8+EM/TNF+"                                 
+ [722] "7/gag/8+Naive/CD154+"                            
+ [723] "7/gag/8+Naive/CD154+GzB+"                        
+ [724] "7/gag/8+Naive/CD154+IFNg+"                       
+ [725] "7/gag/8+Naive/GzB+"                              
+ [726] "7/gag/8+Naive/IFNg+"                             
+ [727] "7/gag/8+Naive/IL21+"                             
+ [728] "7/gag/8+TD/CD154+"                               
+ [729] "7/gag/8+TD/CD154+GzB+"                           
+ [730] "7/gag/8+TD/GzB+"                                 
+ [731] "7/gag/8+TD/GzB+IFNg+"                            
+ [732] "7/gag/8+TD/GzB+IFNg+TNF+"                        
+ [733] "7/gag/8+TD/GzB+IL21+"                            
+ [734] "7/gag/8+TD/GzB+TNF+"                             
+ [735] "7/gag/8+TD/TNF+"                                 
+ [736] "7/gag/CXCR5+CD45RA-PD1+CCR7-/CD154+"             
+ [737] "7/gag/CXCR5+CD45RA-PD1+CCR7-/GzB+"               
+ [738] "7/gag/CXCR5+PD1+/CD154+"                         
+ [739] "7/gag/CXCR5+PD1+/CD154+IFNg+"                    
+ [740] "7/gag/CXCR5+PD1+/CD154+IFNg+IL2+TNF+"            
+ [741] "7/gag/CXCR5+PD1+/GzB+"                           
+ [742] "7/gag/CXCR5+PD1+/IFNg+"                          
+ [743] "7/gag/CXCR5+PD1+/IL21+"                          
+ [744] "7/vacenv/3+4+/CD154+"                            
+ [745] "7/vacenv/3+4+/CD154+GzB+"                        
+ [746] "7/vacenv/3+4+/CD154+GzB+IFNg+IL2+TNF+"           
+ [747] "7/vacenv/3+4+/CD154+GzB+IFNg+TNF+"               
+ [748] "7/vacenv/3+4+/CD154+IFNg+"                       
+ [749] "7/vacenv/3+4+/CD154+IFNg+IL2+"                   
+ [750] "7/vacenv/3+4+/CD154+IFNg+IL2+IL21+TNF+"          
+ [751] "7/vacenv/3+4+/CD154+IFNg+IL2+TNF+"               
+ [752] "7/vacenv/3+4+/CD154+IFNg+TNF+"                   
+ [753] "7/vacenv/3+4+/CD154+IL2+"                        
+ [754] "7/vacenv/3+4+/CD154+IL2+IL4+TNF+"                
+ [755] "7/vacenv/3+4+/CD154+IL2+TNF+"                    
+ [756] "7/vacenv/3+4+/CD154+TNF+"                        
+ [757] "7/vacenv/3+4+/GzB+"                              
+ [758] "7/vacenv/3+4+/GzB+IL21+"                         
+ [759] "7/vacenv/3+4+/GzB+TNF+"                          
+ [760] "7/vacenv/3+4+/IFNg+"                             
+ [761] "7/vacenv/3+4+/IFNg+IL2+TNF+"                     
+ [762] "7/vacenv/3+4+/IFNg+TNF+"                         
+ [763] "7/vacenv/3+4+/IL2+"                              
+ [764] "7/vacenv/3+4+/IL2+TNF+"                          
+ [765] "7/vacenv/3+4+/IL21+"                             
+ [766] "7/vacenv/3+4+/IL4+"                              
+ [767] "7/vacenv/3+4+/TNF+"                              
+ [768] "7/vacenv/3+8+/CD154+"                            
+ [769] "7/vacenv/3+8+/CD154+GzB+"                        
+ [770] "7/vacenv/3+8+/CD154+GzB+IFNg+"                   
+ [771] "7/vacenv/3+8+/CD154+GzB+IL4+"                    
+ [772] "7/vacenv/3+8+/CD154+IFNg+"                       
+ [773] "7/vacenv/3+8+/GzB+"                              
+ [774] "7/vacenv/3+8+/GzB+IFNg+"                         
+ [775] "7/vacenv/3+8+/GzB+IFNg+TNF+"                     
+ [776] "7/vacenv/3+8+/GzB+IL2+"                          
+ [777] "7/vacenv/3+8+/GzB+IL21+"                         
+ [778] "7/vacenv/3+8+/GzB+TNF+"                          
+ [779] "7/vacenv/3+8+/IFNg+"                             
+ [780] "7/vacenv/3+8+/IFNg+IL2+TNF+"                     
+ [781] "7/vacenv/3+8+/IFNg+TNF+"                         
+ [782] "7/vacenv/3+8+/IL2+"                              
+ [783] "7/vacenv/3+8+/IL21+"                             
+ [784] "7/vacenv/3+8+/IL4+"                              
+ [785] "7/vacenv/3+8+/TNF+"                              
+ [786] "7/vacenv/3+CD4-CD8-/CD154+"                      
+ [787] "7/vacenv/3+CD4-CD8-/CD154+GzB+"                  
+ [788] "7/vacenv/3+CD4-CD8-/GzB+"                        
+ [789] "7/vacenv/3+CD4-CD8-/GzB+IFNg+"                   
+ [790] "7/vacenv/3+CD4-CD8-/GzB+IFNg+TNF+"               
+ [791] "7/vacenv/3+CD4-CD8-/GzB+TNF+"                    
+ [792] "7/vacenv/3+CD4-CD8-/IFNg+"                       
+ [793] "7/vacenv/3+CD4-CD8-/IFNg+TNF+"                   
+ [794] "7/vacenv/3+CD4-CD8-/IL4+"                        
+ [795] "7/vacenv/3+CD4-CD8-/TNF+"                        
+ [796] "7/vacenv/3+NKT cells/CD154+"                     
+ [797] "7/vacenv/3+NKT cells/CD154+GzB+"                 
+ [798] "7/vacenv/3+NKT cells/CD154+GzB+IFNg+"            
+ [799] "7/vacenv/3+NKT cells/CD154+IFNg+"                
+ [800] "7/vacenv/3+NKT cells/GzB+"                       
+ [801] "7/vacenv/3+NKT cells/GzB+IFNg+"                  
+ [802] "7/vacenv/3+NKT cells/GzB+IFNg+TNF+"              
+ [803] "7/vacenv/3+NKT cells/GzB+IL21+"                  
+ [804] "7/vacenv/3+NKT cells/GzB+TNF+"                   
+ [805] "7/vacenv/3+NKT cells/IFNg+"                      
+ [806] "7/vacenv/3+NKT cells/IFNg+TNF+"                  
+ [807] "7/vacenv/3+NKT cells/IL21+"                      
+ [808] "7/vacenv/3+NKT cells/IL4+"                       
+ [809] "7/vacenv/3+NKT cells/TNF+"                       
+ [810] "7/vacenv/4+CM/CD154+"                            
+ [811] "7/vacenv/4+CM/CD154+GzB+"                        
+ [812] "7/vacenv/4+CM/CD154+IFNg+"                       
+ [813] "7/vacenv/4+CM/CD154+IFNg+IL2+"                   
+ [814] "7/vacenv/4+CM/CD154+IFNg+IL2+TNF+"               
+ [815] "7/vacenv/4+CM/CD154+IFNg+TNF+"                   
+ [816] "7/vacenv/4+CM/CD154+IL2+"                        
+ [817] "7/vacenv/4+CM/CD154+IL2+TNF+"                    
+ [818] "7/vacenv/4+CM/CD154+TNF+"                        
+ [819] "7/vacenv/4+CM/GzB+"                              
+ [820] "7/vacenv/4+CM/IFNg+"                             
+ [821] "7/vacenv/4+CM/IFNg+TNF+"                         
+ [822] "7/vacenv/4+CM/IL2+"                              
+ [823] "7/vacenv/4+CM/IL2+TNF+"                          
+ [824] "7/vacenv/4+CM/IL21+"                             
+ [825] "7/vacenv/4+CM/IL4+"                              
+ [826] "7/vacenv/4+CM/TNF+"                              
+ [827] "7/vacenv/4+EM/CD154+"                            
+ [828] "7/vacenv/4+EM/CD154+GzB+"                        
+ [829] "7/vacenv/4+EM/CD154+GzB+IFNg+IL2+TNF+"           
+ [830] "7/vacenv/4+EM/CD154+IFNg+"                       
+ [831] "7/vacenv/4+EM/CD154+IFNg+IL2+"                   
+ [832] "7/vacenv/4+EM/CD154+IFNg+IL2+IL21+TNF+"          
+ [833] "7/vacenv/4+EM/CD154+IFNg+IL2+TNF+"               
+ [834] "7/vacenv/4+EM/CD154+IFNg+TNF+"                   
+ [835] "7/vacenv/4+EM/CD154+IL2+"                        
+ [836] "7/vacenv/4+EM/CD154+IL2+TNF+"                    
+ [837] "7/vacenv/4+EM/CD154+TNF+"                        
+ [838] "7/vacenv/4+EM/GzB+"                              
+ [839] "7/vacenv/4+EM/GzB+TNF+"                          
+ [840] "7/vacenv/4+EM/IFNg+"                             
+ [841] "7/vacenv/4+EM/IFNg+IL2+TNF+"                     
+ [842] "7/vacenv/4+EM/IFNg+TNF+"                         
+ [843] "7/vacenv/4+EM/IL2+"                              
+ [844] "7/vacenv/4+EM/IL2+TNF+"                          
+ [845] "7/vacenv/4+EM/TNF+"                              
+ [846] "7/vacenv/4+Naive/CD154+"                         
+ [847] "7/vacenv/4+Naive/CD154+GzB+"                     
+ [848] "7/vacenv/4+Naive/CD154+IFNg+"                    
+ [849] "7/vacenv/4+Naive/CD154+TNF+"                     
+ [850] "7/vacenv/4+Naive/GzB+"                           
+ [851] "7/vacenv/4+Naive/GzB+IL21+"                      
+ [852] "7/vacenv/4+Naive/IFNg+"                          
+ [853] "7/vacenv/4+Naive/IL2+"                           
+ [854] "7/vacenv/4+Naive/IL2+TNF+"                       
+ [855] "7/vacenv/4+Naive/IL21+"                          
+ [856] "7/vacenv/4+Naive/IL4+"                           
+ [857] "7/vacenv/4+Naive/TNF+"                           
+ [858] "7/vacenv/4+TD/CD154+"                            
+ [859] "7/vacenv/4+TD/GzB+"                              
+ [860] "7/vacenv/4+TD/IL4+"                              
+ [861] "7/vacenv/4+TD/TNF+"                              
+ [862] "7/vacenv/8+CM/CD154+"                            
+ [863] "7/vacenv/8+CM/CD154+GzB+"                        
+ [864] "7/vacenv/8+CM/GzB+"                              
+ [865] "7/vacenv/8+EM/CD154+"                            
+ [866] "7/vacenv/8+EM/CD154+GzB+"                        
+ [867] "7/vacenv/8+EM/GzB+"                              
+ [868] "7/vacenv/8+EM/GzB+IFNg+"                         
+ [869] "7/vacenv/8+EM/GzB+IFNg+TNF+"                     
+ [870] "7/vacenv/8+EM/GzB+IL2+"                          
+ [871] "7/vacenv/8+EM/GzB+TNF+"                          
+ [872] "7/vacenv/8+EM/IFNg+"                             
+ [873] "7/vacenv/8+EM/IFNg+TNF+"                         
+ [874] "7/vacenv/8+EM/TNF+"                              
+ [875] "7/vacenv/8+Naive/CD154+"                         
+ [876] "7/vacenv/8+Naive/CD154+GzB+"                     
+ [877] "7/vacenv/8+Naive/CD154+IFNg+"                    
+ [878] "7/vacenv/8+Naive/GzB+"                           
+ [879] "7/vacenv/8+Naive/IFNg+"                          
+ [880] "7/vacenv/8+Naive/IL21+"                          
+ [881] "7/vacenv/8+TD/CD154+"                            
+ [882] "7/vacenv/8+TD/CD154+GzB+"                        
+ [883] "7/vacenv/8+TD/GzB+"                              
+ [884] "7/vacenv/8+TD/GzB+IFNg+"                         
+ [885] "7/vacenv/8+TD/GzB+IFNg+TNF+"                     
+ [886] "7/vacenv/8+TD/GzB+IL21+"                         
+ [887] "7/vacenv/8+TD/GzB+TNF+"                          
+ [888] "7/vacenv/8+TD/IFNg+TNF+"                         
+ [889] "7/vacenv/8+TD/TNF+"                              
+ [890] "7/vacenv/CXCR5+CD45RA-PD1+CCR7-/CD154+"          
+ [891] "7/vacenv/CXCR5+CD45RA-PD1+CCR7-/GzB+"            
+ [892] "7/vacenv/CXCR5+PD1+/CD154+"                      
+ [893] "7/vacenv/CXCR5+PD1+/CD154+IFNg+"                 
+ [894] "7/vacenv/CXCR5+PD1+/GzB+"                        
+ [895] "7/vacenv/CXCR5+PD1+/IFNg+"                       
+ [896] "7/vacenv/CXCR5+PD1+/IL21+"                       
+ [897] "9/env/3+4+/CD154+"                               
+ [898] "9/env/3+4+/CD154+GzB+"                           
+ [899] "9/env/3+4+/CD154+GzB+IFNg+IL2+TNF+"              
+ [900] "9/env/3+4+/CD154+GzB+IFNg+TNF+"                  
+ [901] "9/env/3+4+/CD154+IFNg+"                          
+ [902] "9/env/3+4+/CD154+IFNg+IL2+"                      
+ [903] "9/env/3+4+/CD154+IFNg+IL2+IL21+TNF+"             
+ [904] "9/env/3+4+/CD154+IFNg+IL2+TNF+"                  
+ [905] "9/env/3+4+/CD154+IFNg+IL21+TNF+"                 
+ [906] "9/env/3+4+/CD154+IFNg+TNF+"                      
+ [907] "9/env/3+4+/CD154+IL2+"                           
+ [908] "9/env/3+4+/CD154+IL2+IL21+TNF+"                  
+ [909] "9/env/3+4+/CD154+IL2+IL4+TNF+"                   
+ [910] "9/env/3+4+/CD154+IL2+TNF+"                       
+ [911] "9/env/3+4+/CD154+TNF+"                           
+ [912] "9/env/3+4+/GzB+"                                 
+ [913] "9/env/3+4+/GzB+IFNg+TNF+"                        
+ [914] "9/env/3+4+/GzB+IL21+"                            
+ [915] "9/env/3+4+/GzB+IL4+"                             
+ [916] "9/env/3+4+/GzB+TNF+"                             
+ [917] "9/env/3+4+/IFNg+"                                
+ [918] "9/env/3+4+/IFNg+IL2+TNF+"                        
+ [919] "9/env/3+4+/IFNg+TNF+"                            
+ [920] "9/env/3+4+/IL2+"                                 
+ [921] "9/env/3+4+/IL2+TNF+"                             
+ [922] "9/env/3+4+/IL21+"                                
+ [923] "9/env/3+4+/IL4+"                                 
+ [924] "9/env/3+4+/TNF+"                                 
+ [925] "9/env/3+8+/CD154+"                               
+ [926] "9/env/3+8+/CD154+GzB+"                           
+ [927] "9/env/3+8+/CD154+IFNg+"                          
+ [928] "9/env/3+8+/GzB+"                                 
+ [929] "9/env/3+8+/GzB+IFNg+"                            
+ [930] "9/env/3+8+/GzB+IFNg+IL2+TNF+"                    
+ [931] "9/env/3+8+/GzB+IFNg+TNF+"                        
+ [932] "9/env/3+8+/GzB+IL2+"                             
+ [933] "9/env/3+8+/GzB+IL21+"                            
+ [934] "9/env/3+8+/GzB+IL4+"                             
+ [935] "9/env/3+8+/GzB+TNF+"                             
+ [936] "9/env/3+8+/IFNg+"                                
+ [937] "9/env/3+8+/IFNg+IL2+TNF+"                        
+ [938] "9/env/3+8+/IFNg+TNF+"                            
+ [939] "9/env/3+8+/IL2+"                                 
+ [940] "9/env/3+8+/IL2+TNF+"                             
+ [941] "9/env/3+8+/IL21+"                                
+ [942] "9/env/3+8+/IL4+"                                 
+ [943] "9/env/3+8+/TNF+"                                 
+ [944] "9/env/3+CD4-CD8-/CD154+"                         
+ [945] "9/env/3+CD4-CD8-/CD154+GzB+"                     
+ [946] "9/env/3+CD4-CD8-/GzB+"                           
+ [947] "9/env/3+CD4-CD8-/GzB+TNF+"                       
+ [948] "9/env/3+CD4-CD8-/IFNg+"                          
+ [949] "9/env/3+CD4-CD8-/IL4+"                           
+ [950] "9/env/3+NKT cells/CD154+"                        
+ [951] "9/env/3+NKT cells/CD154+GzB+"                    
+ [952] "9/env/3+NKT cells/CD154+GzB+IFNg+"               
+ [953] "9/env/3+NKT cells/CD154+IFNg+"                   
+ [954] "9/env/3+NKT cells/GzB+"                          
+ [955] "9/env/3+NKT cells/GzB+IFNg+"                     
+ [956] "9/env/3+NKT cells/GzB+IFNg+TNF+"                 
+ [957] "9/env/3+NKT cells/GzB+TNF+"                      
+ [958] "9/env/3+NKT cells/IFNg+"                         
+ [959] "9/env/3+NKT cells/IL21+"                         
+ [960] "9/env/3+NKT cells/IL4+"                          
+ [961] "9/env/4+CM/CD154+"                               
+ [962] "9/env/4+CM/CD154+IFNg+"                          
+ [963] "9/env/4+CM/CD154+IFNg+IL2+"                      
+ [964] "9/env/4+CM/CD154+IFNg+IL2+TNF+"                  
+ [965] "9/env/4+CM/CD154+IFNg+TNF+"                      
+ [966] "9/env/4+CM/CD154+IL2+"                           
+ [967] "9/env/4+CM/CD154+IL2+IL21+TNF+"                  
+ [968] "9/env/4+CM/CD154+IL2+TNF+"                       
+ [969] "9/env/4+CM/CD154+TNF+"                           
+ [970] "9/env/4+CM/GzB+"                                 
+ [971] "9/env/4+CM/IFNg+"                                
+ [972] "9/env/4+CM/IFNg+IL2+TNF+"                        
+ [973] "9/env/4+CM/IL2+"                                 
+ [974] "9/env/4+CM/IL2+TNF+"                             
+ [975] "9/env/4+CM/IL21+"                                
+ [976] "9/env/4+CM/IL4+"                                 
+ [977] "9/env/4+CM/TNF+"                                 
+ [978] "9/env/4+EM/CD154+"                               
+ [979] "9/env/4+EM/CD154+GzB+"                           
+ [980] "9/env/4+EM/CD154+GzB+IFNg+IL2+TNF+"              
+ [981] "9/env/4+EM/CD154+IFNg+"                          
+ [982] "9/env/4+EM/CD154+IFNg+IL2+"                      
+ [983] "9/env/4+EM/CD154+IFNg+IL2+IL21+TNF+"             
+ [984] "9/env/4+EM/CD154+IFNg+IL2+TNF+"                  
+ [985] "9/env/4+EM/CD154+IFNg+IL21+TNF+"                 
+ [986] "9/env/4+EM/CD154+IFNg+TNF+"                      
+ [987] "9/env/4+EM/CD154+IL2+"                           
+ [988] "9/env/4+EM/CD154+IL2+IL21+TNF+"                  
+ [989] "9/env/4+EM/CD154+IL2+TNF+"                       
+ [990] "9/env/4+EM/CD154+TNF+"                           
+ [991] "9/env/4+EM/GzB+"                                 
+ [992] "9/env/4+EM/GzB+TNF+"                             
+ [993] "9/env/4+EM/IFNg+"                                
+ [994] "9/env/4+EM/IFNg+IL2+TNF+"                        
+ [995] "9/env/4+EM/IFNg+TNF+"                            
+ [996] "9/env/4+EM/IL2+"                                 
+ [997] "9/env/4+EM/IL2+TNF+"                             
+ [998] "9/env/4+EM/IL21+"                                
+ [999] "9/env/4+EM/TNF+"                                 
+[1000] "9/env/4+Naive/CD154+"                            
+[1001] "9/env/4+Naive/CD154+GzB+"                        
+[1002] "9/env/4+Naive/CD154+IFNg+"                       
+[1003] "9/env/4+Naive/CD154+TNF+"                        
+[1004] "9/env/4+Naive/GzB+"                              
+[1005] "9/env/4+Naive/GzB+IL4+"                          
+[1006] "9/env/4+Naive/IFNg+"                             
+[1007] "9/env/4+Naive/IL2+"                              
+[1008] "9/env/4+Naive/IL21+"                             
+[1009] "9/env/4+Naive/IL4+"                              
+[1010] "9/env/4+Naive/TNF+"                              
+[1011] "9/env/4+TD/GzB+"                                 
+[1012] "9/env/4+TD/IL2+TNF+"                             
+[1013] "9/env/8+CM/CD154+"                               
+[1014] "9/env/8+CM/CD154+GzB+"                           
+[1015] "9/env/8+CM/GzB+"                                 
+[1016] "9/env/8+CM/IFNg+"                                
+[1017] "9/env/8+CM/TNF+"                                 
+[1018] "9/env/8+EM/CD154+"                               
+[1019] "9/env/8+EM/CD154+GzB+"                           
+[1020] "9/env/8+EM/GzB+"                                 
+[1021] "9/env/8+EM/GzB+IFNg+"                            
+[1022] "9/env/8+EM/GzB+IFNg+TNF+"                        
+[1023] "9/env/8+EM/GzB+IL21+"                            
+[1024] "9/env/8+EM/GzB+TNF+"                             
+[1025] "9/env/8+EM/IFNg+"                                
+[1026] "9/env/8+EM/IFNg+IL2+TNF+"                        
+[1027] "9/env/8+EM/IFNg+TNF+"                            
+[1028] "9/env/8+EM/TNF+"                                 
+[1029] "9/env/8+Naive/CD154+"                            
+[1030] "9/env/8+Naive/CD154+GzB+"                        
+[1031] "9/env/8+Naive/CD154+IFNg+"                       
+[1032] "9/env/8+Naive/GzB+"                              
+[1033] "9/env/8+Naive/IFNg+"                             
+[1034] "9/env/8+Naive/IL21+"                             
+[1035] "9/env/8+TD/CD154+"                               
+[1036] "9/env/8+TD/CD154+GzB+"                           
+[1037] "9/env/8+TD/GzB+"                                 
+[1038] "9/env/8+TD/GzB+IFNg+"                            
+[1039] "9/env/8+TD/GzB+IFNg+TNF+"                        
+[1040] "9/env/8+TD/GzB+IL21+"                            
+[1041] "9/env/8+TD/GzB+TNF+"                             
+[1042] "9/env/8+TD/IFNg+"                                
+[1043] "9/env/8+TD/IFNg+TNF+"                            
+[1044] "9/env/8+TD/TNF+"                                 
+[1045] "9/env/CXCR5+CD45RA-PD1+CCR7-/CD154+"             
+[1046] "9/env/CXCR5+CD45RA-PD1+CCR7-/CD154+IFNg+IL2+TNF+"
+[1047] "9/env/CXCR5+CD45RA-PD1+CCR7-/GzB+"               
+[1048] "9/env/CXCR5+CD45RA-PD1+CCR7-/TNF+"               
+[1049] "9/env/CXCR5+PD1+/CD154+"                         
+[1050] "9/env/CXCR5+PD1+/CD154+IFNg+"                    
+[1051] "9/env/CXCR5+PD1+/CD154+IFNg+IL2+TNF+"            
+[1052] "9/env/CXCR5+PD1+/GzB+"                           
+[1053] "9/env/CXCR5+PD1+/IFNg+"                          
+[1054] "9/env/CXCR5+PD1+/TNF+"                           
+[1055] "9/gag/3+4+/CD154+"                               
+[1056] "9/gag/3+4+/CD154+GzB+"                           
+[1057] "9/gag/3+4+/CD154+GzB+IFNg+IL2+TNF+"              
+[1058] "9/gag/3+4+/CD154+GzB+IFNg+TNF+"                  
+[1059] "9/gag/3+4+/CD154+IFNg+"                          
+[1060] "9/gag/3+4+/CD154+IFNg+IL2+"                      
+[1061] "9/gag/3+4+/CD154+IFNg+IL2+IL21+TNF+"             
+[1062] "9/gag/3+4+/CD154+IFNg+IL2+TNF+"                  
+[1063] "9/gag/3+4+/CD154+IFNg+TNF+"                      
+[1064] "9/gag/3+4+/CD154+IL2+"                           
+[1065] "9/gag/3+4+/CD154+IL2+IL21+TNF+"                  
+[1066] "9/gag/3+4+/CD154+IL2+TNF+"                       
+[1067] "9/gag/3+4+/CD154+TNF+"                           
+[1068] "9/gag/3+4+/GzB+"                                 
+[1069] "9/gag/3+4+/GzB+IFNg+TNF+"                        
+[1070] "9/gag/3+4+/GzB+IL21+"                            
+[1071] "9/gag/3+4+/GzB+IL4+"                             
+[1072] "9/gag/3+4+/GzB+TNF+"                             
+[1073] "9/gag/3+4+/IFNg+"                                
+[1074] "9/gag/3+4+/IFNg+IL2+TNF+"                        
+[1075] "9/gag/3+4+/IFNg+TNF+"                            
+[1076] "9/gag/3+4+/IL2+"                                 
+[1077] "9/gag/3+4+/IL2+TNF+"                             
+[1078] "9/gag/3+4+/IL21+"                                
+[1079] "9/gag/3+4+/IL4+"                                 
+[1080] "9/gag/3+4+/TNF+"                                 
+[1081] "9/gag/3+8+/CD154+"                               
+[1082] "9/gag/3+8+/CD154+GzB+"                           
+[1083] "9/gag/3+8+/CD154+IFNg+"                          
+[1084] "9/gag/3+8+/GzB+"                                 
+[1085] "9/gag/3+8+/GzB+IFNg+"                            
+[1086] "9/gag/3+8+/GzB+IFNg+IL2+TNF+"                    
+[1087] "9/gag/3+8+/GzB+IFNg+TNF+"                        
+[1088] "9/gag/3+8+/GzB+IL2+"                             
+[1089] "9/gag/3+8+/GzB+IL21+"                            
+[1090] "9/gag/3+8+/GzB+IL4+"                             
+[1091] "9/gag/3+8+/GzB+TNF+"                             
+[1092] "9/gag/3+8+/IFNg+"                                
+[1093] "9/gag/3+8+/IFNg+IL2+TNF+"                        
+[1094] "9/gag/3+8+/IFNg+TNF+"                            
+[1095] "9/gag/3+8+/IL2+"                                 
+[1096] "9/gag/3+8+/IL2+TNF+"                             
+[1097] "9/gag/3+8+/IL21+"                                
+[1098] "9/gag/3+8+/IL4+"                                 
+[1099] "9/gag/3+8+/TNF+"                                 
+[1100] "9/gag/3+CD4-CD8-/CD154+"                         
+[1101] "9/gag/3+CD4-CD8-/CD154+GzB+"                     
+[1102] "9/gag/3+CD4-CD8-/GzB+"                           
+[1103] "9/gag/3+CD4-CD8-/GzB+TNF+"                       
+[1104] "9/gag/3+CD4-CD8-/IFNg+"                          
+[1105] "9/gag/3+CD4-CD8-/IL4+"                           
+[1106] "9/gag/3+NKT cells/CD154+"                        
+[1107] "9/gag/3+NKT cells/CD154+GzB+"                    
+[1108] "9/gag/3+NKT cells/CD154+GzB+IFNg+"               
+[1109] "9/gag/3+NKT cells/CD154+IFNg+"                   
+[1110] "9/gag/3+NKT cells/GzB+"                          
+[1111] "9/gag/3+NKT cells/GzB+IFNg+"                     
+[1112] "9/gag/3+NKT cells/GzB+IFNg+TNF+"                 
+[1113] "9/gag/3+NKT cells/GzB+TNF+"                      
+[1114] "9/gag/3+NKT cells/IFNg+"                         
+[1115] "9/gag/3+NKT cells/IL21+"                         
+[1116] "9/gag/3+NKT cells/IL4+"                          
+[1117] "9/gag/4+CM/CD154+"                               
+[1118] "9/gag/4+CM/CD154+IFNg+"                          
+[1119] "9/gag/4+CM/CD154+IFNg+IL2+"                      
+[1120] "9/gag/4+CM/CD154+IFNg+IL2+TNF+"                  
+[1121] "9/gag/4+CM/CD154+IFNg+TNF+"                      
+[1122] "9/gag/4+CM/CD154+IL2+"                           
+[1123] "9/gag/4+CM/CD154+IL2+IL21+TNF+"                  
+[1124] "9/gag/4+CM/CD154+IL2+TNF+"                       
+[1125] "9/gag/4+CM/CD154+TNF+"                           
+[1126] "9/gag/4+CM/GzB+"                                 
+[1127] "9/gag/4+CM/IFNg+"                                
+[1128] "9/gag/4+CM/IFNg+IL2+TNF+"                        
+[1129] "9/gag/4+CM/IL2+"                                 
+[1130] "9/gag/4+CM/IL2+TNF+"                             
+[1131] "9/gag/4+CM/IL21+"                                
+[1132] "9/gag/4+CM/IL4+"                                 
+[1133] "9/gag/4+CM/TNF+"                                 
+[1134] "9/gag/4+EM/CD154+"                               
+[1135] "9/gag/4+EM/CD154+GzB+IFNg+IL2+TNF+"              
+[1136] "9/gag/4+EM/CD154+IFNg+"                          
+[1137] "9/gag/4+EM/CD154+IFNg+IL2+"                      
+[1138] "9/gag/4+EM/CD154+IFNg+IL2+IL21+TNF+"             
+[1139] "9/gag/4+EM/CD154+IFNg+IL2+TNF+"                  
+[1140] "9/gag/4+EM/CD154+IFNg+TNF+"                      
+[1141] "9/gag/4+EM/CD154+IL2+"                           
+[1142] "9/gag/4+EM/CD154+IL2+IL21+TNF+"                  
+[1143] "9/gag/4+EM/CD154+IL2+TNF+"                       
+[1144] "9/gag/4+EM/CD154+TNF+"                           
+[1145] "9/gag/4+EM/GzB+"                                 
+[1146] "9/gag/4+EM/GzB+TNF+"                             
+[1147] "9/gag/4+EM/IFNg+"                                
+[1148] "9/gag/4+EM/IFNg+IL2+TNF+"                        
+[1149] "9/gag/4+EM/IFNg+TNF+"                            
+[1150] "9/gag/4+EM/IL2+"                                 
+[1151] "9/gag/4+EM/IL2+TNF+"                             
+[1152] "9/gag/4+EM/IL21+"                                
+[1153] "9/gag/4+EM/TNF+"                                 
+[1154] "9/gag/4+Naive/CD154+"                            
+[1155] "9/gag/4+Naive/CD154+GzB+"                        
+[1156] "9/gag/4+Naive/CD154+IFNg+"                       
+[1157] "9/gag/4+Naive/CD154+TNF+"                        
+[1158] "9/gag/4+Naive/GzB+"                              
+[1159] "9/gag/4+Naive/GzB+IL4+"                          
+[1160] "9/gag/4+Naive/IFNg+"                             
+[1161] "9/gag/4+Naive/IL2+"                              
+[1162] "9/gag/4+Naive/IL21+"                             
+[1163] "9/gag/4+Naive/IL4+"                              
+[1164] "9/gag/4+Naive/TNF+"                              
+[1165] "9/gag/4+TD/GzB+"                                 
+[1166] "9/gag/4+TD/IL2+TNF+"                             
+[1167] "9/gag/8+CM/CD154+"                               
+[1168] "9/gag/8+CM/CD154+GzB+"                           
+[1169] "9/gag/8+CM/GzB+"                                 
+[1170] "9/gag/8+CM/IFNg+"                                
+[1171] "9/gag/8+CM/TNF+"                                 
+[1172] "9/gag/8+EM/CD154+"                               
+[1173] "9/gag/8+EM/CD154+GzB+"                           
+[1174] "9/gag/8+EM/GzB+"                                 
+[1175] "9/gag/8+EM/GzB+IFNg+"                            
+[1176] "9/gag/8+EM/GzB+IFNg+TNF+"                        
+[1177] "9/gag/8+EM/GzB+IL21+"                            
+[1178] "9/gag/8+EM/GzB+TNF+"                             
+[1179] "9/gag/8+EM/IFNg+"                                
+[1180] "9/gag/8+EM/IFNg+TNF+"                            
+[1181] "9/gag/8+EM/TNF+"                                 
+[1182] "9/gag/8+Naive/CD154+"                            
+[1183] "9/gag/8+Naive/CD154+GzB+"                        
+[1184] "9/gag/8+Naive/CD154+IFNg+"                       
+[1185] "9/gag/8+Naive/GzB+"                              
+[1186] "9/gag/8+Naive/IFNg+"                             
+[1187] "9/gag/8+Naive/IL21+"                             
+[1188] "9/gag/8+TD/CD154+"                               
+[1189] "9/gag/8+TD/CD154+GzB+"                           
+[1190] "9/gag/8+TD/GzB+"                                 
+[1191] "9/gag/8+TD/GzB+IFNg+"                            
+[1192] "9/gag/8+TD/GzB+IFNg+TNF+"                        
+[1193] "9/gag/8+TD/GzB+IL21+"                            
+[1194] "9/gag/8+TD/GzB+TNF+"                             
+[1195] "9/gag/8+TD/TNF+"                                 
+[1196] "9/gag/CXCR5+CD45RA-PD1+CCR7-/CD154+"             
+[1197] "9/gag/CXCR5+CD45RA-PD1+CCR7-/CD154+IFNg+IL2+TNF+"
+[1198] "9/gag/CXCR5+CD45RA-PD1+CCR7-/GzB+"               
+[1199] "9/gag/CXCR5+CD45RA-PD1+CCR7-/TNF+"               
+[1200] "9/gag/CXCR5+PD1+/CD154+"                         
+[1201] "9/gag/CXCR5+PD1+/CD154+IFNg+"                    
+[1202] "9/gag/CXCR5+PD1+/CD154+IFNg+IL2+TNF+"            
+[1203] "9/gag/CXCR5+PD1+/GzB+"                           
+[1204] "9/gag/CXCR5+PD1+/IFNg+"                          
+[1205] "9/gag/CXCR5+PD1+/TNF+"                           
+[1206] "9/vacenv/3+4+/CD154+"                            
+[1207] "9/vacenv/3+4+/CD154+GzB+"                        
+[1208] "9/vacenv/3+4+/CD154+GzB+IFNg+IL2+TNF+"           
+[1209] "9/vacenv/3+4+/CD154+GzB+IFNg+TNF+"               
+[1210] "9/vacenv/3+4+/CD154+IFNg+"                       
+[1211] "9/vacenv/3+4+/CD154+IFNg+IL2+"                   
+[1212] "9/vacenv/3+4+/CD154+IFNg+IL2+IL21+TNF+"          
+[1213] "9/vacenv/3+4+/CD154+IFNg+IL2+TNF+"               
+[1214] "9/vacenv/3+4+/CD154+IFNg+IL21+TNF+"              
+[1215] "9/vacenv/3+4+/CD154+IFNg+TNF+"                   
+[1216] "9/vacenv/3+4+/CD154+IL2+"                        
+[1217] "9/vacenv/3+4+/CD154+IL2+IL21+TNF+"               
+[1218] "9/vacenv/3+4+/CD154+IL2+IL4+TNF+"                
+[1219] "9/vacenv/3+4+/CD154+IL2+TNF+"                    
+[1220] "9/vacenv/3+4+/CD154+TNF+"                        
+[1221] "9/vacenv/3+4+/GzB+"                              
+[1222] "9/vacenv/3+4+/GzB+IFNg+TNF+"                     
+[1223] "9/vacenv/3+4+/GzB+IL21+"                         
+[1224] "9/vacenv/3+4+/GzB+IL4+"                          
+[1225] "9/vacenv/3+4+/GzB+TNF+"                          
+[1226] "9/vacenv/3+4+/IFNg+"                             
+[1227] "9/vacenv/3+4+/IFNg+IL2+TNF+"                     
+[1228] "9/vacenv/3+4+/IFNg+TNF+"                         
+[1229] "9/vacenv/3+4+/IL2+"                              
+[1230] "9/vacenv/3+4+/IL2+TNF+"                          
+[1231] "9/vacenv/3+4+/IL21+"                             
+[1232] "9/vacenv/3+4+/IL4+"                              
+[1233] "9/vacenv/3+4+/TNF+"                              
+[1234] "9/vacenv/3+8+/CD154+"                            
+[1235] "9/vacenv/3+8+/CD154+GzB+"                        
+[1236] "9/vacenv/3+8+/CD154+IFNg+"                       
+[1237] "9/vacenv/3+8+/GzB+"                              
+[1238] "9/vacenv/3+8+/GzB+IFNg+"                         
+[1239] "9/vacenv/3+8+/GzB+IFNg+TNF+"                     
+[1240] "9/vacenv/3+8+/GzB+IL2+"                          
+[1241] "9/vacenv/3+8+/GzB+IL21+"                         
+[1242] "9/vacenv/3+8+/GzB+IL4+"                          
+[1243] "9/vacenv/3+8+/GzB+TNF+"                          
+[1244] "9/vacenv/3+8+/IFNg+"                             
+[1245] "9/vacenv/3+8+/IFNg+IL2+TNF+"                     
+[1246] "9/vacenv/3+8+/IFNg+TNF+"                         
+[1247] "9/vacenv/3+8+/IL2+"                              
+[1248] "9/vacenv/3+8+/IL2+TNF+"                          
+[1249] "9/vacenv/3+8+/IL21+"                             
+[1250] "9/vacenv/3+8+/IL4+"                              
+[1251] "9/vacenv/3+8+/TNF+"                              
+[1252] "9/vacenv/3+CD4-CD8-/CD154+"                      
+[1253] "9/vacenv/3+CD4-CD8-/CD154+GzB+"                  
+[1254] "9/vacenv/3+CD4-CD8-/GzB+"                        
+[1255] "9/vacenv/3+CD4-CD8-/GzB+TNF+"                    
+[1256] "9/vacenv/3+CD4-CD8-/IFNg+"                       
+[1257] "9/vacenv/3+CD4-CD8-/IL4+"                        
+[1258] "9/vacenv/3+NKT cells/CD154+"                     
+[1259] "9/vacenv/3+NKT cells/CD154+GzB+"                 
+[1260] "9/vacenv/3+NKT cells/CD154+GzB+IFNg+"            
+[1261] "9/vacenv/3+NKT cells/CD154+IFNg+"                
+[1262] "9/vacenv/3+NKT cells/GzB+"                       
+[1263] "9/vacenv/3+NKT cells/GzB+IFNg+"                  
+[1264] "9/vacenv/3+NKT cells/GzB+IFNg+TNF+"              
+[1265] "9/vacenv/3+NKT cells/GzB+TNF+"                   
+[1266] "9/vacenv/3+NKT cells/IFNg+"                      
+[1267] "9/vacenv/3+NKT cells/IL21+"                      
+[1268] "9/vacenv/3+NKT cells/IL4+"                       
+[1269] "9/vacenv/4+CM/CD154+"                            
+[1270] "9/vacenv/4+CM/CD154+GzB+"                        
+[1271] "9/vacenv/4+CM/CD154+IFNg+"                       
+[1272] "9/vacenv/4+CM/CD154+IFNg+IL2+"                   
+[1273] "9/vacenv/4+CM/CD154+IFNg+IL2+TNF+"               
+[1274] "9/vacenv/4+CM/CD154+IFNg+TNF+"                   
+[1275] "9/vacenv/4+CM/CD154+IL2+"                        
+[1276] "9/vacenv/4+CM/CD154+IL2+IL21+TNF+"               
+[1277] "9/vacenv/4+CM/CD154+IL2+TNF+"                    
+[1278] "9/vacenv/4+CM/CD154+TNF+"                        
+[1279] "9/vacenv/4+CM/GzB+"                              
+[1280] "9/vacenv/4+CM/IFNg+"                             
+[1281] "9/vacenv/4+CM/IFNg+IL2+TNF+"                     
+[1282] "9/vacenv/4+CM/IL2+"                              
+[1283] "9/vacenv/4+CM/IL2+TNF+"                          
+[1284] "9/vacenv/4+CM/IL21+"                             
+[1285] "9/vacenv/4+CM/IL4+"                              
+[1286] "9/vacenv/4+CM/TNF+"                              
+[1287] "9/vacenv/4+EM/CD154+"                            
+[1288] "9/vacenv/4+EM/CD154+GzB+"                        
+[1289] "9/vacenv/4+EM/CD154+GzB+IFNg+IL2+TNF+"           
+[1290] "9/vacenv/4+EM/CD154+IFNg+"                       
+[1291] "9/vacenv/4+EM/CD154+IFNg+IL2+"                   
+[1292] "9/vacenv/4+EM/CD154+IFNg+IL2+IL21+TNF+"          
+[1293] "9/vacenv/4+EM/CD154+IFNg+IL2+TNF+"               
+[1294] "9/vacenv/4+EM/CD154+IFNg+IL21+TNF+"              
+[1295] "9/vacenv/4+EM/CD154+IFNg+TNF+"                   
+[1296] "9/vacenv/4+EM/CD154+IL2+"                        
+[1297] "9/vacenv/4+EM/CD154+IL2+IL21+TNF+"               
+[1298] "9/vacenv/4+EM/CD154+IL2+TNF+"                    
+[1299] "9/vacenv/4+EM/CD154+TNF+"                        
+[1300] "9/vacenv/4+EM/GzB+"                              
+[1301] "9/vacenv/4+EM/GzB+TNF+"                          
+[1302] "9/vacenv/4+EM/IFNg+"                             
+[1303] "9/vacenv/4+EM/IFNg+IL2+TNF+"                     
+[1304] "9/vacenv/4+EM/IFNg+TNF+"                         
+[1305] "9/vacenv/4+EM/IL2+"                              
+[1306] "9/vacenv/4+EM/IL2+TNF+"                          
+[1307] "9/vacenv/4+EM/IL21+"                             
+[1308] "9/vacenv/4+EM/TNF+"                              
+[1309] "9/vacenv/4+Naive/CD154+"                         
+[1310] "9/vacenv/4+Naive/CD154+GzB+"                     
+[1311] "9/vacenv/4+Naive/CD154+IFNg+"                    
+[1312] "9/vacenv/4+Naive/CD154+TNF+"                     
+[1313] "9/vacenv/4+Naive/GzB+"                           
+[1314] "9/vacenv/4+Naive/GzB+IL4+"                       
+[1315] "9/vacenv/4+Naive/IFNg+"                          
+[1316] "9/vacenv/4+Naive/IL2+"                           
+[1317] "9/vacenv/4+Naive/IL21+"                          
+[1318] "9/vacenv/4+Naive/IL4+"                           
+[1319] "9/vacenv/4+Naive/TNF+"                           
+[1320] "9/vacenv/4+TD/GzB+"                              
+[1321] "9/vacenv/8+CM/CD154+"                            
+[1322] "9/vacenv/8+CM/CD154+GzB+"                        
+[1323] "9/vacenv/8+CM/GzB+"                              
+[1324] "9/vacenv/8+CM/IFNg+"                             
+[1325] "9/vacenv/8+CM/TNF+"                              
+[1326] "9/vacenv/8+EM/CD154+"                            
+[1327] "9/vacenv/8+EM/CD154+GzB+"                        
+[1328] "9/vacenv/8+EM/GzB+"                              
+[1329] "9/vacenv/8+EM/GzB+IFNg+"                         
+[1330] "9/vacenv/8+EM/GzB+IFNg+TNF+"                     
+[1331] "9/vacenv/8+EM/GzB+IL21+"                         
+[1332] "9/vacenv/8+EM/GzB+TNF+"                          
+[1333] "9/vacenv/8+EM/IFNg+"                             
+[1334] "9/vacenv/8+EM/IFNg+TNF+"                         
+[1335] "9/vacenv/8+EM/TNF+"                              
+[1336] "9/vacenv/8+Naive/CD154+"                         
+[1337] "9/vacenv/8+Naive/CD154+GzB+"                     
+[1338] "9/vacenv/8+Naive/CD154+IFNg+"                    
+[1339] "9/vacenv/8+Naive/GzB+"                           
+[1340] "9/vacenv/8+Naive/IFNg+"                          
+[1341] "9/vacenv/8+Naive/IL21+"                          
+[1342] "9/vacenv/8+TD/CD154+"                            
+[1343] "9/vacenv/8+TD/CD154+GzB+"                        
+[1344] "9/vacenv/8+TD/GzB+"                              
+[1345] "9/vacenv/8+TD/GzB+IFNg+"                         
+[1346] "9/vacenv/8+TD/GzB+IFNg+TNF+"                     
+[1347] "9/vacenv/8+TD/GzB+IL21+"                         
+[1348] "9/vacenv/8+TD/GzB+TNF+"                          
+[1349] "9/vacenv/8+TD/IFNg+TNF+"                         
+[1350] "9/vacenv/8+TD/TNF+"                              
+[1351] "9/vacenv/CXCR5+CD45RA-PD1+CCR7-/CD154+"          
+[1352] "9/vacenv/CXCR5+CD45RA-PD1+CCR7-/GzB+"            
+[1353] "9/vacenv/CXCR5+CD45RA-PD1+CCR7-/TNF+"            
+[1354] "9/vacenv/CXCR5+PD1+/CD154+"                      
+[1355] "9/vacenv/CXCR5+PD1+/CD154+IFNg+"                 
+[1356] "9/vacenv/CXCR5+PD1+/GzB+"                        
+[1357] "9/vacenv/CXCR5+PD1+/IFNg+"                       
+[1358] "9/vacenv/CXCR5+PD1+/TNF+"                        
+> stimdat <- data.frame(stimdat)
+> 
+> # Analysis Settings ---------
+> configurations <- expand.grid(iterations = 40,
++                               fseed = 1:4,
++                               pargroup = 1:13)
+> config <- configurations[setting, ]
+> iterations <- config[["iterations"]]
+> fseed <- config[["fseed"]]
+> pargroup <- config[["pargroup"]]
+> 
+> stimdat$par <- as.character(stimdat$visitStimCell) %>% strsplit("/") %>%
++   sapply(function(x) x[[3]])
+> parentGroups <- unique(stimdat$par)
+> stimdat <- subset(stimdat, par == parentGroups[pargroup])
+> stimdat$visitStimCell <- factor(stimdat$visitStimCell)
+> stimdat$stim <- factor(stimdat$stim)
+> 
+> nPosteriors <- ceiling(length(levels(stimdat$visitStimCell)) / length(unique(stimdat$ptid))) + 1
+> 
+> control = flowReMix_control(updateLag = round(iterations / 3),
++                             nPosteriors = nPosteriors,
++                             maxDispersion = 10^4,
++                             isingInit = -6,
++                             intSampSize = 50,
++                             ncores = ncpus,
++                             seed = fseed,
++                             isingWprior = FALSE,
++                             isingStabilityReps = 100,
++                             threads = ncpus * 2)
+> 
+> fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
++                 subject_id = ptid,
++                 cell_type = visitStimCell,
++                 cluster_variable = stim,
++                 data = stimdat,
++                 covariance = "sparse",
++                 ising_model = "sparse",
++                 regression_method = "robust",
++                 cluster_assignment = TRUE,
++                 iterations = iterations,
++                 parallel = TRUE,
++                 verbose = TRUE,
++                 control = control)
+Computing in parallel on 4 cores
+[1] "Initializing Regression Equations"
+Loading required package: foreach
+Loading required package: rngtools
+Loading required package: pkgmaker
+Loading required package: registry
+
+Attaching package: ‘pkgmaker’
+
+The following object is masked from ‘package:base’:
+
+    isNamespaceLoaded
+
+
+[1] "Starting Stochastic EM"
+[1] "Sampling!"
+starting sampler with  8  threads 
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+2.17322e+07 loop iterations per second per thread (avg) 
+[1] "Updating Ising!"
+Error in { : 
+  task 1 failed - "More than two classes; use multinomial family instead in call to glmnet"
+Calls: flowReMix ... raIsing -> %dorng% -> do.call -> %dopar% -> <Anonymous>
+Execution halted
+

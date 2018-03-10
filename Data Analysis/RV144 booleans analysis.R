@@ -93,7 +93,7 @@ control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50, initMHcoe
                              preAssignCoefs = 1, sampleNew = FALSE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
                              isingStabilityReps = 0, randStabilityReps = 0,
-                             isingInit = -7)
+                             isingInit = -7, threads = 4)
 
 booldata$subset <- factor(booldata$subset)
 # dim(booldata)

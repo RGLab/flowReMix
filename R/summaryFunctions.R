@@ -44,6 +44,7 @@ plot.flowReMix <- function(x, target = NULL, varname = NULL,
     mc[[1]] = getFromNamespace("plotROC",ns = "flowReMix")
     mc$obj = mc$x
     mc$x =NULL
+    mc$type <- NULL
     return(eval(mc,envir = parent.frame()))
   } else if(type == "scatter") {
     if(!is.null(mc$summary)) {

@@ -779,7 +779,7 @@ flowReMix <- function(formula,
 
           # separation <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
           #                   family = "binomial", method = "detect_separation")$separation
-          if(popDat[[2]]) {
+          if(popDat[[2]] | firth) {
             fit <- NULL
             try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
                        family = "binomial", method = brglmFit))
@@ -790,13 +790,6 @@ flowReMix <- function(formula,
                                              weights = weights * emWeights,
                                              family = "binomial")), silent=TRUE)
           }
-
-          ## FIRTH IF INTERCEPT IS TOO SMALL
-          if(coef(fit)[1] < -20) {
-            try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
-                           family = "binomial", method = brglmFit))
-          }
-          ######################################
 
           if(is.null(fit)) {
             try(fit <- glm(formula = glmformula, data = popDat[[1]],
