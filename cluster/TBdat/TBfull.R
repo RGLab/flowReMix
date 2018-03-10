@@ -68,8 +68,8 @@ stimDat$subset <- factor(stimDat$subset)
 
 # Analysis Setting -------------
 configurations <- expand.grid(mcEM = c(TRUE),
-                              seed = 1:50,
                               maxdisp = c(10, 50, 100),
+                              seed = 1:50,
                               npost = c(10),
                               niter = c(60))
 
