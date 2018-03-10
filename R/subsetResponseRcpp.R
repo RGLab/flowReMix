@@ -449,6 +449,10 @@ flowReMix <- function(formula,
     }
   }
 
+  if(is.null(threads)) {
+    threads <- ncores * 2
+  }
+
   # Checking if inputs are valid --------------------------
   if(!is.null(data)) {
     if(is.data.table(data)) {
