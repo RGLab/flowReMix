@@ -78,7 +78,8 @@ rm(tbdat)
 
 # Analysis Setting -------------
 configurations <- expand.grid(mcEM = c(TRUE),
-                              seed = 1:10,
+                              dispersion = c(10, 50, 100),
+                              seed = 1:50,
                               npost = c(20),
                               niter = c(60))
 
@@ -86,13 +87,14 @@ mcEM <- configurations[["mcEM"]][setting]
 seed <- configurations[["seed"]][setting]
 npost <- configurations[["npost"]][setting]
 niter <- configurations[["niter"]][setting]
+disp <- configurations[["dispersion"]][setting]
 lag <- round(niter / 3)
 
 # Analysis ----------------------------------
 control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
                              keepEach = 5,
                              nPosteriors = npost, centerCovariance = TRUE,
-                             maxDispersion = 50 * 10^3, minDispersion = 10^7,
+                             maxDispersion = disp * 10^3, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              lastSample = NULL, isingInit = -log(99),
                              markovChainEM = mcEM,
@@ -128,7 +130,8 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/TBdat6_disp50_full_mcEM", as.integer(mcEM),
+file <- paste("results/TBdat_6_",
+              "disp", disp,
               "seed", seed,
               "npost", npost,
               "niter", niter,

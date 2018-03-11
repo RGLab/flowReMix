@@ -313,8 +313,6 @@ initializeModel <- function(dat, formula, method, mixed) {
 #' @importFrom glmnet coef.cv.glmnet
 #' @importFrom glmnet predict.cv.glmnet
 #' @importFrom data.table is.data.table
-#' @importFrom tidyr complete
-#' @importFrom dplyr inner_join
 #' @import doRNG
 #' @import doParallel
 #' @import foreach
@@ -355,7 +353,6 @@ flowReMix <- function(formula,
   keepEach <- as.integer(control$keepEach)
   initMethod <- control$initMethod
   ncores <-  control$ncores
-  threads <- control$threads
   isingInit <- control$isingInit
   lastSample <- control$lastSample
   preAssignCoefs <- control$preAssignCoefs
@@ -447,10 +444,6 @@ flowReMix <- function(formula,
     } else {
       initMethod <- "binom"
     }
-  }
-
-  if(is.null(threads)) {
-    threads <- ncores * 2
   }
 
   # Checking if inputs are valid --------------------------
@@ -552,7 +545,7 @@ flowReMix <- function(formula,
   if(dataReplicates > 1) {
     if(round(dataReplicates) != dataReplicates) warning("dataReplicates rounded to the nearest positive whole number!")
     dataReplicates <- round(dataReplicates)
-    dat <- rbindlist(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)))
+    dat <- do.call("rbind",c(lapply(1:dataReplicates, function(x) replicateDataset(dat, x)), make.row.names = FALSE))
   } else {
     dataReplicates <- 1
   }
@@ -565,40 +558,22 @@ flowReMix <- function(formula,
 
   # Initializing covariates and random effects------------------
   if(verbose) print("Initializing Regression Equations")
-  data.table::setDT(dat)
-  dataByPopulation <- split(dat,by="sub.population")
-  ### dim(dat)
-  ### 11,184,300
-  ### system.time(split(dat,by="sub.population"))
-  ###   user  system elapsed
-  ###  1.563   0.230   1.795
-  ###
-  ### system.time(by(dat, dat$sub.population, function(x) x))
-  ###   user  system elapsed
-  ###  18.299  22.016  40.343
+  dataByPopulation <- by(dat, dat$sub.population, function(x) x)
 
   #indices <- 1:length(dataByPopulation)
   #chunkSize=min(200,length(dataByPopulation));
   #chunkids = rep(seq_len(ceiling(length(dataByPopulation) / chunkSize)),each = chunkSize,length.out = length(dataByPopulation))
   #chunks = split(indices,chunkids)
+  initialization=list()
   #for(i in seq_along(chunks)){
-  registerDoRNG()
-
   initialization <- foreach(j = 1:length(dataByPopulation)) %dorng%  {
     initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
   }
-
+  #    initialization = c(initialization,initializationI)
+  #}
   names(initialization) <- names(dataByPopulation)
-  isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
-  if(class(isEmpty)%in%"list"){
-    initialization=list();
-    for(j in 1:length(dataByPopulation)) {
-      initialization[[j]]=initializeModel(dataByPopulation[[j]], initFormula, initMethod, mixed)
-    }
-    names(initialization) <- names(dataByPopulation)
-    isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
-  }
 
+  isEmpty <- sapply(initialization, function(x) x$empty) #Sooo much faster than comparing the first element, which is a "fit" object against a "string".
 
   if(any(isEmpty)) {
     empty <- names(initialization)[isEmpty]
@@ -668,13 +643,10 @@ flowReMix <- function(formula,
 
   # preAssignmentMat <- preAssignment[order(preAssignment$id, preAssignment$subset), ]
   preAssignmentMat = preAssignment %>% arrange(id, subset)
-  data.table::setDT(preAssignmentMat)
-  preAssignmentMat[,id:=as.character(id)]
-  preAssignment = split(preAssignmentMat,by = "id")
-  ## preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
-  ##   x$id <- as.character(x$id)
-  ##   return(x)
-  ## })
+  preAssignment <- by(preAssignmentMat, preAssignment$id, function(x) {
+    x$id <- as.character(x$id)
+    return(x)
+  })
 
   if(any(preAssignCoefs > 1) | any(preAssignCoefs < 0)) {
     warning("preAssignCoefs must be a numeric vector the coordinates of which must be between 0 and 1!")
@@ -682,8 +654,7 @@ flowReMix <- function(formula,
   }
 
   # More preparations ---------------------------
-  ## databyid <- by(dat, dat$id, function(x) x)
-  databyid <-  split(dat,by="id") #use data.table .. sooo much faster. 50s vs 1.3s on 11M rows.
+  databyid <- by(dat, dat$id, function(x) x)
   dat$subpopInd <- as.numeric(dat$sub.population)
   posteriors <- matrix(0, nrow = nSubjects, ncol = nSubsets)
   clusterAssignments <- matrix(0.5, nrow = nSubjects, ncol = nSubsets)
@@ -742,13 +713,11 @@ flowReMix <- function(formula,
     }
 
     # Refitting Model with current random effects/assignments
-    dataByPopulation <- rbindlist(databyid)
-    data.table::setDT(dataByPopulation)
+    dataByPopulation <- as.data.frame(rbindlist(databyid))
     dataByPopulation$iteration <- iter
     dataByPopulation$emWeights <- 1
     if(markovChainEM) {
-      accumDat = split(dataByPopulation,by="sub.population")
-      ##accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
+      accumDat <- by(dataByPopulation, dataByPopulation$sub.population, function(x) x)
     } else {
       accumList[[max(1, iter - updateLag)]] <- dataByPopulation
       accumDat <- as.data.frame(rbindlist(accumList))
@@ -931,16 +900,14 @@ flowReMix <- function(formula,
 
     # Updating Prediction ---------------
     if(iter == 1) popnames <- names(accumDat)
-    accumDat <- foreach(popdata = accumDat) %dorng% {
+    accumDat <- foreach(popdata = accumDat) %dopar% {
       computeFlowEta(popdata, coefficientList, iter, initFormula, mixed)
     }
     names(accumDat) <- popnames
 
-    databyid <- rbindlist(accumDat)
-    databyid <- databyid[order(sub.population,id)]
-    #databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
-    databyid <- split(databyid, by = "id")
-    ## databyid <- by(databyid, databyid$id, function(x) x)
+    databyid <- as.data.frame(rbindlist(accumDat))
+    databyid <- with(databyid, databyid[order(sub.population, id, decreasing = FALSE), ])
+    databyid <- by(databyid, databyid$id, function(x) x)
 
     # S-step ------------------------------
     iterAssignments <- matrix(0, nrow = nSubjects, ncol = nSubsets)
@@ -966,9 +933,8 @@ flowReMix <- function(formula,
     }
 
     listForMH = vector('list', nSubjects)
-
     for(i in 1:length(listForMH)){
-      listForMH[[i]] = list(dat = databyid[[i]][, keepcols,with=FALSE],
+      listForMH[[i]] = list(dat = databyid[[i]][, keepcols],
                             pre = preAssignment[[i]],
                             rand = estimatedRandomEffects[i, ],
                             assign = clusterAssignments[i, ],
@@ -1000,9 +966,6 @@ flowReMix <- function(formula,
       #                  M, invcov, mixed, sampleRandom = TRUE,
       #                  doNotSample = doNotSampleSubset,
       #                  markovChainEM = markovChainEM)
-      #      browser()
-      if(verbose)
-        cat("starting sampler with ", threads," threads");
       (MHresult <- CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y,
                                            N = mhList$TOT, subpopInd = mhList$subpopInd,
                                            clusterassignments = mhList$clusterassignments,
@@ -1018,9 +981,7 @@ flowReMix <- function(formula,
                                            M = M, invcov = invcov, mixed = mixed,
                                            sampleRandom = TRUE,
                                            doNotSample = doNotSampleSubset,
-                                           markovChainEM = markovChainEM,
-                                           cpus = threads,
-                                           seed = as.integer(control$seed)))
+                                           markovChainEM = markovChainEM, cpus=ncores, seed = as.integer(control$seed)))
       # print("S-STEP TIME:")
       # print(time)
 
@@ -1044,7 +1005,6 @@ flowReMix <- function(formula,
     # print(mem_used()) #### MEMORY CHECK
 
     # assignmentList <- lapply(MHresult, function(x) x$assign)
-
     assignmentList = (plyr::alply(MHresult$assign, 3, function(x) x))
     # MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
     MHrates = colMeans(MHresult$rate)
@@ -1132,7 +1092,8 @@ flowReMix <- function(formula,
         exportAssignment <- assignmentList
       }
 
-      assignmentList <- do.call("rbind",assignmentList)
+      # assignmentList <- as.data.frame(rbindlist(assignmentList))
+      assignmentList <- do.call("rbind", assignmentList)
       # assignmentList <- as.data.frame(assignmentList) #why?
       colnames(assignmentList) <- popnames
 
@@ -1148,7 +1109,6 @@ flowReMix <- function(formula,
                               minprob = 1 / nSubjects, verbose=verbose,
                               weights = isingWeights, parallel = parallel)
         } else {
-          data.table::setDF(preAssignmentMat)
           isingfit <- pIsing(assignmentList, AND = TRUE,
                              preAssignment = preAssignmentMat,
                              prevfit = isingCoefs, verbose=verbose,
@@ -1205,7 +1165,8 @@ flowReMix <- function(formula,
       randomList <- randomOutput
     }
 
-    randomList <- do.call("rbind",randomList)
+    # randomList <- as.data.frame(rbindlist(randomList))
+    randomList <- do.call("rbind", randomList)
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
@@ -1270,8 +1231,7 @@ flowReMix <- function(formula,
       realIDs <- gsub("\\%%%.*", "", uniqueIDs)
       post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
       postid <- names(post)
-      post = do.call(rbind,post)
-      posteriors <- data.frame(post)
+      posteriors <- data.frame(rbindlist(post))
       names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)
@@ -1327,7 +1287,7 @@ flowReMix <- function(formula,
 
   if(control$isingStabilityReps > 0) {
     if(verbose) print("Performing stability selection for ising model!")
-    # browser)
+    # browser()
     result$isingStability <- try(stabilityGraph(result, type = "ising",
                                                 reps = control$isingStabilityReps,
                                                 seed = control$seed,
