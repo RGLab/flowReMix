@@ -78,6 +78,11 @@ for(i in 1:nrow(map)) {
   marginals$population[which(marginals$population == map[i, 1])] <- map[i, 2]
 }
 marginals$population <- factor(marginals$population)
+# nfunctions <- marginals$population %>% as.character %>%
+#   strsplit(split = "/") %>%
+#   sapply(function(x) x[[2]]) %>% strsplit("+", fixed = TRUE) %>%
+#   unlist() %>% unique()
+
 
 # Setting up data for analysis ---------------------------
 subsetDat <- stimulationModel(marginals,

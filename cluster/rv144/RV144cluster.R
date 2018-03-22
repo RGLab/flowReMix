@@ -99,3 +99,6 @@ file <- paste("results/rv144_firth_1_disp", disp,
               "seed", seed,
               ".rds", sep = "")
 saveRDS(fit, file = file)
+
+
+

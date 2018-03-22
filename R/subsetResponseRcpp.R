@@ -299,6 +299,7 @@ initializeModel <- function(dat, formula, method, mixed) {
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
 #' @import foreach
+#' @import tidyr
 #' @importFrom R.utils withTimeout
 #' @importFrom grDevices rainbow
 #' @importFrom utils capture.output
@@ -1231,7 +1232,7 @@ flowReMix <- function(formula,
       realIDs <- gsub("\\%%%.*", "", uniqueIDs)
       post <- by(posteriors, INDICES = realIDs, FUN = colMeans)
       postid <- names(post)
-      posteriors <- data.frame(rbindlist(post))
+      posteriors <- data.frame(do.call("rbind", post))
       names(posteriors) <- popnames
       posteriors <- cbind(id = postid, 1 - posteriors)
       names(posteriors)[1] <- as.character(call$subject_id)

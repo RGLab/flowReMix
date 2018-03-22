@@ -82,7 +82,7 @@ rocTable <- function(obj, target, direction = "auto", adjust = "BH",
   p <- ncol(post)
   aucs <- numeric(p)
   for(i in 1:p) {
-    rocfit <- pROC::roc(target ~ post[, i])
+    rocfit <- roc(target ~ post[, i], direction = direction)
     aucs[i] <- rocfit$auc
   }
   n0 <- sum(target == uniqVals[1])
@@ -289,7 +289,8 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
                         test = c("none", "logistic", "t-test", "wilcoxon"),
                         one_sided = FALSE, jitter = FALSE,
-                        ncol = 5, adjust = "BH",sigdigits=5, ...) {
+                        ncol = 5, adjust = "BH",sigdigits=5,
+                        normWeights = FALSE, ...) {
   if(is.null(varname) & !is.null(target)) {
     varname <- as.character(match.call()$target)
     varname <- varname[length(varname)]
@@ -347,6 +348,9 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
       ingroup <- which(colnames(post)[-1] %in% group)
       probs <- post[, ingroup + 1, drop = FALSE]
       w <- w[ingroup]
+      if(normWeights) {
+        w <- w / sum(w)
+      }
       score <- apply(probs, 1, function(x) sum(x * w))
 
       datlist[[slot]] <- data.frame(id = post[, 1],
@@ -399,10 +403,12 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
     }
   }
 
+  free_y <- ifelse(normWeights, "free_y", "fixed")
   figure <- ggplot(forplot)
   if(is.null(target)) {
+    free_y <- ifelse(normWeights, "free_y", "fixed")
     figure <- figure + geom_boxplot(aes(x = measure, y = score),outlier.color = NA) +
-      facet_wrap(~ group)
+      facet_wrap(~ group, scales = free_y)
     if(jitter) {
       figure <- figure + geom_point(aes(x = measure, y = score),position = position_jitterdodge(jitter.height = 0))
     }
@@ -415,7 +421,7 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
     }
   }
 
-  figure <- figure + facet_wrap(~ group, ncol = ncol) +
+  figure <- figure + facet_wrap(~ group, ncol = ncol, scales = free_y) +
     theme_bw() + scale_y_continuous(name = unique(forplot$measure)) +
     scale_x_discrete(name="",labels = "") + theme(axis.ticks.x = element_blank())
 

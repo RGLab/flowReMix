@@ -68,7 +68,7 @@ nonzerocounts <- data.frame(names(nonzerocounts), as.numeric(unlist(nonzerocount
 
 # Choosing subset of data for analysis -----------------
 countkeep <- nonzerocounts[nonzerocounts[, 2] >= 0.2, 1]
-popkeep <- c("cd4", "MAIT", "NKrainbow", "DCs", "Bcells", "conCD*")
+popkeep <- c("cd4", "MAIT", "NKrainbow", "DCs", "Bcells", "conCD*", "monocytes")
 stimkeep <- c("P", "MP", "Mtbaux")
 # tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep) & (stimgroup %in% stimkeep))
 tempdat <- subset(tbdat, (subset %in% countkeep) & (parent %in% popkeep))
@@ -80,7 +80,7 @@ rm(tbdat)
 configurations <- expand.grid(mcEM = c(TRUE),
                               dispersion = c(10, 50, 100),
                               seed = 1:50,
-                              npost = c(20),
+                              npost = c(15),
                               niter = c(60))
 
 mcEM <- configurations[["mcEM"]][setting]

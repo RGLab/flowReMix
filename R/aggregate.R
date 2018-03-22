@@ -179,6 +179,7 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
   if(df){
     data.frame(
       mean = mean(x),
+      median = median(x),
       sd = sd(x),
       n = length(x),
       t(quantile(x, c(0.1, 0.5, 0.9))),
@@ -187,6 +188,7 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
   }else{
     c(
       mean = mean(x),
+      median = median(x),
       sd = sd(x),
       n = length(x),
       quantile(x, c(0.1, 0.5, 0.9))

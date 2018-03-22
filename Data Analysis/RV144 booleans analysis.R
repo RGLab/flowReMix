@@ -77,7 +77,7 @@ booldata <- with(booldata, booldata[order(subset, ptid, stim, decreasing = FALSE
 library(flowReMix)
 prior <- 0
 npost <- 1
-niter <- 15
+niter <- 30
 seed <- 1
 lastSample <- NULL
 cpus <- 2
@@ -89,10 +89,10 @@ control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50, initMHcoe
                              randomAssignProb = 10^-8, intSampSize = 50,
                              initMethod = "robust", ncores = cpus,
                              markovChainEM = TRUE,
-                             seed = seed, prior = -0.5, lastSample = lastSample,
+                             seed = seed, prior = 0, lastSample = lastSample,
                              preAssignCoefs = 1, sampleNew = FALSE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
-                             isingStabilityReps = 0, randStabilityReps = 0,
+                             isingStabilityReps = 0, randStabilityReps = 100,
                              isingInit = -7, threads = 4)
 
 booldata$subset <- factor(booldata$subset)
@@ -105,13 +105,14 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              data = booldata,
                              covariance = "sparse",
                              ising_model = "sparse",
-                             regression_method = "firth",
+                             regression_method = "robust",
                              iterations =  niter,
                              cluster_assignment = TRUE,
                              parallel = TRUE, keepSamples = TRUE,
                              verbose = TRUE, control = control))
-# save(fit, file = "data analysis/results/local_rv144_wo_screen.Robj")
+# saveRDS(fit, file = "data analysis/results/local_rv144_w_randomStab.rds")
 # plot(fit, type = "scatter")
+
 
 # add_ptid <- function(x, subject_id) {
 #   x$subject_id <- match.call()$subject_id
