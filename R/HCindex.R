@@ -1,8 +1,9 @@
 # Helper function for computing the HC index
-hcStat <- function(labels, posteriors, direction, wilcoxonPvals = NULL, a0 = 0.75) {
+hcStat <- function(labels, posteriors, direction, wilcoxonPvals = NULL, a0 = 0.75, plus = TRUE) {
   if(is.null(wilcoxonPvals)) {
     wilcoxonPvals <- apply(posteriors, 2, function(x) wilcox.test(x[labels], x[!labels], exact = FALSE, alternative = "greater")$p.value)
   }
+  N <- length(wilcoxonPvals)
   if(direction == "greater") {
     pvals <- wilcoxonPvals
   } else if(direction == "two.sided") {
@@ -11,17 +12,31 @@ hcStat <- function(labels, posteriors, direction, wilcoxonPvals = NULL, a0 = 0.7
     pvals <- 1 - wilcoxonPvals
   }
   alternativeHigh <- wilcoxonPvals < 0.5
+  pvalOrder <- order(pvals)
   pvals <- sort(pvals)
-  pvals <- pmax(pvals, 10^-10)
-  pvals <- pmin(pvals, 0.999)
-  nstats <- ceiling(a0 * length(pvals))
+  # pvals <- pmax(pvals, 10^-10)
+  # pvals <- pmin(pvals, 0.999)
+  nstats <- ceiling(a0 * N)
   pvals <- pvals[1:nstats]
-  HC <- (1:nstats/nstats - pvals) / sqrt(pvals * (1 - pvals))
-  hcInd <- which.max(HC)
+  unifQuants <- 1:nstats/N
+  HC <- (unifQuants - pvals) / sqrt(pvals * (1 - pvals))
+  if(plus) {
+    lbound <- -1
+  } else {
+    lbound <- 1 / N
+  }
+  if(any(pvals >= lbound)) {
+    hcInd <- which.max(HC[pvals >= lbound]) + sum(pvals < lbound)
+  } else {
+    hcInd <- length(HC)
+  }
+
   HC <- HC[hcInd]
-  index <- colnames(posteriors) %in% names(pvals)[1:hcInd]
+  # index <- colnames(posteriors) %in% names(pvals)[1:hcInd]
+  index <- 1:N %in% pvalOrder[1:hcInd]
   numLabels <- 1 - 2 * (!labels)
   index[index] <- sign(apply(posteriors[, index, drop = FALSE], 2, function(x) coef(lm(numLabels ~ x))[2]))
+  index[is.na(index)] <- 0
   index <- index / sum(abs(index))
   score <- as.numeric(as.matrix(posteriors) %*% index)
   diff <- mean(score[labels]) - mean(score[!labels])
@@ -49,6 +64,7 @@ hcStat <- function(labels, posteriors, direction, wilcoxonPvals = NULL, a0 = 0.7
 hcIndex <- function(fit, groups = "all", target,
                     direction = c("two.sided", "less", "greater"), a0 = 0.75,
                     nPermutations = 1000, nBootstrap = 200,
+                    plus = TRUE, innovated = FALSE, scale = FALSE,
                     verbose = TRUE) {
   # Preparing groups (if all)
   if(groups[1] == "all") {
@@ -63,6 +79,11 @@ hcIndex <- function(fit, groups = "all", target,
     if(length(groups) < 1) {
       stop("No valid groups!")
     }
+  }
+
+  # if innovated then can only do one group
+  if(innovated & length(groups) > 1) {
+    stop("innovated HC can only be computed for a single group at a time!")
   }
 
   # Verifying that fit is flowReMix
@@ -94,6 +115,14 @@ hcIndex <- function(fit, groups = "all", target,
     stop("target variable must be specified!")
   }
 
+  # removing NA targets
+  posteriors <- aggregate$posteriors
+  posteriors <- posteriors[!is.na(target), ]
+  target <- target[!is.na(target)]
+  if(is.factor(target)) {
+    levels(target) <- levels(target)[!is.na(levels(target))]
+  }
+
   # Validating target
   if(!is.factor(target)) {
     if(length(unique(target)) != 2) {
@@ -114,12 +143,16 @@ hcIndex <- function(fit, groups = "all", target,
   labels <- target == alternative
 
   # preparing posterior probability table
-  posteriors <- aggregate$posteriors
   nGroups <- length(groups)
   inGroups <- unlist(groups) %>% unique()
   inGroups <- colnames(posteriors) %in% inGroups
   posteriors <- posteriors[, inGroups]
-  groupIndices <- lapply(groups, function(g) colnames(posteriors) %in% g)
+  if(!innovated) {
+    groupIndices <- lapply(groups, function(g) colnames(posteriors) %in% g)
+  } else {
+    groupIndices <- list()
+    groupIndices$iHC <- 1:min(nrow(posteriors), ncol(posteriors))
+  }
   anyAllSame <- apply(posteriors, 2, function(x) all(x == x[1]))
   if(any(anyAllSame)) {
     stop("Some cell-subsets have constant posterior probabilities,
@@ -127,9 +160,17 @@ hcIndex <- function(fit, groups = "all", target,
   }
 
   # computing observed HC index
-  pvals <- apply(posteriors, 2, function(x) wilcox.test(x[labels], x[!labels], exact = FALSE, alternative = "greater")$p.value)
+  if(innovated) {
+    tpost <- scale(posteriors, scale = scale)
+    eigen <- svd(tpost)
+    tpost <- eigen$u %*% diag(eigen$d)
+  } else {
+    tpost <- posteriors
+  }
+  pvals <- apply(tpost, 2, function(x) wilcox.test(x[labels], x[!labels], exact = FALSE, alternative = "greater")$p.value)
   observed <- lapply(groupIndices, function(g) {
-    hcStat(labels, posteriors[, g], direction, wilcoxonPvals = pvals[g], a0 = a0)
+    hcStat(labels, tpost[, g], direction, wilcoxonPvals = pvals[g], a0 = a0,
+           plus = plus)
   })
 
   # permutation test
@@ -142,9 +183,10 @@ hcIndex <- function(fit, groups = "all", target,
   }
   for(i in 1:M) {
     permLabels <- labels[order(runif(length(labels)))]
-    pvals <- apply(posteriors, 2, function(x) wilcox.test(x[permLabels], x[!permLabels], exact = FALSE, alternative = "greater")$p.value)
+    pvals <- apply(tpost, 2, function(x) wilcox.test(x[permLabels], x[!permLabels], exact = FALSE, alternative = "greater")$p.value)
     permFit <- lapply(groupIndices, function(g) {
-      hcStat(permLabels, posteriors[, g], direction, wilcoxonPvals = pvals[g], a0 = a0)
+      hcStat(permLabels, tpost[, g], direction, wilcoxonPvals = pvals[g],
+             a0 = a0, plus = plus)
     })
     differences[i, ] <- sapply(permFit, function(x) x$diff)
     hcStats[i, ] <- sapply(permFit, function(x) x$HC)
@@ -181,12 +223,22 @@ hcIndex <- function(fit, groups = "all", target,
     bootSamp <- c(baselineSamp, alternativeSamp)
     bootlabels <- labels[bootSamp]
     bootpost <- posteriors[bootSamp, ]
-    pvals <- apply(bootpost, 2, function(x) wilcox.test(x[bootlabels], x[!bootlabels], exact = FALSE, alternative = "greater")$p.value)
+    if(innovated) {
+      tpost <- scale(bootpost, scale = scale)
+      eigen <- svd(tpost)
+      tpost <- eigen$u %*% diag(eigen$d)
+    } else {
+      tpost <- posteriors
+    }
+    pvals <- apply(tpost, 2, function(x) wilcox.test(x[bootlabels], x[!bootlabels], exact = FALSE, alternative = "greater")$p.value)
     bootFit <- lapply(groupIndices, function(g) {
-      hcStat(bootlabels, bootpost[, g], direction, wilcoxonPvals = pvals[g], a0 = a0)
+      hcStat(bootlabels, tpost[, g], direction, wilcoxonPvals = pvals[g],
+             a0 = a0, plus = plus)
     })
-    for(j in 1:nGroups) {
-      inclusions[groupIndices[[j]], j] <- inclusions[groupIndices[[j]], j] + sign(bootFit[[j]]$index)
+    if(!innovated) {
+      for(j in 1:nGroups) {
+        inclusions[groupIndices[[j]], j] <- inclusions[groupIndices[[j]], j] + sign(bootFit[[j]]$index)
+      }
     }
     if(verbose) setTxtProgressBar(pb, i)
   }

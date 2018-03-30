@@ -36,8 +36,8 @@ Imports: Rcpp,
     circlize, 
     scales,
     tidygraph,
-    RColorBrewer 
-Suggests: pROC,
-    reshape2,
+    RColorBrewer, 
+    pROC
+Suggests: reshape2,
     testthat
 RoxygenNote: 6.0.1

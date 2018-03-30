@@ -6,7 +6,7 @@
 \usage{
 hcIndex(fit, groups = "all", target, direction = c("two.sided", "less",
   "greater"), a0 = 0.75, nPermutations = 1000, nBootstrap = 200,
-  verbose = TRUE)
+  plus = TRUE, innovated = FALSE, scale = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{fit}{a object of class 'flowReMix'}

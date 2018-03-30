@@ -1,5 +1,6 @@
 #' @import ggplot2
 #' @import dplyr
+#' @importFrom pROC roc
 plotROC <- function(obj, target, direction = "auto",
                     ncols = 5,
                     thresholdPalette = NULL,
@@ -24,7 +25,7 @@ plotROC <- function(obj, target, direction = "auto",
   plotList <- list()
   aucs <- numeric(p)
   for(i in 1:p) {
-    rocfit <- pROC::roc(target ~ post[, i], smooth = FALSE,
+    rocfit <- roc(target ~ post[, i], smooth = FALSE,
                         direction = direction)
     aucs[i] <- rocfit$auc
     fpr <-  1 - rocfit$specificities
