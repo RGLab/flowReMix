@@ -3,6 +3,7 @@
 data-raw/*
 figures/*
 Notebooks/*
+tex/*
 prototypes/*
 Data Analysis/*
 Data Analysis/results/*
@@ -13,11 +14,12 @@ Simulations/*
 tables/*
 write-ups/*
 Notebooks/*
+cluster/hvtn/results/*
 summarize.R
 summarizeAggregates.R
 experimental malaria figure.pdf
 experimental malaria plot2.pdf
-cluster
+cluster/*
 porotypes
 plot2.pdf
 ./*.rds

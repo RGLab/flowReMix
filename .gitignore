@@ -13,5 +13,6 @@ write-ups/*
 figures/*
 presentation/*
 tex/*
+cluster/hvtn/results/*
 Rplot0*
 .Rproj.user

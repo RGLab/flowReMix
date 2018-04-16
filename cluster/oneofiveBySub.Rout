@@ -29,28 +29,24 @@ Type 'q()' to quit R.
 > stimdat$stim <- factor(stimdat$stim)
 > 
 > # Analysis Settings ---------
-> configurations <- expand.grid(disp = c(10, 50),
-+                               iterations = c(21, 30),
-+                               1:15)
+> configurations <- expand.grid(iterations = 60,
++                               fseed = 1:40)
 > config <- configurations[setting, ]
 > iterations <- config[["iterations"]]
 > fseed <- config[["fseed"]]
-> disp <- config[["disp"]]
 > nPosteriors <- 4
 > 
 > control = flowReMix_control(updateLag = round(iterations / 3),
 +                             nPosteriors = nPosteriors,
-+                             maxDispersion = 10^3 * disp,
-+                             isingInit = -5,
++                             maxDispersion = 10^4 * 5,
++                             isingInit = -6,
 +                             intSampSize = 50,
 +                             ncores = ncpus,
 +                             seed = fseed,
 +                             isingWprior = FALSE,
-+                             isingStabilityReps = 100)
++                             isingStabilityReps = 100,
++                             threads = ncpus * 2)
 > 
-> # stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[16:35])
-> stimdat$ptid <- factor(stimdat$ptid)
-> stimdat$visitStimCell <- factor(stimdat$visitStimCell)
 > fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
 +                 subject_id = ptid,
 +                 cell_type = visitStimCell,
@@ -80,7 +76,12 @@ The following object is masked from ‘package:base’:
 
 [1] "Starting Stochastic EM"
 [1] "Sampling!"
-Error in CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y, N = mhList$TOT,  : 
-  Expecting a single value: [extent=0].
-Calls: flowReMix -> CppFlowSstepList_mc_vec -> .Call
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+
+[1] "Updating Ising!"
+Error in { : 
+  task 1 failed - "More than two classes; use multinomial family instead in call to glmnet"
+Calls: flowReMix ... raIsing -> %dorng% -> do.call -> %dopar% -> <Anonymous>
 Execution halted

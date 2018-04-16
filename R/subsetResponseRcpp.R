@@ -602,7 +602,7 @@ flowReMix <- function(formula,
 
   # Initializing covariance from diagonal covariance
   levelProbs <- rep(0.5, nSubsets)
-  covariance <- diag(apply(estimatedRandomEffects, 2, var))
+  covariance <- diag(apply(estimatedRandomEffects, 2, var, na.rm = TRUE))
   invcov <- diag(1 / diag(covariance))
   invCovAvg <- invcov
   invCovVar <- invcov^2
@@ -619,6 +619,7 @@ flowReMix <- function(formula,
         - as.numeric(min(prop[treatmentvar == baseline]) < max(prop[treatmentvar !=
                                                                       baseline]))  ## https://github.com/tidyverse/dplyr/issues/341
       }) %>% complete(subset,fill=list(-1)) %>% arrange(id, as.character(subset))%>%as.data.frame # preAssignment of -1 means it's ignored.. now we will have complete preassignment data.. this could still crash elsewhere..
+      preAssignment$assign[is.na(preAssignment$assign)] <- -1
       cat("\n")
       # preAssignment <- do.call("rbind", c(preAssignment,make.row.names=FALSE))
       # names(preAssignment) <- c("id", "subset", "assign")
@@ -768,6 +769,15 @@ flowReMix <- function(formula,
               return(NULL)
             }
           }
+
+          # # # EXPERIMENTAL # # # #
+          if(!is.null(fit)) {
+            if(any(abs(coef(fit)) > 10^6)) {
+              try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
+                             family = "binomial", method = brglmFit))
+            }
+          }
+          # # # # # # # # # # # # # #
 
           eta <- predict(fit)
           mu <- 1 / (1 + exp(-eta))
@@ -1095,7 +1105,7 @@ flowReMix <- function(formula,
 
       # assignmentList <- as.data.frame(rbindlist(assignmentList))
       assignmentList <- do.call("rbind", assignmentList)
-      # assignmentList <- as.data.frame(assignmentList) #why?
+      assignmentList[assignmentList == 0.5] <- 0
       colnames(assignmentList) <- popnames
 
       # If markov chain EM or not aggregating then all weights are 1
@@ -1168,6 +1178,7 @@ flowReMix <- function(formula,
 
     # randomList <- as.data.frame(rbindlist(randomList))
     randomList <- do.call("rbind", randomList)
+    randomList <- imputeRandomEffects(randomList)
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
@@ -1605,6 +1616,34 @@ editFlowFormulas <- function(call, mixed) {
   return(list(formula = formula, glmformula = glmformula, initFormula = initFormula))
 }
 
+
+# A function for imputing elements in the random effect sample
+imputeRandomEffects <- function(X, imputeLM = FALSE) {
+  if(!any(is.na(X))) {
+    return(X)
+  }
+
+  result <- X
+  # First step: impute with mean
+  for(i in 1:ncol(X)) {
+    result[is.na(X[, i]), i] <- mean(X[, i], na.rm = TRUE)
+  }
+
+  # Second step: Impute with regression
+  if(imputeLM) {
+    for(i in 1:ncol(X)) {
+      if(any(is.na(X[, i]))) {
+        lmmod <- lm(X[, i] ~ X[, -i] - 1)
+        isna <- is.na(X[, i])
+        residSD <- sd(lmmod$residuals)
+        result[isna, i] <- predict(lmmod, newdata = result[isna, -i]) +
+          rnorm(length(isna), sd = residSD)
+      }
+    }
+  }
+
+  return(result)
+}
 
 
 
