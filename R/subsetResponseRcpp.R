@@ -626,7 +626,7 @@ flowReMix <- function(formula,
 
   # Initializing covariance from diagonal covariance
   levelProbs <- rep(0.5, nSubsets)
-  covariance <- diag(apply(estimatedRandomEffects, 2, var))
+  covariance <- diag(apply(estimatedRandomEffects, 2, var, na.rm = TRUE))
   invcov <- diag(1 / diag(covariance))
   invCovAvg <- invcov
   invCovVar <- invcov^2
@@ -1133,6 +1133,7 @@ flowReMix <- function(formula,
       }
 
       assignmentList <- do.call("rbind",assignmentList)
+      assignmentList[assignmentList == 0.5] <- 0
       # assignmentList <- as.data.frame(assignmentList) #why?
       colnames(assignmentList) <- popnames
 
@@ -1206,6 +1207,7 @@ flowReMix <- function(formula,
     }
 
     randomList <- do.call("rbind",randomList)
+    randomList <- randomEffectMeanImputation(randomList)
     oldCovariance <- covariance
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
@@ -1642,6 +1644,18 @@ editFlowFormulas <- function(call, mixed) {
   glmformula <- update.formula(formula, cbind(y, N - y) ~ .  + offset(randomOffset))
   initFormula <- update.formula(formula, cbind(y, N - y) ~ .)
   return(list(formula = formula, glmformula = glmformula, initFormula = initFormula))
+}
+
+
+randomEffectMeanImputation <- function(X) {
+  for(i in 1:ncol(X)) {
+    if(any(is.na(X[, i]))) {
+      isna <- is.na(X[, i])
+      X[isna, i] <- mean(X[, i], na.rm = TRUE) + rnorm(length(isna), sd = sd(X[, i], na.rm = TRUE))
+    }
+  }
+
+  return(X)
 }
 
 
