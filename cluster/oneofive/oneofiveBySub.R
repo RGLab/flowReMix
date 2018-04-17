@@ -3,7 +3,7 @@ library(magrittr)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-ncpus <- 4
+ncpus <- 2
 
 stimdat <- readRDS(file = "data/hvtn105_110subsets.rds")
 stimdat$visitStimCell <- factor(stimdat$visitStimCell)
@@ -17,7 +17,7 @@ config <- configurations[setting, ]
 iterations <- config[["iterations"]]
 fseed <- config[["fseed"]]
 disp <- config[["disp"]]
-nPosteriors <- 4
+nPosteriors <- 2
 
 control = flowReMix_control(updateLag = round(iterations / 3),
                             nPosteriors = nPosteriors,
@@ -29,7 +29,7 @@ control = flowReMix_control(updateLag = round(iterations / 3),
                             isingWprior = FALSE,
                             isingStabilityReps = 100)
 
-stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[1:20])
+stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[221:240])
 stimdat$ptid <- factor(stimdat$ptid)
 stimdat$visitStimCell <- factor(stimdat$visitStimCell)
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,

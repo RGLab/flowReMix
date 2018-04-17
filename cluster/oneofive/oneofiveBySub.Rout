@@ -31,7 +31,7 @@ Type 'q()' to quit R.
 > # Analysis Settings ---------
 > configurations <- expand.grid(disp = c(10, 50),
 +                               iterations = c(21, 30),
-+                               1:15)
++                               fseed = 1:15)
 > config <- configurations[setting, ]
 > iterations <- config[["iterations"]]
 > fseed <- config[["fseed"]]
@@ -48,7 +48,7 @@ Type 'q()' to quit R.
 +                             isingWprior = FALSE,
 +                             isingStabilityReps = 100)
 > 
-> # stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[16:35])
+> # stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[1:20])
 > stimdat$ptid <- factor(stimdat$ptid)
 > stimdat$visitStimCell <- factor(stimdat$visitStimCell)
 > fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
@@ -80,7 +80,13 @@ The following object is masked from ‘package:base’:
 
 [1] "Starting Stochastic EM"
 [1] "Sampling!"
-Error in CppFlowSstepList_mc_vec(nsubjects = mhList$N, Y = mhList$Y, N = mhList$TOT,  : 
-  Expecting a single value: [extent=0].
-Calls: flowReMix -> CppFlowSstepList_mc_vec -> .Call
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+
+[1] "Updating Ising!"
+[1] "Estimating Covariance!"
+Error in if (MHrate > targetRate + 0.05) { : 
+  missing value where TRUE/FALSE needed
+Calls: flowReMix
 Execution halted
