@@ -1047,7 +1047,7 @@ flowReMix <- function(formula,
 
     assignmentList = (plyr::alply(MHresult$assign, 3, function(x) x))
     # MHrates <- rowMeans(sapply(MHresult, function(x) x$rate))
-    MHrates = colMeans(MHresult$rate)
+    MHrates = rowMeans(MHresult$rate, na.rm = TRUE)
     # randomList <- lapply(MHresult, function(x) x$rand)
     randomList = (plyr::alply(MHresult$rand, 3, function(x) x))
     rm(MHresult)
