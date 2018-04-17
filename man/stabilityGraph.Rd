@@ -24,6 +24,10 @@ stabilityGraph(obj, type = c("ising", "randomEffects"), cv = FALSE,
 \item{AND}{\code{logical}. How the Ising edges are aggregated. AND or OR.}
 
 \item{seed}{random seed. Default 100 if NULL.}
+
+\item{sampleNew}{\code{logical} Do we generate new samples or use the ones from the fitting procedure? (default FALSE)}
+
+\item{keepEach}{\code{numeric} Keep every \code{keepEach} simulation result. (default 1)}
 }
 \description{
 Compute the stable components of the Ising or Random Effects graphical model through bootstrapping.

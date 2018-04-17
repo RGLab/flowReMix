@@ -9,6 +9,8 @@
 #' @param gamma \code{numeric} MORE DETAILS
 #' @param AND \code{logical}. How the Ising edges are aggregated. AND or OR.
 #' @param seed random seed. Default 100 if NULL.
+#' @param sampleNew \code{logical} Do we generate new samples or use the ones from the fitting procedure? (default FALSE)
+#' @param keepEach \code{numeric} Keep every \code{keepEach} simulation result. (default 1)
 #' @import ggplot2
 #' @importFrom network network
 #' @importFrom GGally ggnet2

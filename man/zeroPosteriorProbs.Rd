@@ -2,8 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{zeroPosteriorProbs}
 \alias{zeroPosteriorProbs}
-\title{zeroPosteriorProbs
-description return the posterior probabilities with preassignments set to zero.}
+\title{zeroPosteriorProbs}
 \usage{
 zeroPosteriorProbs(modelfit)
 }
@@ -12,4 +11,7 @@ zeroPosteriorProbs(modelfit)
 }
 \value{
 matrix of posterior probabilities
+}
+\description{
+return the posterior probabilities with preassignments set to zero.
 }

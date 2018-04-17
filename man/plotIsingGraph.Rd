@@ -8,6 +8,10 @@ plotIsingGraph(x, weight = 0.6, layout = "kk")
 }
 \arguments{
 \item{x}{\code{flowReMix} object.}
+
+\item{weight}{\code{numeric} default 0.6}
+
+\item{layout}{\code{character} type of layout, default "kk".}
 }
 \value{
 \code{ggplot} ggraph object
@@ -17,8 +21,12 @@ Plot an ising graph.
 }
 \examples{
 data(fit505)
+library(tidygraph)
+library(grid)
+library(ggplot2)
+library(igraph)
 plotIsingGraph(fit505,weight=0.9) +
 guides(shape=guide_legend(nrow=1),
   size=guide_legend(nrow=1),
-  color=guide_legend(nrow=4))
+  color=guide_legend(nrow=4))+theme_bw(base_family="")
 }

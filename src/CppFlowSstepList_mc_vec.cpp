@@ -366,8 +366,8 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
     arma::cube assignmentMats(mat_size, nsubsets, nsubjects);
     arma::cube randomEffectMats(mat_size, nsubsets, nsubjects);
     arma::mat MHsuccessrates(nsubsets, nsubjects);
-    arma::mat proportions = Y/N;
-    arma::vec condvar = (1.0)/(invcov.diag());
+    arma::mat proportions = Y / N;
+    arma::vec condvar = (1.0) /(invcov.diag());
 
     if (mixed) {
       std::fill(assignmentMats.begin(), assignmentMats.end(), 1.0);
@@ -379,12 +379,12 @@ List CppFlowSstepList_mc_vec(const int nsubjects, const arma::mat& Y,
 
     auto max_threads = std::thread::hardware_concurrency();
 
-     ////////////////////////////////////////////
-     // reinitialize the parallel generator    //
-     // only if the requested number           //
-     //  of cpus is greater or less than       //
-     // the size of the generator vector       //
-     ////////////////////////////////////////////
+    ////////////////////////////////////////////
+    // reinitialize the parallel generator    //
+    // only if the requested number           //
+    //  of cpus is greater or less than       //
+    // the size of the generator vector       //
+    ////////////////////////////////////////////
     if (!ParallelNormalGenerator::isinit(cpus)) {
       ParallelNormalGenerator::initialize(cpus, seed);
     }

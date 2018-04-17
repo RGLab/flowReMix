@@ -8,9 +8,19 @@
 #' \item{type}{character specifying the plot type. can be "scatter", "boxplot", "FDR", "ROC", "ising". Required.}
 #' }
 #' @param x The model fit of class \code{flowReMix} returned by the fitting function.
+#' @param target \code{name} Unquoted name of the variable to test in the "ROC", "boxplot", "scatter" type plots.
+#' @param varname \code{character} The name to assign the \code{target} variable in the plot legend.
+#' @param subsets \code{character} A vector of names of subsets. Used for "boxplot" and "scatter".
+#' @param ncol \code{numeric} Not documented
+#' @param palette Not documented
+#' @param paletteRange Not documented
+#' @param type \code{character} Type of plot to produce from the flowReMix object.
 #' @param ... additional arguments, see description.
 #' @usage
-#'   \method{plot}{flowReMix}(x,...)
+#'   \method{plot}{flowReMix}(x,target, varname, subsets,ncol,palette,paletteRange,type,...)
+#' @importFrom graphics plot
+#' @importFrom grDevices colorRampPalette
+#' @importFrom stats aggregate lm median
 #' @export
 plot.flowReMix <- function(x, target = NULL, varname = NULL,
                            subsets = NULL, ncol = 5,

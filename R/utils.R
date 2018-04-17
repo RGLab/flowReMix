@@ -62,6 +62,7 @@ getIsing = function(x){
 #' the positive functions are simply listed in the name. For example, "8+/A+B+C+" would be  a degree 3
 #' subset of CD8+ cells.
 #' @param x \code{character} cell subset name from \code{getSubsets}
+#' @param split \code{character} a regular expression defining how to split the cell subset definition to determine the degree.
 #'
 #' @return \code{numeric} vector of degree of functionality.
 #' @export
@@ -116,6 +117,7 @@ weightForPFS = function(x, M = NULL, parsefun = degreeFromStringFun, split = "\\
 #' @param stimVar \code{name} Unquoted  name of the stimulation variable in the data. e.g. stim
 #' @param parentVar \code{name} Unquoted name of the parent cell population variable in the data. e.g. parent
 #' @param outcomeVar \code{name} Unquoted name of the outcome variable in the data. If provided, the scores will be merged with the data using the \code{subject_id}
+#' @param subsetVar \code{name} Unquoted name of the variable that holds the cell subset definition.
 #' @param ... additional arguments passed to weightForPFS.
 #' @details
 #' Requires that the data table has a variable for stimulation and for cell population parent.
@@ -129,10 +131,11 @@ weightForPFS = function(x, M = NULL, parsefun = degreeFromStringFun, split = "\\
 #'
 #' @examples
 #' data(fit505)
-#' flowReMixPFS(fit505,M=5, stimVar = stimGroup, parentVar = parent)
-#' flowReMixPFS(fit505,M=5,stimVar=stimGroup,parentVar=parent,outcomeVar=infection)
+#' flowReMixPFS(fit505,M=5, stimVar = stimGroup, parentVar = parent, subsetVar = subset)
+#' flowReMixPFS(fit505,M=5,stimVar=stimGroup,parentVar=parent,outcomeVar=infection, subsetVar = subset)
 #'\dontrun{
-#' flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,split=",")
+#' flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,
+#'              outcomeVar=infection, subsetVar = subset, split=",")
 #' }
 flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL, subsetVar = NULL, ...){
   mc  =  match.call()
@@ -173,6 +176,8 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
 #'
 #' Plot an ising graph.
 #' @param x \code{flowReMix} object.
+#' @param weight \code{numeric} default 0.6
+#' @param layout \code{character} type of layout, default "kk".
 #'
 #' @return \code{ggplot} ggraph object
 #' @export
@@ -181,12 +186,17 @@ flowReMixPFS = function(x,M,stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
 #' @importFrom tidygraph group_components
 #' @importFrom tidygraph activate
 #' @importFrom rlang enquo
+#' @import ggraph
 #' @examples
 #' data(fit505)
+#' library(tidygraph)
+#' library(grid)
+#' library(ggplot2)
+#' library(igraph)
 #' plotIsingGraph(fit505,weight=0.9) +
 #' guides(shape=guide_legend(nrow=1),
 #'   size=guide_legend(nrow=1),
-#'   color=guide_legend(nrow=4))
+#'   color=guide_legend(nrow=4))+theme_bw(base_family="")
 plotIsingGraph = function(x, weight=0.6,layout="kk"){
   weight = enquo(weight)
   .isFlowRemix(x)
@@ -254,6 +264,8 @@ plotIsingGraph = function(x, weight=0.6,layout="kk"){
 #'
 #' @examples
 #' data(fit505)
+#' library(dplyr)
+#' library(tidyr)
 #' #also defined in the package namespace
 #' parser = function(x,separator,functions){
 #'   functions=enquo(functions)
@@ -528,7 +540,7 @@ extractFromList = function(mhlist){
 
 #'@name zeroPosteriorProbs
 #'@title zeroPosteriorProbs
-#'description return the posterior probabilities with preassignments set to zero.
+#'@description return the posterior probabilities with preassignments set to zero.
 #'@param modelfit A flowReMix model fit
 #'@return matrix of posterior probabilities
 #'@export

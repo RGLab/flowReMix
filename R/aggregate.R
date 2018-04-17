@@ -2,6 +2,7 @@
 #'@title Aggregate flowReMix model fits
 #'@description Average flowReMix model fits based on multiple starting points.
 #'@param x A \code{list} of flowReMix model fits or a \code{character} vector of \code{rds} files storing model fits.
+#'@param summarizeCoefs \code{logical} Should the coefficients be summarized? (default FALSE)
 #'@param verbose \code{logical}. Display a progress bar.
 #'@importFrom purrr flatten
 #'@importFrom purrr map

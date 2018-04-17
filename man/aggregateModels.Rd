@@ -10,6 +10,8 @@ aggregateModels(x, verbose = TRUE, summarizeCoefs = FALSE)
 \item{x}{A \code{list} of flowReMix model fits or a \code{character} vector of \code{rds} files storing model fits.}
 
 \item{verbose}{\code{logical}. Display a progress bar.}
+
+\item{summarizeCoefs}{\code{logical} Should the coefficients be summarized? (default FALSE)}
 }
 \description{
 Average flowReMix model fits based on multiple starting points.

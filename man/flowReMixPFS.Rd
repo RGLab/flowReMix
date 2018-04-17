@@ -19,6 +19,8 @@ flowReMixPFS(x, M, stimVar = NULL, parentVar = NULL, outcomeVar = NULL,
 
 \item{outcomeVar}{\code{name} Unquoted name of the outcome variable in the data. If provided, the scores will be merged with the data using the \code{subject_id}}
 
+\item{subsetVar}{\code{name} Unquoted name of the variable that holds the cell subset definition.}
+
 \item{...}{additional arguments passed to weightForPFS.}
 }
 \value{
@@ -39,10 +41,11 @@ Uses rlang quosures to pass variable information. PFS are NOT normalized to the 
 }
 \examples{
 data(fit505)
-flowReMixPFS(fit505,M=5, stimVar = stimGroup, parentVar = parent)
-flowReMixPFS(fit505,M=5,stimVar=stimGroup,parentVar=parent,outcomeVar=infection)
+flowReMixPFS(fit505,M=5, stimVar = stimGroup, parentVar = parent, subsetVar = subset)
+flowReMixPFS(fit505,M=5,stimVar=stimGroup,parentVar=parent,outcomeVar=infection, subsetVar = subset)
 \dontrun{
-flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,split=",")
+flowReMixPFS(rv144_aggregate,M=6,stimVar=stim,parentVar=parent,
+             outcomeVar=infection, subsetVar = subset, split=",")
 }
 }
 \seealso{

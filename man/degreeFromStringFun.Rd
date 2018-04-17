@@ -9,6 +9,8 @@ degreeFromStringFun(x, split = "\\\\+")
 }
 \arguments{
 \item{x}{\code{character} cell subset name from \code{getSubsets}}
+
+\item{split}{\code{character} a regular expression defining how to split the cell subset definition to determine the degree.}
 }
 \value{
 \code{numeric} vector of degree of functionality.

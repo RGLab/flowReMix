@@ -5,10 +5,24 @@
 \alias{plot.flowReMix}
 \title{plot a flowReMix fit object}
 \usage{
-\method{plot}{flowReMix}(x,...)
+\method{plot}{flowReMix}(x,target, varname, subsets,ncol,palette,paletteRange,type,...)
 }
 \arguments{
 \item{x}{The model fit of class \code{flowReMix} returned by the fitting function.}
+
+\item{target}{\code{name} Unquoted name of the variable to test in the "ROC", "boxplot", "scatter" type plots.}
+
+\item{varname}{\code{character} The name to assign the \code{target} variable in the plot legend.}
+
+\item{subsets}{\code{character} A vector of names of subsets. Used for "boxplot" and "scatter".}
+
+\item{ncol}{\code{numeric} Not documented}
+
+\item{palette}{Not documented}
+
+\item{paletteRange}{Not documented}
+
+\item{type}{\code{character} Type of plot to produce from the flowReMix object.}
 
 \item{...}{additional arguments, see description.}
 }

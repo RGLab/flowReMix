@@ -143,7 +143,19 @@ stimulationModel <- function(data, cell_type, stim_var, controls, stim_groups) {
 #'
 #' @param clusterType \code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.
 #'
+#' @param isingStabilityReps \code{numeric} number of replications to estimate the stability graph. (default 200)
+#'
+#' @param randStabilityReps \code{numeric} number of replications to estimate the random effects graph. (default 0)
+#'
+#' @param learningRate \code{numeric} learning rate (default 0.6)
+#'
+#' @param keepWeightPercent \code{numeric} (default 0.9)
+#'
+#' @param subsetDiscardThreshold \code{numeric} (default 0)
+#'
 #' @param sampleNew \code{logical} should the stability selection draw new samples. Default \code{FALSE}.
+#'
+#' @param threads \code{numeric} Number of threads to use. (default NULL)
 #'
 #' @return An object of type \code{flowReMix_control}.
 #'

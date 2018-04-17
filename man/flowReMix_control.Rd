@@ -81,7 +81,19 @@ with the prior argument on the Ising model.}
 
 \item{clusterType}{\code{character} type of cluster. AUTO, FORK, SOCK. Default AUTO. Can be changed if the default doesn't work.}
 
+\item{isingStabilityReps}{\code{numeric} number of replications to estimate the stability graph. (default 200)}
+
+\item{randStabilityReps}{\code{numeric} number of replications to estimate the random effects graph. (default 0)}
+
+\item{learningRate}{\code{numeric} learning rate (default 0.6)}
+
+\item{keepWeightPercent}{\code{numeric} (default 0.9)}
+
 \item{sampleNew}{\code{logical} should the stability selection draw new samples. Default \code{FALSE}.}
+
+\item{subsetDiscardThreshold}{\code{numeric} (default 0)}
+
+\item{threads}{\code{numeric} Number of threads to use. (default NULL)}
 }
 \value{
 An object of type \code{flowReMix_control}.

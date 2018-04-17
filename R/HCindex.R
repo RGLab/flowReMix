@@ -42,8 +42,16 @@ hcStat <- function(labels, posteriors, direction, wilcoxonPvals = NULL, a0 = 0.7
 #' @param target a factor variable with two levels for which a classifier
 #' will be constructed
 #'
+#' @param direction \code{character} one of two.sided, less, or greater. Direction of test.
+#'
 #' @param a0 Only the top a0% of cell-subsets will be considered for inclusion
 #' in the HC index
+#'
+#' @param nPermutations \code{numeric} number of permutations for the permutation test. (default 1000)
+#'
+#' @param nBootstrap  \code{numeric} number of bootstrap replicates (default 200)
+#'
+#' @param verbose \code{logical}
 #'
 #' @export
 hcIndex <- function(fit, groups = "all", target,

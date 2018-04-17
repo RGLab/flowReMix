@@ -67,6 +67,8 @@ parent cell population, and the cytokine function.
 }
 \examples{
 data(fit505)
+library(dplyr)
+library(tidyr)
 #also defined in the package namespace
 parser = function(x,separator,functions){
   functions=enquo(functions)
