@@ -59,7 +59,7 @@ plotROC <- function(obj, target, direction = "auto",
 }
 
 rocTable <- function(obj, target, direction = "auto", adjust = "BH",
-                     pvalue = c("wilcoxon", "logistic", "ttest"),
+                     pvalue = c("wilcoxon", "logistic", "ttest", "KW"),
                      sortAUC = FALSE,...) {
   mc = match.call()
   if(!is.null(mc$minProbFilter)){
@@ -73,7 +73,7 @@ rocTable <- function(obj, target, direction = "auto", adjust = "BH",
 
   target <- target[notNA]
   uniqVals <- unique(target)
-  if(length(uniqVals) != 2) {
+  if(length(uniqVals) != 2 & pvalue != "KW") {
     stop("Target variable must have exactly two values!")
   }
 
@@ -82,30 +82,43 @@ rocTable <- function(obj, target, direction = "auto", adjust = "BH",
   subsets <- names(obj$posteriors)[-1]
   p <- ncol(post)
   aucs <- numeric(p)
-  for(i in 1:p) {
-    rocfit <- roc(target ~ post[, i], direction = direction)
-    aucs[i] <- rocfit$auc
+  if(pvalue != "KW") {
+    for(i in 1:p) {
+      rocfit <- roc(target ~ post[, i], direction = direction)
+      aucs[i] <- rocfit$auc
+    }
   }
+
   n0 <- sum(target == uniqVals[1])
   n1 <- sum(target == uniqVals[2])
   if(pvalue == "wilcoxon") {
     pvals <- pwilcox(aucs * n0 * n1, n0, n1, lower.tail = FALSE)
   } else if(pvalue == "logistic") {
     pvals <- apply(post, 2, function(x) summary(glm(target ~ x, family = "binomial"))$coefficients[2, 4])
-  } else {
+  } else if(pvalue == "ttest") {
     val1 <- sort(unique(target))[1]
     val2 <- sort(unique(target))[2]
     pvals <- apply(post, 2, function(x) t.test(x[target == val1], x[target == val2])$p.value)
+  } else if(pvalue == "KW") {
+    pvals <- apply(post, 2, function(x) kruskal.test(x, g = target)$p.value)
+  } else {
+    stop("unknown test type")
   }
   minpfilt = obj$levelProbs>minProbFilter
   qvals = pvals
   qvals[!minpfilt] = NA
   qvals[minpfilt] <- p.adjust(pvals[minpfilt], method = adjust)
   responseProb <- obj$levelProbs
-  result <- data.frame(subset = subsets, responseProb  = responseProb,
-                       auc = aucs, pvalue = pvals, qvalue = qvals)
+  if(pvalue != "KW") {
+    result <- data.frame(subset = subsets, responseProb  = responseProb,
+                         auc = aucs, pvalue = pvals, qvalue = qvals)
+  } else {
+    result <- data.frame(subset = subsets, responseProb  = responseProb,
+                         pvalue = pvals, qvalue = qvals)
+  }
+
   if(sortAUC) {
-    result <- result[order(result$auc, decreasing = TRUE), ]
+    result <- result[order(result$pvalue, decreasing = TRUE), ]
   }
 
   return(result)
@@ -288,7 +301,7 @@ plotScatter <- function(obj, subsets = NULL,
 #' @import ggplot2
 plotBoxplot <- function(obj, target = NULL, varname = NULL,
                         weights = NULL, groups = c("subsets", "all"),
-                        test = c("none", "logistic", "t-test", "wilcoxon"),
+                        test = c("none", "logistic", "t-test", "wilcoxon", "KW"),
                         one_sided = FALSE, jitter = FALSE,
                         ncol = 5, adjust = "BH",sigdigits=5,
                         normWeights = FALSE, ...) {
@@ -365,7 +378,7 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
   forplot <- data.table::rbindlist(datlist)
 
   test <- test[1]
-  if(test != "none" & length(unique(target)) != 2) {
+  if(!(test %in% c("none", "KW")) & length(unique(target)) != 2) {
     warning("Target has more than two levels, testing level 1 vs. other levels!")
   }
 
@@ -386,12 +399,17 @@ plotBoxplot <- function(obj, target = NULL, varname = NULL,
                     try(t <- wilcox.test(x$score[tempTarget == 1], x$score[tempTarget == 0],
                                      exact = FALSE)$p.value)
                     })
+  } else if(test == "KW") {
+    pvalues <- by(forplot, list(forplot$group, forplot$measure),
+                  function(x) { t <- NA
+                  try(t <- kruskal.test(x$score, target)$p.value)
+                  })
   }
 
-  if(test %in% c("t-test", "wilcoxon", "logistic")) {
+  if(test %in% c("t-test", "wilcoxon", "logistic", "KW")) {
     pvalues <- as.numeric(pvalues)
-    if(one_sided) pvalues <- pvalues / 2
-    adjp = p.adjust(p = pvalues,method = adjust)
+    if(one_sided & test != "KW") pvalues <- pvalues / 2
+    adjp = p.adjust(p = pvalues, method = adjust)
     slot <- 1
     forplot$group <- as.character(forplot$group)
     for(i in 1:length(weights)) {

@@ -129,7 +129,7 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
   output$isingVar = matrix(map2_dbl(output$isingVar,this$isingVar,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingVar), dimnames = list(rownames(output$isingVar),colnames(output$isingVar)))
   output$isingCount = matrix(map2_dbl(output$isingCount,this$isingCount,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(output$isingCount), dimnames = list(rownames(output$isingCount),colnames(output$isingCount)))
   if(!is.null(output$isingStability)) {
-    output$isingStability$network = matrix(map2_dbl(output$isingStability$network,this$isingStability$network,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(this$isingCount), dimnames = list(rownames(this$isingStability$network),colnames(this$isingStability$network)))
+    try(output$isingStability$network <- matrix(map2_dbl(output$isingStability$network,this$isingStability$network,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(this$isingCount), dimnames = list(rownames(this$isingStability$network),colnames(this$isingStability$network))))
   }
 
   #set the class

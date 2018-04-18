@@ -2,12 +2,12 @@ library(flowReMix)
 library(magrittr)
 require(dplyr)
 library(ggplot2)
-# cpus <- 4
-# print(cpus)
-#
-# args <- commandArgs(TRUE)
-# eval(parse(text=args[[1]]))
-# setting <- as.numeric(setting)
+cpus <- 2
+print(cpus)
+
+args <- commandArgs(TRUE)
+eval(parse(text=args[[1]]))
+setting <- as.numeric(setting)
 
 getExpression <- function(str) {
   first <- substr(str, 1, 7)
@@ -110,18 +110,18 @@ marginals$population <- factor(marginals$population)
 
 
 # Setting up data for analysis ---------------------------
-# subsetDat <- stimulationModel(marginals,
-#                               cell_type = population,
-#                               stim_var = stim,
-#                               stim_groups = list(gag = "VRC GAG B",
-#                                                  pol = c("VRC POL 1 B", "VRC POL 2 B"),
-#                                                  env = c("VRC ENV C", "VRC ENV B", "VRC ENV A"),
-#                                                  nef = "VRC NEF B"),
-#                                                  # Ad5 = "Empty Ad5 (VRC)"),
-#                               controls = c("negctrl"))
-# subsetDat$subset <- subsetDat$stimCellType
-# subsetDat$stimCellType <- NULL
-#
+subsetDat <- stimulationModel(marginals,
+                              cell_type = population,
+                              stim_var = stim,
+                              stim_groups = list(gag = "VRC GAG B",
+                                                 pol = c("VRC POL 1 B", "VRC POL 2 B"),
+                                                 env = c("VRC ENV C", "VRC ENV B", "VRC ENV A"),
+                                                 nef = "VRC NEF B"),
+                                                 # Ad5 = "Empty Ad5 (VRC)"),
+                              controls = c("negctrl"))
+subsetDat$subset <- subsetDat$stimCellType
+subsetDat$stimCellType <- NULL
+
 # # # Screening subsets based on mixed effect model ---------
 # subsetDat$stimGroup <- factor(subsetDat$stimGroup)
 # subsetDat <- subsetDat %>% group_by(ptid,population,stim,stimGroup,parent) %>%
@@ -167,8 +167,8 @@ subsetDat$subset <- factor(as.character(subsetDat$subset))
 # marginals$population <- factor(as.character(marginals$population))
 
 configurations <- expand.grid(method = c("MC"),
-                              seed = 1:100,
-                              maxdisp = c(50),
+                              seed = 1:50,
+                              maxdisp = c(10, 50),
                               niter = c(60),
                               includeBatch = FALSE)
 config <- configurations[setting, ]
@@ -225,7 +225,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_screenFirth_B",
+file <- paste("results/hvtn_screenFirth_C",
               "_maxdisp", maxdisp,
               "_niter", niter,
               "npost", npost,

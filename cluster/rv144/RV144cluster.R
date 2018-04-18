@@ -1,4 +1,4 @@
-cpus <- 4
+cpus <- 2
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
@@ -53,8 +53,8 @@ names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
 configurations <- expand.grid(niters = c(60),
-                              npost = c(5),
-                              seed = c(1:30),
+                              npost = c(3),
+                              seed = c(1:50),
                               disp = c(10, 50))
 config <- configurations[setting, ]
 niter <- config[["niters"]]
@@ -69,14 +69,13 @@ control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50,
                              nPosteriors = npost, centerCovariance = FALSE,
                              maxDispersion = 10^3 * disp, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             isingInit = -7,
+                             isingInit = -5,
                              seed = seed,
-                             ncores = cpus, preAssignCoefs = c(0, 0, 0, 1),
-                             prior = -0.5,
+                             ncores = cpus, preAssignCoefs = c(1),
+                             prior = 0,
                              isingWprior = FALSE,
                              markovChainEM = TRUE,
                              initMethod = "robust",
-                             learningRate = 0.6, keepWeightPercent = .9,
                              lastSample = NULL,
                              isingStabilityReps = 100)
 
@@ -86,14 +85,14 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cell_type = subset,
                              cluster_variable = treatment,
                              data = booldata,
-                             covariance = "sparse",
-                             ising_model = "sparse",
-                             regression_method = "firth",
+                             covariance = "diagonal",
+                             ising_model = "none",
+                             regression_method = "robust",
                              iterations =  niter,
                              cluster_assignment = TRUE,
                              parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_firth_1_disp", disp,
+file <- paste("results/rv144_wfirth_indep_A_disp", disp,
               "_niter", niter,
               "npost", npost,
               "seed", seed,

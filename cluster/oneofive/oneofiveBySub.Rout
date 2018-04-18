@@ -36,7 +36,7 @@ Type 'q()' to quit R.
 > iterations <- config[["iterations"]]
 > fseed <- config[["fseed"]]
 > disp <- config[["disp"]]
-> nPosteriors <- 4
+> nPosteriors <- 2
 > 
 > control = flowReMix_control(updateLag = round(iterations / 3),
 +                             nPosteriors = nPosteriors,
@@ -48,7 +48,7 @@ Type 'q()' to quit R.
 +                             isingWprior = FALSE,
 +                             isingStabilityReps = 100)
 > 
-> # stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[1:20])
+> # stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[221:240])
 > stimdat$ptid <- factor(stimdat$ptid)
 > stimdat$visitStimCell <- factor(stimdat$visitStimCell)
 > fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
@@ -64,29 +64,8 @@ Type 'q()' to quit R.
 +                 parallel = TRUE,
 +                 verbose = TRUE,
 +                 control = control)
-Computing in parallel on 4 cores
-[1] "Initializing Regression Equations"
-Loading required package: foreach
-Loading required package: rngtools
-Loading required package: pkgmaker
-Loading required package: registry
-
-Attaching package: ‘pkgmaker’
-
-The following object is masked from ‘package:base’:
-
-    isNamespaceLoaded
-
-
-[1] "Starting Stochastic EM"
-[1] "Sampling!"
-0%   10   20   30   40   50   60   70   80   90   100%
-[----|----|----|----|----|----|----|----|----|----|
-**************************************************|
-
-[1] "Updating Ising!"
-[1] "Estimating Covariance!"
-Error in if (MHrate > targetRate + 0.05) { : 
-  missing value where TRUE/FALSE needed
-Calls: flowReMix
+Error: nPosteriors * nSubjects should be greater than nSubsets. 
+ nPosteriors * nsubjects = 208
+ nsubsets = 348
+ Try increasing nPosteriors,  currently: 2
 Execution halted

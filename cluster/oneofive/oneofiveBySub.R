@@ -3,7 +3,7 @@ library(magrittr)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-ncpus <- 2
+ncpus <- 8
 
 stimdat <- readRDS(file = "data/hvtn105_110subsets.rds")
 stimdat$visitStimCell <- factor(stimdat$visitStimCell)
@@ -11,13 +11,13 @@ stimdat$stim <- factor(stimdat$stim)
 
 # Analysis Settings ---------
 configurations <- expand.grid(disp = c(10, 50),
-                              iterations = c(21, 30),
-                              fseed = 1:15)
+                              iterations = c(30),
+                              fseed = 1:20)
 config <- configurations[setting, ]
 iterations <- config[["iterations"]]
 fseed <- config[["fseed"]]
 disp <- config[["disp"]]
-nPosteriors <- 2
+nPosteriors <- 4
 
 control = flowReMix_control(updateLag = round(iterations / 3),
                             nPosteriors = nPosteriors,
@@ -29,7 +29,7 @@ control = flowReMix_control(updateLag = round(iterations / 3),
                             isingWprior = FALSE,
                             isingStabilityReps = 100)
 
-stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[221:240])
+# stimdat <- subset(stimdat, visitStimCell %in% levels(visitStimCell)[221:240])
 stimdat$ptid <- factor(stimdat$ptid)
 stimdat$visitStimCell <- factor(stimdat$visitStimCell)
 fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
@@ -46,8 +46,9 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                 verbose = TRUE,
                 control = control)
 
-filename <- paste("results/HVTN105_B_110subsets",
-                  "_iterations", iterations,
+fit$data <- NULL
+filename <- paste("results/HVTN105_C_110subsets",
+                  "TEST_iterations", iterations,
                   "disp", disp,
                   "nPost", nPosteriors,
                   "seed", fseed,
