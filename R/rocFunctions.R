@@ -276,8 +276,9 @@ plotScatter <- function(obj, subsets = NULL,
 
   forplot <- merge(ctrl, treat)
   forplot$shape <- factor(forplot$shape)
+  forplot$sub.population <- as.character(forplot$sub.population)
   if(!is.null(subsets)){
-    forplot = forplot%>%filter(sub.population%in%subsets)
+    forplot = forplot%>%filter(sub.population %in% as.character(subsets))
   }
   figure <- ggplot(forplot)
   if(is.null(target)) {

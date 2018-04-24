@@ -168,6 +168,9 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   }
   #splitting third dimension below.. is along replicates.. so we change that to split by the first now that we've permuted
   samples <- lapply(inds, function(x) samples[x,,,drop=FALSE])
+  for(i in 1:length(samples)) {
+    samples[[i]][samples[[i]] == 0.5] <- 0
+  }
   set.seed(seed)
   countCovar <- foreach(matrices = samples , .combine = "+") %dorng% {
     countCovar <- apply(matrices,1, function(mat) #by first dim - replicates
