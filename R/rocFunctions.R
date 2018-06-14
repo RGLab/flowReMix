@@ -282,18 +282,18 @@ plotScatter <- function(obj, subsets = NULL,
   }
   figure <- ggplot(forplot)
   if(is.null(target)) {
-    figure <- figure + geom_point(aes(x = log(ctrlprop), y = log(trtprop),
+    figure <- figure + geom_point(aes(x = log(ctrlprop + 10^-9), y = log(trtprop + 10^-9),
                                       col = post))
   } else {
-    figure <- figure + geom_point(aes(x = log(ctrlprop), y = log(trtprop),
+    figure <- figure + geom_point(aes(x = log(ctrlprop + 10^-9), y = log(trtprop + 10^-9),
                                       col = post, shape = shape)) +
       scale_shape_discrete(name = varname)
   }
 
   figure <- figure + scale_color_gradientn(limits = paletteRange, name = "Posterior", colors = colPalette) +
     facet_wrap(~ sub.population, scales = "free", ncol = ncol) +
-    xlab("Log Control Proportion") +
-    ylab("Log Treatment Proportion") +
+    xlab("Log(Control Proportion + 10e-9) ") +
+    ylab("Log(Treatment Proportion + 10e0-9)") +
     geom_abline(intercept = 0, slope = 1)
 
   return(figure)

@@ -111,6 +111,7 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
 malbool$allstims <- malbool$subset %>% as.character() %>%
   strsplit("/") %>% sapply(function(x) paste(x[-1], collapse = "/")) %>%
   factor()
+malbool$visitSubset <- paste(malbool$visitno, malbool$subset, sep = "/")
 
 # Analysis --------
 malbool <- subset(malbool, subset %in% levels(subset))

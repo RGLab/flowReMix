@@ -53,9 +53,9 @@ names(booldata) <- tolower(names(booldata))
 
 # Configurations --------------------
 configurations <- expand.grid(niters = c(60),
-                              npost = c(3),
+                              npost = c(1),
                               seed = c(1:50),
-                              disp = c(10, 50))
+                              disp = c(100, 50, 10))
 config <- configurations[setting, ]
 niter <- config[["niters"]]
 npost <- config[["npost"]]
@@ -71,9 +71,8 @@ control <- flowReMix_control(updateLag = round(niter / 3), nsamp = 50,
                              randomAssignProb = 10^-8, intSampSize = 50,
                              isingInit = -5,
                              seed = seed,
-                             ncores = cpus, preAssignCoefs = c(1),
-                             prior = 0,
-                             isingWprior = FALSE,
+                             ncores = cpus,
+                             preAssignCoefs = c(1),
                              markovChainEM = TRUE,
                              initMethod = "robust",
                              lastSample = NULL,
@@ -92,7 +91,7 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                              cluster_assignment = TRUE,
                              parallel = TRUE, keepSamples = FALSE,
                              verbose = TRUE, control = control))
-file <- paste("results/rv144_wfirth_indep_A_disp", disp,
+file <- paste("results/rv144_wfirth_indep_B_disp", disp,
               "_niter", niter,
               "npost", npost,
               "seed", seed,

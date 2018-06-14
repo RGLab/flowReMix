@@ -2,7 +2,7 @@ library(flowReMix)
 library(magrittr)
 require(dplyr)
 library(ggplot2)
-cpus <- 2
+cpus <- 4
 print(cpus)
 
 args <- commandArgs(TRUE)
@@ -167,8 +167,8 @@ subsetDat$subset <- factor(as.character(subsetDat$subset))
 # marginals$population <- factor(as.character(marginals$population))
 
 configurations <- expand.grid(method = c("MC"),
-                              seed = 1:50,
-                              maxdisp = c(10, 50),
+                              seed = 1:40,
+                              maxdisp = c(50, 100),
                               niter = c(60),
                               includeBatch = FALSE)
 config <- configurations[setting, ]
@@ -225,7 +225,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  cluster_assignment = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/hvtn_screenFirth_C",
+file <- paste("results/hvtn_screenFirth_D",
               "_maxdisp", maxdisp,
               "_niter", niter,
               "npost", npost,
