@@ -55,24 +55,16 @@ disp <- config[["disp"]]
 stabilityReps <- 50
 
 # Control Object --------
-control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
-                             keepEach = 5,
-                             nPosteriors = npost, centerCovariance = TRUE,
-                             maxDispersion = disp * 1000, minDispersion = 10^7,
+control <- flowReMix_control(updateLag = lag, nsamp = 50,
+                             keepEach = keepeach, initMHcoef = 2.5,
+                             nPosteriors = npost, centerCovariance = FALSE,
+                             maxDispersion = maxdisp * 1000, minDispersion = 10^7,
                              randomAssignProb = 10^-8, intSampSize = 50,
-                             lastSample = NULL, isingInit = -log(99),
+                             seed = seed, zeroPosteriorProbs = FALSE,
+                             ncores = cpus, preAssignCoefs = 1,
+                             prior = prior, isingWprior = FALSE,
                              markovChainEM = mcEM,
-                             initMethod = "robust",
-                             preAssignCoefs = 1,
-                             seed = seed,
-                             ncores = ncores,
-                             isingWprior = FALSE,
-                             zeroPosteriorProbs = FALSE,
-                             isingStabilityReps = stabilityReps,
-                             randStabilityReps = 0,
-                             learningRate = 0.75,
-                             keepWeightPercent = 0.9,
-                             sampleNew = FALSE)
+                             initMethod = "robust")
 
 malbool$allstims <- malbool$subset %>% as.character() %>%
   strsplit("/") %>% sapply(function(x) paste(x[-1], collapse = "/")) %>%

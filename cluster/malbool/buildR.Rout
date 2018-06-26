@@ -1,0 +1,255 @@
+
+R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # install.packages("glmnet", repos='http://cran.us.r-project.org')
+> # install.packages("brglm2", repos='http://cran.us.r-project.org')
+> # install.packages("Rcpp", repos='http://cran.us.r-project.org')
+> # install.packages("CompQuadForm", repos='http://cran.us.r-project.org')
+> # install.packages("PDSCE", repos='http://cran.us.r-project.org')
+> # install.packages("restrictedMVN", repos='http://cran.us.r-project.org')
+> # install.packages("data.table", repos='http://cran.us.r-project.org')
+> # install.packages("pryr", repos='http://cran.us.r-project.org')
+> # install.packages("truncnorm", repos='http://cran.us.r-project.org')
+> # install.packages("doParallel", repos='http://cran.us.r-project.org')
+> # install.packages("selectiveInference", repos='http://cran.us.r-project.org')
+> # install.packages("foreach", repos='http://cran.us.r-project.org')
+> # install.packages("robustbase", repos='http://cran.us.r-project.org')
+> # install.packages("lpSolveAPI", repos='http://cran.us.r-project.org')
+> # install.packages("network", repos='http://cran.us.r-project.org')
+> # install.packages("viridis", repos='http://cran.us.r-project.org')
+> # install.packages("rlang", repos='http://cran.us.r-project.org')
+> # install.packages("doRNG", repos='http://cran.us.r-project.org')
+> # install.packages("purrr", repos='http://cran.us.r-project.org')
+> # install.packages("tidyr", repos='http://cran.us.r-project.org')
+> # install.packages("IsingSampler", repos='http://cran.us.r-project.org')
+> # install.packages("mvtnorm", repos='http://cran.us.r-project.org')
+> # install.packages("mixtools", repos='http://cran.us.r-project.org')
+> # install.packages("progress", repos='http://cran.us.r-project.org')
+> # install.packages("bigmemory", repos='http://cran.us.r-project.org')
+> # install.packages("iterators", repos='http://cran.us.r-project.org')
+> # install.packages("tidygraph", repos='http://cran.us.r-project.org')
+> # install.packages("circlize", repos='http://cran.us.r-project.org')
+> # install.packages("RcppProgress", repos='http://cran.us.r-project.org')
+> # install.packages("Rcpp", repos='http://cran.us.r-project.org')
+> # install.packages("RcppArmadillo", repos='http://cran.us.r-project.org')
+> # install.packages("R.utils", repos='http://cran.us.r-project.org')
+> # install.packages("tmg", repos='http://cran.us.r-project.org')
+> install.packages("knockoff", repos='http://cran.us.r-project.org')
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+trying URL 'http://cran.us.r-project.org/src/contrib/knockoff_0.3.0.tar.gz'
+Content type 'application/x-gzip' length 124269 bytes (121 KB)
+==================================================
+downloaded 121 KB
+
+* installing *source* package ‘knockoff’ ...
+** package ‘knockoff’ successfully unpacked and MD5 sums checked
+** R
+** inst
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded
+* DONE (knockoff)
+
+The downloaded source packages are in
+	‘/tmp/jobs/amitmeir/2128363/RtmppX9RAk/downloaded_packages’
+> 
+> install.packages("canKnock_0.1.0.tar.gz", type = "source")
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+inferring 'repos = NULL' from 'pkgs'
+* installing *source* package ‘canKnock’ ...
+** R
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+* DONE (canKnock)
+> install.packages("PSAT_0.1.0.tar.gz", type = "source")
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+inferring 'repos = NULL' from 'pkgs'
+* installing *source* package ‘PSAT’ ...
+** libs
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c RcppExports.cpp -o RcppExports.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from RcppExports.cpp:4:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c quadraticSampler.cpp -o quadraticSampler.o
+g++ -shared -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -L/sw/ebpkgs/software/GCCcore/5.4.0/lib64 -L/sw/ebpkgs/software/GCCcore/5.4.0/lib -L/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/lib -L/sw/ebpkgs/software/libreadline/6.3-foss-2016b/lib -L/sw/ebpkgs/software/ncurses/6.0-foss-2016b/lib -L/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/lib -L/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/lib -L/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/lib -L/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/lib -L/sw/ebpkgs/software/PCRE/8.38-foss-2016b/lib -L/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/lib -L/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/lib -L/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/lib -L/sw/ebpkgs/software/Java/1.8.0_92/lib -L/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/lib -L/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/lib -L/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/lib -o PSAT.so RcppExports.o quadraticSampler.o -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -lR
+installing to /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/PSAT/libs
+** R
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+* DONE (PSAT)
+> install.packages("selectiveTweedy_0.1.0.tar.gz", type = "source")
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+inferring 'repos = NULL' from 'pkgs'
+* installing *source* package ‘selectiveTweedy’ ...
+** libs
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c MHsamp.cpp -o MHsamp.o
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c RcppExports.cpp -o RcppExports.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from RcppExports.cpp:4:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -shared -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -L/sw/ebpkgs/software/GCCcore/5.4.0/lib64 -L/sw/ebpkgs/software/GCCcore/5.4.0/lib -L/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/lib -L/sw/ebpkgs/software/libreadline/6.3-foss-2016b/lib -L/sw/ebpkgs/software/ncurses/6.0-foss-2016b/lib -L/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/lib -L/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/lib -L/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/lib -L/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/lib -L/sw/ebpkgs/software/PCRE/8.38-foss-2016b/lib -L/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/lib -L/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/lib -L/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/lib -L/sw/ebpkgs/software/Java/1.8.0_92/lib -L/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/lib -L/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/lib -L/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/lib -o selectiveTweedy.so MHsamp.o RcppExports.o -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -lR
+installing to /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/selectiveTweedy/libs
+** R
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+* DONE (selectiveTweedy)
+> install.packages("variationalReg_0.1.0.tar.gz", type = "source")
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+inferring 'repos = NULL' from 'pkgs'
+* installing *source* package ‘variationalReg’ ...
+** libs
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c RcppExports.cpp -o RcppExports.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from RcppExports.cpp:4:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c normalsampler.cpp -o normalsampler.o
+g++ -shared -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -L/sw/ebpkgs/software/GCCcore/5.4.0/lib64 -L/sw/ebpkgs/software/GCCcore/5.4.0/lib -L/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/lib -L/sw/ebpkgs/software/libreadline/6.3-foss-2016b/lib -L/sw/ebpkgs/software/ncurses/6.0-foss-2016b/lib -L/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/lib -L/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/lib -L/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/lib -L/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/lib -L/sw/ebpkgs/software/PCRE/8.38-foss-2016b/lib -L/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/lib -L/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/lib -L/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/lib -L/sw/ebpkgs/software/Java/1.8.0_92/lib -L/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/lib -L/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/lib -L/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/lib -o variationalReg.so RcppExports.o normalsampler.o -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -lR
+installing to /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/variationalReg/libs
+** R
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+* DONE (variationalReg)
+> install.packages("selectiveROI_0.1.0.tar.gz", type = "source")
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+inferring 'repos = NULL' from 'pkgs'
+* installing *source* package ‘selectiveROI’ ...
+** libs
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c RcppExports.cpp -o RcppExports.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from RcppExports.cpp:4:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include"   -fpic  -O2 -march=native  -c sliceSampler.cpp -o sliceSampler.o
+g++ -shared -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -L/sw/ebpkgs/software/GCCcore/5.4.0/lib64 -L/sw/ebpkgs/software/GCCcore/5.4.0/lib -L/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/lib -L/sw/ebpkgs/software/libreadline/6.3-foss-2016b/lib -L/sw/ebpkgs/software/ncurses/6.0-foss-2016b/lib -L/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/lib -L/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/lib -L/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/lib -L/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/lib -L/sw/ebpkgs/software/PCRE/8.38-foss-2016b/lib -L/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/lib -L/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/lib -L/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/lib -L/sw/ebpkgs/software/Java/1.8.0_92/lib -L/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/lib -L/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/lib -L/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/lib -o selectiveROI.so RcppExports.o sliceSampler.o -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -lR
+installing to /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/selectiveROI/libs
+** R
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+* DONE (selectiveROI)
+> install.packages("flowReMix_0.2.tar.gz", type = "source")
+Installing package into ‘/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3’
+(as ‘lib’ is unspecified)
+inferring 'repos = NULL' from 'pkgs'
+* installing *source* package ‘flowReMix’ ...
+** libs
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c CppFlowSstepList_mc_vec.cpp -o CppFlowSstepList_mc_vec.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from CppFlowSstepList_mc_vec.cpp:3:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c CppflowSstep.cpp -o CppflowSstep.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from CppflowSstep.cpp:3:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c RcppExports.cpp -o RcppExports.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from RcppExports.cpp:4:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c lchoose.cpp -o lchoose.o
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c simRandomEffectCoordinate_mc.cpp -o simRandomEffectCoordinate_mc.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from simRandomEffectCoordinate_mc.cpp:1:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c subsetAssignGibbs_mc.cpp -o subsetAssignGibbs_mc.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from subsetAssignGibbs_mc.cpp:3:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c subsetResponse.cpp -o subsetResponse.o
+In file included from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo:53:0,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadilloForward.h:46,
+                 from /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/RcppArmadillo.h:31,
+                 from subsetResponse.cpp:1:
+/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include/armadillo_bits/compiler_setup.hpp:474:96: note: #pragma message: WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+
+   #pragma message ("WARNING: use of OpenMP disabled; this compiler doesn't support OpenMP 3.0+")
+                                                                                                ^
+g++ -I/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/include -DNDEBUG  -I/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/include -I/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/include -I/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/include -I/sw/ebpkgs/software/libreadline/6.3-foss-2016b/include -I/sw/ebpkgs/software/ncurses/6.0-foss-2016b/include -I/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/include -I/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/include -I/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/include -I/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/include -I/sw/ebpkgs/software/PCRE/8.38-foss-2016b/include -I/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/include -I/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/include -I/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/include -I/sw/ebpkgs/software/Java/1.8.0_92/include -I/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/include -I/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/include -I/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/include -I/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/include -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/Rcpp/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppArmadillo/include" -I"/homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/RcppProgress/include"  -std=c++14 -g -O0 -DARMA_NO_DEBUG -DPROFILE -fpic  -O2 -march=native  -c weightedmean.cpp -o weightedmean.o
+g++ -shared -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -L/sw/ebpkgs/software/GCCcore/5.4.0/lib64 -L/sw/ebpkgs/software/GCCcore/5.4.0/lib -L/sw/ebpkgs/software/OpenBLAS/0.2.18-GCC-5.4.0-2.26-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/ScaLAPACK/2.0.2-gompi-2016b-OpenBLAS-0.2.18-LAPACK-3.6.1/lib -L/sw/ebpkgs/software/FFTW/3.3.4-gompi-2016b/lib -L/sw/ebpkgs/software/libreadline/6.3-foss-2016b/lib -L/sw/ebpkgs/software/ncurses/6.0-foss-2016b/lib -L/sw/ebpkgs/software/bzip2/1.0.6-foss-2016b/lib -L/sw/ebpkgs/software/XZ/5.2.2-foss-2016b/lib -L/sw/ebpkgs/software/zlib/1.2.8-foss-2016b/lib -L/sw/ebpkgs/software/SQLite/3.13.0-foss-2016b/lib -L/sw/ebpkgs/software/PCRE/8.38-foss-2016b/lib -L/sw/ebpkgs/software/libpng/1.6.23-foss-2016b/lib -L/sw/ebpkgs/software/libjpeg-turbo/1.5.0-foss-2016b/lib -L/sw/ebpkgs/software/LibTIFF/4.0.6-foss-2016b/lib -L/sw/ebpkgs/software/Java/1.8.0_92/lib -L/sw/ebpkgs/software/Tcl/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/Tk/8.6.5-foss-2016b/lib -L/sw/ebpkgs/software/cURL/7.49.1-foss-2016b/lib -L/sw/ebpkgs/software/libxml2/2.9.4-foss-2016b/lib -L/sw/ebpkgs/software/GMP/6.1.1-foss-2016b/lib -o flowReMix.so CppFlowSstepList_mc_vec.o CppflowSstep.o RcppExports.o lchoose.o simRandomEffectCoordinate_mc.o subsetAssignGibbs_mc.o subsetResponse.o weightedmean.o -L/sw/ebpkgs/software/R/3.3.1-foss-2016b/lib/R/lib -lR
+installing to /homes/amitmeir/R/x86_64-pc-linux-gnu-library/3.3/flowReMix/libs
+** R
+** data
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+* DONE (flowReMix)
+> 
+> 
+> 
+> proc.time()
+   user  system elapsed 
+148.764  12.124 187.536 

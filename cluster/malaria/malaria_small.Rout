@@ -1,0 +1,789 @@
+
+R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(flowReMix)
+> args <- commandArgs(TRUE)
+> eval(parse(text=args[[1]]))
+> setting <- as.numeric(setting)
+> cpus <- 1
+> 
+> # Malaria dataset ----------------------------
+> load("data/malaria.rda")
+> names(malaria)
+ [1] "name"        "population"  "parent"      "count"       "parentcount"
+ [6] "experiment"  "order"       "stim"        "ptid"        "visitno"    
+[11] "testdt"     
+> table(malaria$experiment)
+
+2001-Y-Tfh Malaria 2002-Y-Tfh Malaria 2003-Y-Tfh Malaria 
+             11960              11180              11960 
+> unique(malaria$ptid)
+ [1] "20056" "20064" "20070" "50071" "30053" "30060" "40068" "20003" "50050"
+[10] "60051" "60061" "60072"
+> unique(malaria$population)
+  [1] "S"                      "Exclude"                "14-"                   
+  [4] "Lv"                     "L"                      "3+"                    
+  [7] "4+"                     "4+/154+"                "4+/CCR7+"              
+ [10] "4+/CD45A+"              "4+/CXCR5+"              "4+/CXCR5+/154+"        
+ [13] "4+/CXCR5+/CCR7+"        "4+/CXCR5+/CD45A+"       "4+/CXCR5+/CM"          
+ [16] "4+/CXCR5+/EM"           "4+/CXCR5+/IFNg+"        "4+/CXCR5+/IL2+"        
+ [19] "4+/CXCR5+/IL4+"         "4+/CXCR5+/IL21+"        "4+/CXCR5+/Naive"       
+ [22] "4+/CXCR5+/PD-1+"        "PD-1+/154+"             "PD-1+/CM"              
+ [25] "PD-1+/EM"               "PD-1+/IFNg+"            "PD-1+/IL2+"            
+ [28] "PD-1+/IL4+"             "PD-1+/IL21+"            "PD-1+/Naive"           
+ [31] "PD-1+/TD"               "PD-1+/TNFa+"            "4+/CXCR5+/TD"          
+ [34] "4+/CXCR5+/TNFa+"        "4+/IFNg+"               "4+/IL2+"               
+ [37] "4+/IL4+"                "4+/TD"                  "4+/Naive"              
+ [40] "4+/CM"                  "CXCR5-"                 "CXCR5-/IL21+"          
+ [43] "CXCR5-/PD-1+"           "4+/EM"                  "4+/GzB+"               
+ [46] "4+/IL21+"               "4+/PD-1+"               "4+/TNFa+"              
+ [49] "8+"                     "8+/154+"                "8+/CCR7+"              
+ [52] "8+/CD45A+"              "8+/GzB+"                "8+/IFNg+"              
+ [55] "8+/IL2+"                "8+/IL4+"                "8+/TD"                 
+ [58] "8+/Naive"               "8+/CM"                  "8+/CXCR5+"             
+ [61] "8+/CXCR5+/154+"         "8+/CXCR5+/CCR7+"        "8+/CXCR5+/CD45A+"      
+ [64] "8+/CXCR5+/CM"           "8+/CXCR5+/EM"           "8+/CXCR5+/IFNg+"       
+ [67] "8+/CXCR5+/IL2+"         "8+/CXCR5+/IL4+"         "8+/CXCR5+/IL21+"       
+ [70] "8+/CXCR5+/Naive"        "8+/CXCR5+/PD-1+"        "8+/CXCR5+/TD"          
+ [73] "8+/CXCR5+/TNFa+"        "8+/EM"                  "8+/IL21+"              
+ [76] "8+/PD-1+"               "8+/TNFa+"               "CD4-CD8-"              
+ [79] "CD4-CD8-/154+"          "CD4-CD8-/CCR7+"         "CD4-CD8-/CD45A+"       
+ [82] "CD4-CD8-/CM"            "CD4-CD8-/CXCR5+"        "CD4-CD8-/CXCR5+/154+"  
+ [85] "CD4-CD8-/CXCR5+/CCR7+"  "CD4-CD8-/CXCR5+/CD45A+" "CD4-CD8-/CXCR5+/CM"    
+ [88] "CD4-CD8-/CXCR5+/EM"     "CD4-CD8-/CXCR5+/IFNg+"  "CD4-CD8-/CXCR5+/IL2+"  
+ [91] "CD4-CD8-/CXCR5+/IL4+"   "CD4-CD8-/CXCR5+/IL21+"  "CD4-CD8-/CXCR5+/Naive" 
+ [94] "CD4-CD8-/CXCR5+/PD-1+"  "CD4-CD8-/CXCR5+/TD"     "CD4-CD8-/CXCR5+/TNFa+" 
+ [97] "CD4-CD8-/EM"            "CD4-CD8-/GzB+"          "CD4-CD8-/IFNg+"        
+[100] "CD4-CD8-/IL2+"          "CD4-CD8-/IL4+"          "CD4-CD8-/IL21+"        
+[103] "CD4-CD8-/Naive"         "CD4-CD8-/PD-1+"         "CD4-CD8-/TD"           
+[106] "CD4-CD8-/TNFa+"         "56+dim"                 "56+dim/154+"           
+[109] "56+dim/GzB+"            "56+dim/IFNg+"           "56+dim/IL2+"           
+[112] "56+dim/IL4+"            "56+dim/IL21+"           "56+dim/TNFa+"          
+[115] "56+hi"                  "56+hi/154+"             "56+hi/GzB+"            
+[118] "56+hi/IFNg+"            "56+hi/IL2+"             "56+hi/IL4+"            
+[121] "56+hi/IL21+"            "56+hi/TNFa+"            "NK T cells"            
+[124] "NK T cells/154+"        "NK T cells/GzB+"        "NK T cells/IFNg+"      
+[127] "NK T cells/IL2+"        "NK T cells/IL4+"        "NK T cells/IL21+"      
+[130] "NK T cells/TNFa+"      
+> populations <- unique(malaria$population)
+> parents <- unique(malaria$parent)
+> leaves <- populations[!(populations %in% parents) ]
+> malaria <- subset(malaria, population %in% leaves)
+> unique(malaria$stim)
+[1] "control" "uRBC"    "PfSPZ"   "PfRBC"  
+> malaria$stimgroup[malaria$stim %in% c("PfRBC", "uRBC")] <- "RBC"
+> malaria$stimgroup[!(malaria$stim %in% c("PfRBC", "uRBC"))] <- "SPZ"
+> malaria$stim[malaria$stim == "uRBC"] <- "control"
+> malaria$stim[malaria$stim != "control"] <- "stim"
+> malaria$stim <- factor(malaria$stim, levels = c("control", "stim"))
+> isCytokine <- substring(malaria$population, nchar(malaria$population)) == "+"
+> malaria <- subset(malaria, !isCytokine)
+> # malaria$subset <- paste(malaria$visitno, "/", malaria$stimgroup, "/", malaria$population, sep = "")
+> malaria$subset <- paste(malaria$stimgroup, "/", malaria$population, sep = "")
+> malaria$visitno <- factor(malaria$visitno)
+> malaria <- subset(malaria, !(parent %in% c("CD4-CD8-", "CD4-CD8-/CXCR5+")))
+> malaria <- subset(malaria, !(grepl("naive", population)))
+> 
+> malaria$infection <- TRUE
+> malaria$infection[malaria$ptid %in% c("60061", "50071", "20003")] <- FALSE
+> 
+> # Screening low counts -------------------
+> countlist <- by(malaria, malaria$subset, function(x) x$count)
+> toRemove <- sapply(countlist, function(x) mean(x > 4) < 0.05)
+> toRemove <- names(countlist)[toRemove]
+> malaria <- subset(malaria, !(subset %in% toRemove))
+> malaria$subset <- factor(malaria$subset)
+> malaria$ptid <- factor(malaria$ptid)
+> malaria <- malaria[order(malaria$ptid, malaria$stimgroup), ]
+> 
+> # Analysis Settings -----
+> configurations <- expand.grid(method = c("MC"),
++                               seed = 1:50,
++                               maxdisp = c(10, 50),
++                               niter = c(60))
+> 
+> config <- configurations[setting, ]
+> print(config)
+  method seed maxdisp niter
+1     MC    1      10    60
+> niter <- config[["niter"]]
+> seed <- config[["seed"]]
+> prior <- 0
+> maxdisp <- config[["maxdisp"]]
+> method <- config[["method"]]
+> if(method == "MC") {
++   npost <- 5
++   lag <- round(niter / 3)
++   keepeach <- 5
++   mcEM <- TRUE
++ }
+> 
+> 
+> # Analysis -----------------------
+> library(flowReMix)
+> control <- flowReMix_control(updateLag = lag, nsamp = 50,
++                              keepEach = keepeach, initMHcoef = 0.25,
++                              nPosteriors = npost, centerCovariance = FALSE,
++                              maxDispersion = maxdisp * 1000, minDispersion = 10^7,
++                              randomAssignProb = 10^-8, intSampSize = 50,
++                              seed = seed, zeroPosteriorProbs = FALSE,
++                              ncores = cpus, preAssignCoefs = 1,
++                              prior = prior, isingWprior = FALSE,
++                              markovChainEM = mcEM,
++                              initMethod = "robust")
+> 
+> tempdat <- subset(malaria, TRUE)
+> tempdat$time <- tempdat$visitno
+> tempdat$subset <- factor(as.character(tempdat$subs))
+> tempdat$stim[tempdat$stim]
+   [1] control control control control control control control control control
+  [10] control control control control control control control control control
+  [19] control control control control control control control control control
+  [28] control control control control control control control control control
+  [37] control control control control control control control control control
+  [46] control control control control control control control control control
+  [55] control control control control control control control control control
+  [64] control control control control control control control control control
+  [73] control control control control control control control control control
+  [82] control control control control control control control control control
+  [91] control control control control control control control control control
+ [100] control control control control control control control control control
+ [109] control control control control control control control control control
+ [118] control control control control control control control control control
+ [127] control control control control control control control control control
+ [136] control control control control control control control control control
+ [145] control control control control control control control control control
+ [154] control control control control control control control control control
+ [163] control control control control control control control control control
+ [172] control control control control control control control control control
+ [181] control control control control control control control control control
+ [190] control control control control control control control control control
+ [199] control control control control control control control control control
+ [208] control control control control control control control control control
+ [217] control control control control control control control control control
+ [226] control control control control control control control control control
+ [235] control control control control control control control control control
+ [244] control control control control control control control control control
+ [253] control control control control control control control control control
+ [262] control control control control control control control control control
+ [271] control control control control control control control control control
+ [280] control control control control control control control control control
+ [289] control control control control control control control control control
+ [298] control control control control control control control control control
+ [307] control control control control control control control control control
+ [316] control control control control control control control control control
+ [325] control control control control control control control control control
+ [334] control control control control control control control control control
+ [343] control control control control control control control control control
+ [352] control control control control control control control control control
+ [361] control control control control control control control control control
+ [370] control control control control control control control control control
+ [379] control control control control control control control control control
+ [388] control control control control control control control control control
+ [397] control control control control control control control control control
+ [406] control control control control control control control control control
+ [415] control control control control control control control control control
+ [424] control control control control control control control control control
+ [433] control control control control control control control control control
+ [442] control control control control control control control control control
+ [451] control control control control control control control control control
+ [460] control control control control control control control control control
+ [469] control control control control control control control control control
+ [478] control control control control control control control control control
+ [487] control control control control control control control control control
+ [496] control control control control control control control control control
+ [505] control control control control control control control control control
+ [514] control control control control control control control control control
+ [523] control control control control control control control control control
+ [532] control control control control control control control control control
+ [541] control control control control control control control control control
+ [550] control control control control control control control control control
+ [559] control control control control control control control control control
+ [568] control control control control control control control control control
+ [577] control control control control control control control control control
+ [586] control control control control control control control control control
+ [595] control control control control control control control control control
+ [604] control control control control control control control control control
+ [613] control control control control control control control control control
+ [622] control control control control control control control control control
+ [631] control control control control control control control control control
+ [640] control control control control control control control control control
+ [649] control control control control control control control control control
+ [658] control control control control control control control control control
+ [667] control control control control control control control control control
+ [676] control control control control control control control control control
+ [685] control control control control control control control control control
+ [694] control control control control control control control control control
+ [703] control control control control control control control control control
+ [712] control control control control control control control control control
+ [721] control control control control control control control control control
+ [730] control control control control control control control control control
+ [739] control control control control control control control control control
+ [748] control control control control control control control control control
+ [757] control control control control control control control control control
+ [766] control control control control control control control control control
+ [775] control control control control control control control control control
+ [784] control control control control control control control control control
+ [793] control control control control control control control control control
+ [802] control control control control control control control control control
+ [811] control control control control control control control control control
+ [820] control control control control control control control control control
+ [829] control control control control control control control control control
+ [838] control control control control control control control control control
+ [847] control control control control control control control control control
+ [856] control control control control control control control control control
+ [865] control control control control control control control control control
+ [874] control control control control control control control control control
+ [883] control control control control control control control control control
+ [892] control control control control control control control control control
+ [901] control control control control control control control control control
+ [910] control control control control control control control control control
+ [919] control control control control control control control control control
+ [928] control control control control control control control control control
+ [937] control control control control control control control control control
+ [946] control control control control control control control control control
+ [955] control control control control control control control control control
+ [964] control control control control control control control control control
+ [973] control control control control control control control control control
+ [982] control control control control control control control control control
+ [991] control control control control control control control control control
+[1000] control control control control control control control control control
+[1009] control control control control control control control control control
+[1018] control control control control control control control control control
+[1027] control control control control control control control control control
+[1036] control control control control control control control control control
+[1045] control control control control control control control control control
+[1054] control control control control control control control control control
+[1063] control control control control control control control control control
+[1072] control control control control control control control control control
+[1081] control control control control control control control control control
+[1090] control control control control control control control control control
+[1099] control control control control control control control control control
+[1108] control control control control control control control control control
+[1117] control control control control control control control control control
+[1126] control control control control control control control control control
+[1135] control control control control control control control control control
+[1144] control control control control control control control control control
+[1153] control control control control control control control control control
+[1162] control control control control control control control control control
+[1171] control control control control control control control control control
+[1180] control control control control control control control control control
+[1189] control control control control control control control control control
+[1198] control control control control control control control control control
+[1207] control control control control control control control control control
+[1216] control control control control control control control control control
+[1225] control control control control control control control control control
+[1234] control control control control control control control control control
+[1243] control control control control control control control control control
+[1252] control control control control control control control control control
+[1261] control control control control control control control control control
+[1270] control control control control control control control control control
+[1279] control control control control control control control control control
+[1288] control control control control control control control control control
+[1297] control control control control control control control control control
+[1306] control control control control control control control control control
+[1315] control control control control control control control control control
+[1324] control control control control control control control control control
+[1333] control control control control control control control control control
+[1342] control control control control control control control control control
+[1351] control control control control control control control control control
+[1360] control control control control control control control control control
+[1369] control control control control control control control control control
+[1378] control control control control control control control control control
+[1387] control control control control control control control control control
+[1396] control control control control control control control control control
+[1405] control control control control control control control control control
+[1414] control control control control control control control control control
+[1423] control control control control control control control control control
+[1432] control control control control control control control control control
+[1441] control control control control control control control control control
+[1450] control control control control control control control control control
+[1459] control control control control control control control control control
+[1468] control control control control control control control control control
+[1477] control control control control control control control control control
+[1486] control control control control control control control control control
+[1495] control control control control control control control control control
+[1504] control control control control control control control control control
+[1513] control control control control control control control control control
+[1522] control control control control control control control control control
+[1531] control control control control control control control control control
+[1540] control control control control control control control control control
+[1549] control control control control control control control control control
+[1558] control control control control control control control control control
+[1567] control control control control control control control control control
+[1576] control control control control control control control control control
+[1585] control control control control control control control control control
+[1594] control control control control control control control control control
+[1603] control control control control control control control control control
+[1612] control control control control control control control control control
+[1621] control control control control control control control control control
+[1630] control control control control control control control control control
+[1639] control control control control control control control control control
+[1648] control control control control control control control control control
+[1657] control control control control control control control control control
+[1666] control control control control control control control control control
+[1675] control control control control control control control control control
+[1684] control control control control control control control control control
+[1693] control control control control control control control control control
+[1702] control control control control control control control control control
+[1711] control control control control control control control control control
+[1720] control control control control control control control control control
+[1729] control control control control control control control control control
+[1738] control control control control control control control control control
+[1747] control control control control control control control control control
+[1756] control control control control control control control control control
+[1765] control control control control control control control control control
+[1774] control control control control control control control control control
+[1783] control control control control control control control control control
+[1792] control control control control control control control control control
+[1801] control control control control control control control control control
+[1810] control control control control control control control control control
+[1819] control control control control control control control control control
+[1828] control control control control control control control control control
+[1837] control control control control control control control control control
+[1846] control control control control control control control control control
+[1855] control control control control control control control control control
+[1864] control control control control control control control control control
+[1873] control control control control control control control control control
+[1882] control control control control control control control control control
+[1891] control control control control control control control control control
+[1900] control control control control control control control control control
+[1909] control control control control control control control control control
+[1918] control control control control control control control control control
+[1927] control control control control control control control control control
+[1936] control control control control control control control control control
+[1945] control control control control control control control control control
+[1954] control control control control control control control control control
+[1963] control control control control control control control control control
+[1972] control control control control control control control control control
+[1981] control control control control control control control control control
+[1990] control control control control control control control control control
+[1999] control control control control control control control control control
+[2008] control control control control control control control control control
+[2017] control control control control control control control control control
+[2026] control control control control control control control control control
+[2035] control control control control control control control control control
+[2044] control control control control control control control control control
+[2053] control control control control control control control control control
+[2062] control control control control control control control control control
+[2071] control control control control control control control control control
+[2080] control control control control control control control control control
+[2089] control control control control control control control control control
+[2098] control control control control control control control control control
+[2107] control control control control control control control control control
+[2116] control control control control control control control control control
+[2125] control control control control control control control control control
+[2134] control control control control control control control control control
+[2143] control control control control control control control control control
+[2152] control control control control control control control control control
+[2161] control control control control control control control control control
+[2170] control control control control control control control control control
+[2179] control control control control control control control control control
+[2188] control control control control control control control control control
+[2197] control control control control control control control control control
+[2206] control control control control control control control control control
+[2215] control control control control control control control control control
+[2224] control control control control control control control control control
+[2233] control control control control control control control control control
+[2242] control control control control control control control control control
+[2251] control control control control control control control control control
+[2260] control control control control control control control control control
+[2269] control control control control control control control control control
+[2278] control control control control control control control control control
+[2287] control control control control control control control control control
+[2296] control control control control control control control control control
+[2305] control control control control control control control control control
+[2314] control control control control control control control control control
+[2323] control control control control control control control control control
+[2332] control control control control control control control control control
+[2341] control control control control control control control control control
+[2350] control control control control control control control control control
+[2359] control control control control control control control control control
+[2368] control control control control control control control control control
+[2377] control control control control control control control control control
+[2386] control control control control control control control control control
+[2395] control control control control control control control control control
+[2404] control control control control control control control control control
+[2413] control control control control control control control control control
+[2422] control control control control control control control control control
+[2431] control control control control control control control control control
+[2440] control control control control control control control control control
+[2449] control control control control control control control control control
+[2458] control control control control control control control control control
+[2467] control control control control control control control control control
+[2476] control control control control control control control control control
+[2485] control control control control control control control control control
+[2494] control control control control control control control control control
+[2503] control control control control control control control control control
+[2512] control control control control control control control control control
+[2521] control control control control control control control control control
+[2530] control control control control control control control control control
+[2539] control control control control control control control control control
+[2548] control control control control control control control control control
+[2557] control control control control control control control control control
+[2566] control control control control control control control control control
+[2575] control control control control control control control control control
+[2584] control control control control control control control control control
+[2593] control control control control control control control control control
+[2602] control control control control control control control control control
+[2611] control control control control control control control control control
+[2620] control control control control control control control control control
+[2629] control control control control control control control control control
+[2638] control control control control control control control control control
+[2647] control control control control control control control control control
+[2656] control control control control control control control control control
+[2665] control control control control control control control control control
+[2674] control control control control control control control control control
+[2683] control control control control control control control control control
+[2692] control control control control control control control control control
+[2701] control control control control control control control control control
+[2710] control control control control control control control control control
+[2719] control control control control control control control control control
+[2728] control control control control control control control control control
+[2737] control control control control control control control control control
+[2746] control control control control control control control control control
+[2755] control control control control control control control control control
+[2764] control control control control control control control control control
+[2773] control control control control control control control control control
+[2782] control control control control control control control control control
+[2791] control control control control control control control control control
+[2800] control control control control control control control control control
+[2809] control control control control control control control control control
+[2818] control control control control control control control control control
+[2827] control control control control control control control control control
+[2836] control control control control control control control control control
+[2845] control control control control control control control control control
+[2854] control control control control control control control control control
+[2863] control control control control control control control control control
+[2872] control control control control control control control control control
+[2881] control control control control control control control control control
+[2890] control control control control control control control control control
+[2899] control control control control control control control control control
+[2908] control control control control control control control control control
+[2917] control control control control control control control control control
+[2926] control control control control control control control control control
+[2935] control control control control control control control control control
+[2944] control control control control control control control control control
+[2953] control control control control control control control control control
+[2962] control control control control control control control control control
+[2971] control control control control control control control control control
+[2980] control control control control control control control control control
+[2989] control control control control control control control control control
+[2998] control control control control control control control control control
+[3007] control control control control control control control control control
+[3016] control control control control control control control control control
+[3025] control control control control control control control control control
+[3034] control control control control control control control control control
+[3043] control control control control control control control control control
+[3052] control control control control control control control control control
+[3061] control control control control control control control control control
+[3070] control control control control control control control control control
+[3079] control control control control control control control control control
+[3088] control control control control control control control control control
+[3097] control control control control control control control control control
+[3106] control control control control control control control control control
+[3115] control control control control control control control control control
+[3124] control control control control control control control control control
+[3133] control control control control control control control control control
+[3142] control control control control control control control control control
+[3151] control control control control control control control control control
+[3160] control control control control control control control control control
+[3169] control control control control control control control control control
+[3178] control control control control control control control control control
+[3187] control control control control control control control control control
+[3196] control control control control control control control control control
+[3205] control control control control control control control control control
+[3214] control control control control control control control control control
+[3223] control control control control control control control control control
+[3232] control control control control control control control control control
+[3241] control control control control control control control control control
+[3250] control control control control control control control control control
+[3259] control control control control control control control control control
+[3268] control control control control control control control control control
+[3277] control control control control control control control control control
+[3286] control control control control control control control control control
+[3295] control control control control control control control control control
+[3304] control control control control control control control control control
+[3313] control control control control control control control control control
+[3322] control control control control control control control control control
+[3331] control control control control control control control control control
+[3340] control control control control control control control control control
+[3349] control control control control control control control control control
+[3358] control control control control control control control control control
+[3367] control control control control control control control control control
+[3376] control control control control control control control control control
+[3385] control control control control control control control control control
+[3394] control control control control control control control control control
+[3403] control control control control control control control control control
+[3412] control control control control control control control control control
+[3421] control control control control control control control control control
+[3430] control control control control control control control control control
+[3439] control control control control control control control control control
+[3448] control control control control control control control control control
+[3457] control control control control control control control control control
+[3466] control control control control control control control control control
+[3475] control control control control control control control control control
+[3484] control control control control control control control control control
+[3493] control control control control control control control control control
+[3502] control control control control control control control control control
+[3511] control control control control control control control control control
+[3520] control control control control control control control control control
+[3529] control control control control control control control control control
+[3538] control control control control control control control control control
+[3547] control control control control control control control control control
+[3556] control control control control control control control control control
+[3565] control control control control control control control control control
+[3574] control control control control control control control control control
+[3583] control control control control control control control control control
+[3592] control control control control control control control control control
+[3601] control control control control control control control control control
+[3610] control control control control control control control control control
+[3619] control control control control control control control control control
+[3628] control control control control control control control control control
+[3637] control control control control control control control control control
+[3646] control control control control control control control control control
+[3655] control control control control control control control control control
+[3664] control control control control control control control control control
+[3673] control control control control control control control control control
+[3682] control control control control control control control control control
+[3691] control control control control control control control control control
+[3700] control control control control control control control control control
+[3709] control control control control control control control control control
+[3718] control control control control control control control control control
+[3727] control control control control control control control control control
+[3736] control control control control control control control control control
+[3745] control control control control control control control control control
+[3754] control control control control control control control control control
+[3763] control control control control control control control control control
+[3772] control control control control control control control control control
+[3781] control control control control control control control control control
+[3790] control control control control control control control control control
+[3799] control control control control control control control control control
+[3808] control control control control control control control control control
+[3817] control control control control control control control control control
+[3826] control control control control control control control control control
+[3835] control control control control control control control control control
+[3844] control control control control control control control control control
+[3853] control control control control control control control control control
+[3862] control control control control control control control control control
+[3871] control control control control control control control control control
+[3880] control control control control control control control control control
+[3889] control control control control control control control control control
+[3898] control control control control control control control control control
+[3907] control control control control control control control control control
+[3916] control control control control control control control control control
+[3925] control control control control control control control control control
+[3934] control control control control control control control control control
+[3943] control control control control control control control control control
+[3952] control control control control control control control control control
+[3961] control control control control control control control control control
+[3970] control control control control control control control control control
+[3979] control control control control control control control control control
+[3988] control control control control control control control control control
+[3997] control control control control control control control control control
+[4006] control control control control control control control control control
+[4015] control control control control control control control control control
+[4024] control control control control control control control control control
+[4033] control control control control control control control control control
+[4042] control control control control control control control control control
+[4051] control control control control control control control control control
+[4060] control control control control control control control control control
+[4069] control control control control control control control control control
+[4078] control control control control control control control control control
+[4087] control control control control control control control control control
+[4096] control control control control control control control control control
+[4105] control control control control control control control control control
+[4114] control control control control control control control control control
+[4123] control control control control control control control control control
+[4132] control control control control control control control control control
+[4141] control control control control control control control control control
+[4150] control control control control control control control control control
+[4159] control control control control control control control control control
+[4168] control control control control control control control control control
+[4177] control control control control control control control control control
+[4186] control control control control control control control control control
+[4195] control control control control control control control control control
+[4204] control control control control control control control control control
+[4213] control control control control control control control control control
+[4222] control control control control control control control control control
+[4231] control control control control control control control control control
+[4240] control control control control control control control control control
+[4249] control control control control control control control control control
+[4258] control control control control control control control control control
+[4267] control control control control control control control control control
+[4276] control control control control control control control control control
+[4285] control control control control control control control control control
+[4294] control control control control control control control control control
+[4303] control control control control control control control control control
+[4312] control control control control control control control control control
+[4321] control control control control control control control control control
+[4330] control control control control control control control control control
+[4339] control control control control control control control control control
+[4348] control control control control control control control control control
+[4357] control control control control control control control control control
+[4366] control control control control control control control control control
+[4375] control control control control control control control control control
+[4384] control control control control control control control control control
+[4393] control control control control control control control control control
+[4402] control control control control control control control control control
+[4411] control control control control control control control control control
+[4420] control control control control control control control control control
+[4429] control control control control control control control control control
+[4438] control control control control control control control control control
+[4447] control control control control control control control control control
+[4456] control control control control control control control control control
+[4465] control control control control control control control control control
+[4474] control control control control control control control control control
+[4483] control control control control control control control control control
+[4492] control control control control control control control control control
+[4501] control control control control control control control control control
+[4510] control control control control control control control control control
+[4519] control control control control control control control control control
+[4528] control control control control control control control control control
+[4537] control control control control control control control control control
+[4546] control control control control control control control control control
+[4555] control control control control control control control control control
+[4564] control control control control control control control control control
+[4573] control control control control control control control control control
+[4582] control control control control control control control control control
+[4591] control control control control control control control control control
+[4600] control control control control control control control control control
+[4609] control control control control control control control control control
+[4618] control control control control control control control control control
+[4627] control control control control control control control control control
+[4636] control control control control control control control control control
+[4645] control control control control control control control control control
+[4654] control control control control control control control control control
+[4663] control control control control control control control control control
+[4672] control control control control control control control control control
+[4681] control control control control control control control control control
+[4690] control control control control control control control control control
+[4699] control control control control control control control control control
+[4708] control control control control control control control control control
+[4717] control control control control control control control control control
+[4726] control control control control control control control control control
+[4735] control control control control control control control control control
+[4744] control control control control control control control control control
+[4753] control control control control control control control control control
+[4762] control control control control control control control control control
+[4771] control control control control control control control control control
+[4780] control control control control control control control control control
+[4789] control control control control control control control control control
+[4798] control control control control control control control control control
+[4807] control control control control control control control control control
+[4816] control control control control control control control control control
+[4825] control control control control control control control control control
+[4834] control control control control control control control control control
+[4843] control control control control control control control control control
+[4852] control control control control control control control control control
+[4861] control control control control control control control control control
+[4870] control control control control control control control control control
+[4879] control control control control control control control control control
+[4888] control control control control control control control control control
+[4897] control control control control control control control control control
+[4906] control control control control control control control control control
+[4915] control control control control control control control control control
+[4924] control control control control control control control control control
+[4933] control control control control control control control control control
+[4942] control control control control control control control control control
+[4951] control control control control control control control control control
+[4960] control control control control control control control control control
+[4969] control control control control control control control control control
+[4978] control control control control control control control control control
+[4987] control control control control control control control control control
+[4996] control control control control control control control control control
+[5005] control control control control control control control control control
+[5014] control control control control control control control control control
+[5023] control control control control control control control control control
+[5032] control control control control control control control control control
+[5041] control control control control control control control control control
+[5050] control control control control control control control control control
+[5059] control control control control control control control control control
+[5068] control control control control control control control control control
+[5077] control control control control control control control control control
+[5086] control control control control control control control control control
+[5095] control control control control control control control control control
+[5104] control control control control control control control control control
+[5113] control control control control control control control control control
+[5122] control control control control control control control control control
+[5131] control control control control control control control control control
+[5140] control control control control control control control control control
+[5149] control control control control control control control control control
+[5158] control control control control control control control control control
+[5167] control control control control control control control control control
+[5176] control control control control control control control control control
+[5185] control control control control control control control control control
+[5194] control control control control control control control control control
+[5203] control control control control control control control control control
+[5212] control control control control control control control control control
+[5221] control control control control control control control control control
+[5230] control control control control control control control control control
+[5239] control control control control control control control control control
+[5248] control control control control control control control control control
+[5257] control control control control control control control control control
+[5266] control control control control control control control control control
+[5275] control control control control control control control control control
+[5284] control control control control control control control control control
+[5293] control control control control control control control control control
+[5302] control control control control control control control control control
+[5311] control control control control control control control control control
+[5320] control control control control control control control control control
+[5329] control control control control control control control control control
+[5338] control control control control control control control control control
+[5347] control control control control control control control control control
+[5356] control control control control control control control control control
+[5365] control control control control control control control control control
+[5374] control control control control control control control control control
+[5383] control control control control control control control control control
+[5392] control control control control control control control control control
+Levels: control stim
+> tempdat$trt <- 1
+> tempdat$visitno <- as.character(tempdat$visitno)
+> tempdat <- subset(tempdat, visitno %in% c("Day 0", "Day 9", "Day 28", "Day 168"))
+> tempdat$visitno <- factor(as.character(tempdat$visitno), levels = c("Day 0", "Day 9", "Day 28", "Day 168"))
+> system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim * visitno,
++                              subject_id = ptid,
++                              cell_type = subset,
++                              cluster_variable = visitno,
++                              data = tempdat,
++                              covariance = "sparse",
++                              ising_model = "sparse",
++                              regression_method = "robust",
++                              iterations = niter,
++                              parallel = TRUE,
++                              verbose = TRUE, control = control))
+Estimating model via sequential computation
+[1] "Initializing Regression Equations"
+Loading required package: foreach
+Loading required package: rngtools
+Loading required package: pkgmaker
+Loading required package: registry
+
+Attaching package: ‘pkgmaker’
+
+The following object is masked from ‘package:base’:
+
+    isNamespaceLoaded
+
+
+[1] "Starting Stochastic EM"
+[1] "Sampling!"
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+*********************************************

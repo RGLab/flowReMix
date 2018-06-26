@@ -20,7 +20,7 @@
 #' @export
 stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
                            cv = FALSE, reps = 100, cpus = 1,
-                           gamma = 0.9, AND = TRUE, seed = NULL,
+                           gamma = 0, AND = FALSE, seed = NULL,
                            sampleNew = FALSE,keepEach=1) {
   if(cpus == 1) {
     foreach::registerDoSEQ()
@@ -172,14 +172,25 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
     samples[[i]][samples[[i]] == 0.5] <- 0
   }
   set.seed(seed)
-  countCovar <- foreach(matrices = samples , .combine = "+") %dorng% {
-    countCovar <- apply(matrices,1, function(mat) #by first dim - replicates
+  stabilityResults <- foreach(matrices = samples) %dorng% {
+    stabilityResults <- apply(matrices, 1, function(mat) #by first dim - replicates
       raIsing(t(mat), AND = AND, gamma = gamma, family = family,
-              method = "sparse", cv = cv, parallel = FALSE) != 0)
-    countCovar = matrix(rowSums(countCovar),ncol=dim(matrices)[2])
-    return(countCovar)
+              method = "sparse", cv = cv, parallel = FALSE,
+              returnPath = TRUE))
+    countCovar <- lapply(stabilityResults, function(x) x$isingmat != 0) %>%
+      Reduce(f = "+")
+    pathCovar <- lapply(stabilityResults, function(x) x$pathmat) %>%
+      Reduce(f = "+")
+    return(list(count = countCovar, path = pathCovar))
   }
-  # countCovar <- Reduce(cluster_res, f = "+")
+
+  countCovar <- lapply(stabilityResults, function(x) x$count) %>%
+    Reduce(f = "+")
+  pathCovar <- lapply(stabilityResults, function(x) x$path) %>%
+    Reduce(f = "+")
+  pathCovar <- pathCovar / reps
+  pathCovar <- (nrow(pathCovar) - pathCovar + 1) / nrow(pathCovar)
+  diag(pathCovar) <- 0
   props <- countCovar / reps
   colnames(props) <- names(obj$coefficients)
   rownames(props) <- colnames(props)
@@ -188,6 +199,7 @@ stabilityGraph <- function(obj, type = c("ising", "randomEffects"),
   results$network <- props
   results$frequencies <- table(props)
   results$type <- type
+  results$path <- pathCovar
   class(results) <- c("flowReMix_stability")
   return(results)
 }
@@ -289,10 +301,17 @@ plot.flowReMix_stability <- function(x, threshold = 0.5, nEdges = NULL, plotAll 
                                      fillPalette = NULL, title = TRUE,
                                      layout = "fruchtermanreingold",
                                      layout.par = NULL, label_size = 1.8, seed = 100,
+                                     plotPath = FALSE,
                                      ...){
   set.seed(seed)
   measure <- fill
-  props <- x$network
+  if(plotPath) {
+    props <- x$path
+    rownames(props) <- rownames(x$network)
+    colnames(props) <- colnames(x$network)
+  } else {
+    props <- x$network
+  }
   if(is.null(nEdges)) {
     props[abs(props) < threshold] <- 0
   } else {
@@ -342,6 +361,10 @@ plot.flowReMix_stability <- function(x, threshold = 0.5, nEdges = NULL, plotAll 
     alphaTitle <- "Edge Propensity"
   } else {
     alphaTitle <- "Edge Quantile"
+  }
+
+  if(plotPath) {
+    alphaTitle <- "Edge Importance"
   }
 
   requireNamespace("ggplot2")

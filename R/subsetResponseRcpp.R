@@ -1305,6 +1305,8 @@ flowReMix <- function(formula,
                                                 reps = control$isingStabilityReps,
                                                 seed = control$seed,
                                                 cpus = cpus,
+                                                gamma = control$stabilityGamma,
+                                                AND = control$stabilityAND,
                                                 sampleNew = sampleNew))
   }
 
@@ -1314,6 +1316,8 @@ flowReMix <- function(formula,
                                                  reps = control$randStabilityReps,
                                                  seed = control$seed,
                                                  cpus = cpus,
+                                                 gamma = control$stabilityGamma,
+                                                 AND = control$stabilityAND,
                                                  sampleNew = sampleNew))
   }
 

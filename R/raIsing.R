@@ -5,7 +5,8 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
                     modelprobs = NULL, minprob = NULL,
                     method = "sparse", cv = FALSE,
                     family = "binomial",verbose=FALSE,
-                    weights = NULL, parallel = FALSE) {
+                    weights = NULL, parallel = FALSE,
+                    returnPath = FALSE) {
   if(is.null(weights)) {
     weights <- rep(1, nrow(mat))
   }
@@ -25,13 +26,26 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     minprob <- 1 / nrow(mat)
   }
 
-  if(parallel) {
-    isingmat <- foreach(j = 1:ncol(mat), .combine = rbind) %dorng% {
-      getNeighborhood(j, mat, family, off, gamma, weights, cv, method, minprob)
-    }
+  # Estimating the ising parameters via neighborhood selection
+  isingmat <- foreach(j = 1:ncol(mat)) %dorng% {
+    getNeighborhood(j, mat, family, off, gamma, weights, cv, method, minprob,
+                    returnPath = returnPath)
+  }
+  if(returnPath) {
+    isingmat <- lapply(isingmat, function(x) {
+      if(is.list(x)){
+        return(x)
+      } else {
+        l <- list()
+        l$matrow <- x
+        l$orderRow <- rep(length(x), length(x))
+        return(l)
+      }
+      })
+    pathmat <- lapply(isingmat, function(x) x$orderRow) %>% do.call("rbind", .)
+    isingmat <- lapply(isingmat, function(x) x$matrow) %>% do.call("rbind", .)
   } else {
-    isingmat <- do.call("rbind", lapply(1:ncol(mat), getNeighborhood, mat, family, off,
-                                        gamma, weights, cv, method, minprob))
+    isingmat <- do.call("rbind", isingmat)
   }
 
   nonzero <- which(isingmat != 0, arr.ind = TRUE)
@@ -56,7 +70,12 @@ raIsing <- function(mat, AND = TRUE, gamma = 0.9,
     }
   }
 
-  return(isingmat)
+  if(returnPath) {
+    pathmat <- (pathmat + t(pathmat)) / 2
+    return(list(isingmat = isingmat, pathmat = pathmat))
+  } else {
+    return(isingmat)
+  }
 }
 
 pIsing <- function(mat, AND = TRUE, gamma = 0.9,
@@ -174,7 +193,8 @@ pIsing <- function(mat, AND = TRUE, gamma = 0.9,
   return(isingmat)
 }
 
-getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, minprob) {
+getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, minprob,
+                            returnPath = FALSE) {
   y <- as.vector(mat[, j])
   X <- as.matrix(mat[, -j,drop=FALSE])
   xcols <- colSums(X)
@@ -231,5 +251,19 @@ getNeighborhood <- function(j, mat, family, off, gamma, weights, cv, method, min
   }
   matrow[-j] <- coefs[-1]
   matrow[j] <- coefs[1]
-  return(matrow)
+
+  if(returnPath) {
+    optimPath <- apply(as.matrix(netfit$beta), 1, function(x) {
+      if(any(x != 0)) {
+        return(min(which(x != 0)))
+      } else {
+        return(length(matrow))
+      }}) %>% order()
+    orderRow <- rep(length(matrow), length(matrow))
+    orderRow[j] <- 0
+    orderRow[-j][which(xcols >= 4)][order(optimPath)] <- 1:sum(xcols >= 4)
+    return(list(matrow = matrow, orderRow = orderRow))
+  } else {
+    return(matrow)
+  }
 }
