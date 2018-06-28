@@ -107,7 +107,7 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
                              learningRate = 0.75,
                              keepWeightPercent = 0.9,
                              sampleNew = FALSE,
-                             isingAND = FALSE, isingGamma = 0)
+                             stabilityAND = FALSE, stabilityGamma = 0)
 
 malbool$allstims <- malbool$subset %>% as.character() %>%
   strsplit("/") %>% sapply(function(x) paste(x[-1], collapse = "/")) %>%
@@ -120,6 +120,8 @@ malbool$visitno <- factor(malbool$visitno, levels = c("Day 0", "Day 9", "Day 28"
 
 # Analysis --------
 malbool <- subset(malbool, subset %in% levels(subset))
+malbool$subset <- factor(malbool$subset)
+malbool <- subset(malbool, !(population %in% c("CD154+", "GzB+")))
 malbool$subset <- factor(malbool$subset)
 fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  subject_id = ptid,
@@ -134,7 +136,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/malbool_pathIsing_A_",
+file <- paste("results/malbool_noGzB154_A_",
               "disp", disp,
               "seed", seed,
               "npost", npost,
