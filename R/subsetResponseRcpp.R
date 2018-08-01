@@ -772,7 +772,7 @@ flowReMix <- function(formula,
 
           # # # EXPERIMENTAL # # # #
           if(!is.null(fit)) {
-            if(any(abs(coef(fit)) > 10^6)) {
+            if(any(abs(coef(fit)) > 10^6, na.rm = TRUE)) {
               try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
                              family = "binomial", method = brglmFit))
             }

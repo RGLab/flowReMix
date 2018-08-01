@@ -122,6 +122,7 @@ malbool$visitno <- factor(malbool$visitno, levels = c("Day 0", "Day 9", "Day 28"
 malbool <- subset(malbool, subset %in% levels(subset))
 malbool$subset <- factor(malbool$subset)
 malbool <- subset(malbool, !(population %in% c("CD154+", "GzB+")))
+malbool <- subset(malbool, !grepl("SPZ", subset))
 malbool$subset <- factor(malbool$subset)
 fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  subject_id = ptid,
@@ -136,7 +137,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/malbool_noGzB154_A_",
+file <- paste("results/malbool_noSPZ_noGzB154_A_",
               "disp", disp,
               "seed", seed,
               "npost", npost,
