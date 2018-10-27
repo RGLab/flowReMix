@@ -8,7 +8,7 @@ library(ggplot2)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-ncores <- 1
+ncores <- 2
 
 # Loading Data ---------
 tempdat <- readRDS(file = "data/MAL067_screened_B.rds")
@@ -22,7 +22,7 @@ tempdat$interaction <- with(tempdat, visitno == "M3" & stim != "ctrl") %>% facto
 # tempdat <- subset(tempdat, ptid %in% obsPerSubject$ptid)
 
 # Analysis Parameters -----
-configurations <- expand.grid(iterations = c(60),
+configurations <- expand.grid(iterations = c(20),
                               mcEM = TRUE,
                               disp = c(50),
                               npost = c(1),

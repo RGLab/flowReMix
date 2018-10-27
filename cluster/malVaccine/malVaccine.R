@@ -11,23 +11,50 @@ setting <- as.numeric(setting)
 ncores <- 1
 mode <- "M0M3children"
 mode <- "M3children"
+mode <- "M0M3stimTreatment"
+mode <- "M3infantsChildren"
+mode <- "M0M3stimInfants"
+mode <- "M0M3all"
+mode <- "M0M3allB"
 
 # Loading Data ---------
-tempdat <- readRDS(file = "data/MAL067_screened.rds")
+tempdat <- readRDS(file = "data/MAL067_screened_C.rds")
 tempdat$stim <- factor(tempdat$stim)
 if(mode == "M0M3children") {
   tempdat$treatment <- factor(with(tempdat, visitno == "M3" & stim != "ctrl"))
+  tempdat <- subset(tempdat, agec == "5-17m")
+  formula <- formula(cbind(count, parentcount - count) ~ stim  + treatment)
+} else if(mode == "M0M3stimTreatment") {
+  tempdat$treatment <- tempdat$stim
+  tempdat$interaction <- factor(with(tempdat, visitno == "M3" & stim != "ctrl"))
+  tempdat <- subset(tempdat, agec == "5-17m")
+  formula <- formula(cbind(count, parentcount - count) ~ treatment * visitno)
 } else if(mode == "M3children") {
   tempdat$treatment <- tempdat$stim
-  tempdat <- subset(tempdat, visitno == "M0")
+  tempdat <- subset(tempdat, agec == "5-17m")
+  tempdat <- subset(tempdat, visitno == "M3")
+  formula(cbind(count, parentcount - count) ~ treatment)
+} else if(mode == "M0M3all") {
+  tempdat$treatment <- factor(with(tempdat, visitno == "M3" & stim != "ctrl"))
+  formula <- formula(cbind(count, parentcount - count) ~ treatment + stim + agec)
+} else if(mode == "M0M3allB") {
+  tempdat$treatment <- factor(with(tempdat, visitno == "M3" & stim != "ctrl"))
+  formula <- formula(cbind(count, parentcount - count) ~ treatment + stim * sagec)
+} else if(mode == "M0M3stimInfants") {
+  tempdat$treatment <- tempdat$stim
+  formula <- formula(cbind(count, parentcount - count) ~ treatment*agec*visitno)
+} else if(mode == "M3infantsChildren"){
+  tempdat$treatment <- tempdat$stim
+  tempdat <- subset(tempdat, visitno == "M3")
+  formula <- formula(cbind(count, parentcount - count) ~ treatment*agec)
 }
 
 # Analysis Parameters -----
-configurations <- expand.grid(iterations = c(20),
+configurations <- expand.grid(iterations = c(60),
                               mcEM = TRUE,
                               disp = c(50),
                               npost = c(1),
-                              seed = 1:30)
+                              seed = 101:200)
 config <- configurations[setting, ]
 niter <- config[["iterations"]]
 lag <- round(niter / 3)
@@ -60,8 +87,10 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
 
 # Analysis --------
 tempdat$visitno <- factor(tempdat$visitno, levels = c("M0", "M3"))
+tempdat$agec <- factor(tempdat$agec)
+tempdat$subset <- factor(tempdat$subset)
 # tempdat$interaction <- tempdat$visitno:tempdat$stim
-fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
+fit <- flowReMix(cbind(count, parentcount - count) ~ treatment + stim * agec,
                  subject_id = ptid,
                  cell_type = subset,
                  cluster_variable = treatment,
@@ -74,7 +103,13 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ treatment,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/malVaccine_newInterM3_A",
+# file <- paste("results/malVaccine_newInterM3infantsStim_A_",
+#               "disp", disp,
+#               "seed", seed,
+#               "npost", npost,
+#               "niter", niter,
+#               ".rds", sep ="")
+file <- paste("results/malVaccine_newInterM0M3infantsB_B_",
               "disp", disp,
               "seed", seed,
               "npost", npost,

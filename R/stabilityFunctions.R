@@ -287,6 +287,7 @@ plotRawGraph <- function(obj, graph = c("ising"), threshold = 0.5, plotAll = FAL
   }
 
   network$raw <- TRUE
+  network$type <- graph
 
   figure <- plot.flowReMix_stability(network, threshold = threshold, plotAll = plotAll,
                                      fill = fill, fillRange = fillRange, fillPalette = fillPalette,
