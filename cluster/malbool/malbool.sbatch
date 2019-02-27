@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name malaria # Set a name for your job. This is useful if you have multiple jobs queued.
+#SBATCH --job-name noSPZ # Set a name for your job. This is useful if you have multiple jobs queued.
 #SBATCH --partition short    # Slurm partition to use
-#SBATCH --ntasks 2        # Number of tasks to run. By default, one CPU core will be allocated per task
+#SBATCH --ntasks 1        # Number of tasks to run. By default, one CPU core will be allocated per task
 #SBATCH --time 0-12:00       # Wall time limit in D-HH:MM
 #SBATCH --mem-per-cpu=4000    # Memory limit for each tasks (in MB)
 #SBATCH -o flowout.out     # File to which STDOUT will be written

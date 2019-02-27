@@ -4,7 +4,7 @@ library(dplyr)
 args <- commandArgs(TRUE)
 eval(parse(text=args[[1]]))
 setting <- as.numeric(setting)
-ncores <- 2
+ncores <- 1
 
 # Loading data ----
 malbool <- readRDS("data/malaria_booleans.rds")
@@ -77,7 +77,7 @@ malbool$visitno <- factor(malbool$visitno, levels = c("Day 0", "Day 9", "pos", "
 configurations <- expand.grid(iterations = c(60),
                               mcEM = TRUE,
                               disp = c(10, 50),
-                              npost = c(6),
+                              npost = c(8),
                               seed = 1:50)
 config <- configurations[setting, ]
 niter <- config[["iterations"]]
@@ -106,14 +106,23 @@ control <- flowReMix_control(updateLag = lag, nsamp = 50, initMHcoef = 1,
                              randStabilityReps = 0,
                              learningRate = 0.75,
                              keepWeightPercent = 0.9,
-                             sampleNew = FALSE)
+                             sampleNew = FALSE,
+                             stabilityAND = FALSE, stabilityGamma = 0)
 
 malbool$allstims <- malbool$subset %>% as.character() %>%
   strsplit("/") %>% sapply(function(x) paste(x[-1], collapse = "/")) %>%
   factor()
+malbool$visitSubset <- paste(malbool$visitno, malbool$subset, sep = "/")
+
+# Screening time points that don't have observations for all subjects
+malbool <- subset(malbool, visitno %in% c("Day 0", "Day 9", "Day 28", "Day 168"))
+malbool$visitno <- factor(malbool$visitno, levels = c("Day 0", "Day 9", "Day 28", "Day 168"))
 
 # Analysis --------
 malbool <- subset(malbool, subset %in% levels(subset))
+malbool$subset <- factor(malbool$subset)
+malbool <- subset(malbool, !(population %in% c("CD154+", "GzB+")))
+malbool <- subset(malbool, !grepl("SPZ", subset))
 malbool$subset <- factor(malbool$subset)
 fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  subject_id = ptid,
@@ -128,7 +137,7 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ visitno * stim,
                  parallel = TRUE,
                  verbose = TRUE, control = control)
 
-file <- paste("results/malbool_screenB_",
+file <- paste("results/malbool_noSPZ_noGzB154_A_",
               "disp", disp,
               "seed", seed,
               "npost", npost,

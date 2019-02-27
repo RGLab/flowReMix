@@ -47,8 +47,9 @@ control <- flowReMix_control(updateLag = 3, nsamp = 20, initMHcoef = 1,
                              seed = 10,
                              preAssignCoefs = 1, sampleNew = FALSE,
                              learningRate = 0.6, keepWeightPercent = 0.9,
-                             isingStabilityReps = 0, randStabilityReps = 0,
-                             isingInit = -2)
+                             isingStabilityReps = 10, randStabilityReps = 0,
+                             isingInit = -2,
+                             stabilityGamma = 0, stabilityAND = FALSE)
 
 data$stim <- factor(data$stim, levels = c("negctrl", "env"))
 # assignmentMat <- do.call("rbind", by(data, data$ptid, preAssign))
@@ -59,14 +60,17 @@ system.time(fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                  data = data.frame(data),
                  covariance = "sparse",
                  ising_model = "sparse",
-                 regression_method = "firth",
-                 iterations = 100, parallel = TRUE,
+                 regression_method = "robust",
+                 iterations = 6, parallel = TRUE,
                  cluster_assignment = TRUE, keepSamples = FALSE,
                  verbose = TRUE, control = control, newSampler = FALSE))
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed w all.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo ising.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed wo random.Robj")
 # save(fit, file = "Data Analysis/results/RV144 marginals dispersed indepdent.Robj")
+
+plot(fit$isingStability, plotPath = TRUE, threshold = 0.65)
+plot(fit$isingStability, plotPath = FALSE, threshold = 0.8)
 
 system.time(stab <- stabilityGraph(fit, sampleNew = FALSE, reps = 100, cpus = 2))
 

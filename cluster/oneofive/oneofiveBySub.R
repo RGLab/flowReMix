@@ -11,8 +11,8 @@ stimdat$stim <- factor(stimdat$stim)
 
 # Analysis Settings ---------
 configurations <- expand.grid(disp = c(10, 50),
-                              iterations = c(30),
-                              fseed = 1:20)
+                              iterations = c(45),
+                              fseed = 1:50)
 config <- configurations[setting, ]
 iterations <- config[["iterations"]]
 fseed <- config[["fseed"]]
@@ -47,8 +47,8 @@ fit <- flowReMix(cbind(count, parentcount - count) ~ stim,
                 control = control)
 
 fit$data <- NULL
-filename <- paste("results/HVTN105_C_110subsets",
-                  "TEST_iterations", iterations,
+filename <- paste("results/HVTN105_D_110subsets",
+                  "_iterations", iterations,
                   "disp", disp,
                   "nPost", nPosteriors,
                   "seed", fseed,

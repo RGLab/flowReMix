@@ -1,0 +1,112 @@
+require(snowfall)
+run.simulation <- function(config) {#
+  #initializing#
+  n.sample <- config[[1]]#
+  threshold <- config[[2]]#
+  alpha <- config[[3]]#
+  replications <- config[[4]]#
+  rho <- config[[5]]#
+  #Generating Data#
+  true.cor <- rep(rho,replications)#
+  sample <- Finv(Ftransform(true.cor) + rnorm(replications,sd=sqrt(n.sample-3)^-1))#
+  sample.median <- median((sample-true.cor)) #unbiased sample MSE#
+  select <- (sample > threshold) #
+  #If none selected return #
+  if(sum(select)==0) {#
+    return(c(sample=sample.median,selected=NA,conditional=NA))#,sumselect=0))#
+  }#
+  #If selected, compute mses#
+  sample <- sample[select] #selecting #
+  selected.median <- median((sample-true.cor[select])) #
+  conditional <- sapply(sample,estimate.cor,threshold,n.sample)#
+  conditional.median <-  median((conditional-true.cor[select]))#
+  return(c(sample=sample.median,selected=selected.median,conditional=conditional.median))#
+}#
+#
+configurations <- expand.grid(n.sample=c(10,50,100),threshold=c(0.2,0.35,0.5,0.65),alpha=0.1,replications=10^4*5,rhos=seq(from=0.05,to=0.95,by=0.05))#
+#
+sfInit(parallel=TRUE,cpus=2)#
+sfSource("selective functions.R")#
+results <- t(sfApply(configurations,1,run.simulation))#
+configurations <- cbind(configurations,results)#
+sfStop()#
+#
+save(configurations,file="bias demonstration plot data2.Rdata")
+sfInit(parallel=TRUE,cpus=2)#
+sfSource("/users/amitmeir/github code/selective point est/selective functions.R")
+results <- t(sfApply(configurations,1,run.simulation))#
+configurations <- cbind(configurations,results)#
+sfStop()#
+#
+save(configurations,file="bias demonstration plot data2.Rdata")
+source('~/Downloads/insight_0_9_4.R', chdir = TRUE)
+install.packages("installr")
+install.packages(‘installr’)
+install.packages("installr")
+install.packages("diptest")
+install.packages("brglm2")
+install.packages("R.utils")
+install.packages("glasso")
+install.packages("cowplot")
+install.packages("viridis")
+install.packages("profmem")
+install.packages("pryr")
+install.packages("doRNG")
+install.packages("purr")
+install.packages("purrr")
+install.packages("tidyr")
+install.packages("biglasso")
+install.package("IsingSampler")
+install.packages("IsingSampler")
+install.packages("bigmemory")
+install.packages("deconvolveR")
+install.packages("progressbar")
+install.packages("progress")
+install.packages("tidygrpah")
+install.packages("tidygraph")
+packages("circilize")
+install.packageS("circlize)
+install.packageS("circlize")
+install.packages("circlize")
+install.packages('heatmaply')
+53
+install.packages("ggplot2")
+install.packages("mixtools")
+install.packages("here")
+install.packages("quantreg")
+install.packages("isotone")
+install.packages("SKAT")
+install.packages("tidyverse")
+install.packages("restrictedMVN")
+.packages("tmg")
+install.packages("tmg")
+install.packages("gPdtest")
+install.packages("ks")
+install.packages("cowplot")
+install.packages("deconvolvR")
+install.packates("deconvolveR")
+install.packages("deconvolveR")
+install.packages("locfdr")
+install.packages("bigmemory")
+install.packages("slam")
+packages("geeM")
+install.packages("geeM")
+install.packages("gee")
+install.packages("knockoff")
+t
+install.packages("selectiveInference")
+install.packages("doMC")
+install.packages("gam")
+install.packages("rising")
+install.packages("rIsing")
+install.packages("ggplot2")
+install.packages("rlang")
+ls
+setwd()
+getwd
+getwd()
+setwd("Dropbox (Gottardo Lab)/flowReMix")
+install.packages("stemr_0.1.0.tar.gz", repos = 'source')
+getwd()
+install.packages("stemr_0.1.0.tar.gz", repos = 'source')
+install.packages("stemr_0.1.0.tar.gz", method = 'source')

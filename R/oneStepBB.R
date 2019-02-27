@@ -1,3 +1,4 @@
+# A function for fitting a Beta-Binomial Regression
 BBreg <- function(data, formula, weights) {
   # Prototype data -----
   # n <- 100
@@ -53,6 +54,7 @@ BBreg <- function(data, formula, weights) {
   return(result)
 }
 
+# Compute gradient for beta-binomial regression
 compgrad <- function(param, y, N, X, offset, weights) {
   M <- param[length(param)]
   coef <- param[1:(length(param) -1)]
@@ -76,13 +78,14 @@ compgrad <- function(param, y, N, X, offset, weights) {
 
 evalBB <- function(param, y, N, X, offset, weights) {
   M <- param[length(param)]
-  coef <- param[1:(length(param) -1)]
+  coef <- param[1:(length(param) - 1)]
   # coef <- param
   eta <- as.numeric(X %*% coef) + offset
   mu <- 1 / (1 + exp(- eta))
   return(-sum(vecBetaBinomDens(y, N, mu, M) * weights))
 }
 
+# Maximum likelihood estimation of the overdispersion paramter of a beta binomial distribution
 dispersionMLE <- function(y, N, mu) {
   rho <- optimize(f = function(rho) sum(vecBetaBinomDens(y, N, mu, (1 - rho) / rho)),
                   interval = c(0, 1), maximum = TRUE, tol = 10^-6)$maximum

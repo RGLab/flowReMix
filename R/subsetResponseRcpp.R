@@ -772,7 +772,7 @@ flowReMix <- function(formula,
 
           # # # EXPERIMENTAL # # # #
           if(!is.null(fit)) {
-            if(any(abs(coef(fit)) > 10^6)) {
+            if(any(abs(coef(fit)) > 10^6, na.rm = TRUE)) {
               try(fit <- glm(glmformula, data = popDat[[1]], weights = weights * emWeights,
                              family = "binomial", method = brglmFit))
             }
@@ -1183,6 +1183,7 @@ flowReMix <- function(formula,
     if(iter > 1) {
       if(covarianceMethod == "sparse") {
         pdsoftFit <- NULL
+        randomList <- imputeRandomZeros(randomList, threshold = 0.90)
         try(pdsoftFit <- pdsoft.cv(randomList, init = "dense"))
         if(is.null(pdsoftFit)) {
           print("shit")
@@ -1304,6 +1305,8 @@ flowReMix <- function(formula,
                                                 reps = control$isingStabilityReps,
                                                 seed = control$seed,
                                                 cpus = cpus,
+                                                gamma = control$stabilityGamma,
+                                                AND = control$stabilityAND,
                                                 sampleNew = sampleNew))
   }
 
@@ -1313,6 +1316,8 @@ flowReMix <- function(formula,
                                                  reps = control$randStabilityReps,
                                                  seed = control$seed,
                                                  cpus = cpus,
+                                                 gamma = control$stabilityGamma,
+                                                 AND = control$stabilityAND,
                                                  sampleNew = sampleNew))
   }
 
@@ -1643,6 +1648,27 @@ imputeRandomEffects <- function(X, imputeLM = FALSE) {
   }
 
   return(result)
+}
+
+# A function for coping with a weird bug where sometimes the algorithm
+# fails to sample the random effects of non-responsive cell-subsets,
+# resulting in the covariance estimation routine failing
+imputeRandomZeros <- function(randomList, threshold = 0.90) {
+  manyZeros <- apply(randomList, 2, function(x) mean(x == 0) > threshold)
+  if(!any(manyZeros)) {
+    return(randomList)
+  }
+
+  isZeros <- which(manyZeros)
+  sampleFrom <- randomList[, -isZeros]
+  for(j in 1:length(isZeros)) {
+    col <- isZeros[j]
+    for(i in 1:nrow(randomList)) {
+      randomList[i, col] <- sample(sampleFrom[i, ], 1)
+    }
+  }
+
+  return(randomList)
 }
 
 

@@ -132,6 +132,10 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
     try(output$isingStability$network <- matrix(map2_dbl(output$isingStability$network,this$isingStability$network,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(this$isingCount), dimnames = list(rownames(this$isingStability$network),colnames(this$isingStability$network))))
   }
 
+  if(!is.null(output$isingStability$path)) {
+    try(output$isingStability$network <- matrix(map2_dbl(output$isingStability$path,this$isingStability$path,function(x,y)x*(i-1)/i+y*1/i),ncol=ncol(this$isingCount), dimnames = list(rownames(this$isingStability$network),colnames(this$isingStability$network))))
+  }
+
   #set the class
   if(!inherits(output,"flowReMixAggregate"))
     class(output) = c(class(output),"flowReMixAggregate")
@@ -182,7 +186,7 @@ aggregateModels = function(x, verbose=TRUE, summarizeCoefs = FALSE){
       median = median(x),
       sd = sd(x),
       n = length(x),
-      t(quantile(x, c(0.1, 0.5, 0.9))),
+      t(quantile(x, c(0.1, 0.5, 0.9), na.rm = TRUE)),
       check.names = FALSE
     )
   }else{

@@ -5,7 +5,7 @@
 \title{compute a stability graph for the Ising model from a flowReMix fit.}
 \usage{
 stabilityGraph(obj, type = c("ising", "randomEffects"), cv = FALSE,
-  reps = 100, cpus = 1, gamma = 0.9, AND = TRUE, seed = NULL,
+  reps = 100, cpus = 1, gamma = 0, AND = FALSE, seed = NULL,
   sampleNew = FALSE, keepEach = 1)
 }
 \arguments{
